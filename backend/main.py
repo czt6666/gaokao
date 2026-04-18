@@ -38,7 +38,8 @@ from routers import report as report_router, admin as admin_router
 from routers import tracking as tracking_router
 from routers.auth import _verify_token as _auth_verify_token
 
-from services.recommend_core import _rec_cache_get, _run_recommend_core
+from services.recommend_core import _run_recommend_core
+from services._prewarm_cache import start_prewarm_daemon
 
 app = FastAPI(title="高考志愿填报决策引擎", version="3.0.0")
 app.include_router(auth_router.router)
@@ -90,50 +91,8 @@ app.add_middleware(SecurityHeadersMiddleware)
 def on_startup():
     init_db()
     _start_scheduler()
-    # 启动后异步预热高频省份缓存，避免首个用户承受冷启动延迟
-    import threading
-    threading.Thread(target=_prewarm_cache, daemon=True).start()
-
-
-def _prewarm_cache():
-    """预热高频省份的常用位次段缓存（后台线程，启动后5秒开始）"""
-    import time as _time
-    _time.sleep(5)  # 等服务完全启动
-    try:
-        from database import SessionLocal as _SL
-        _db = _SL()
-        # 高频省份 × 典型位次 × 选科
-        _WARM_TARGETS = [
-            ("广东", [5000, 30000, 60000, 100000], "物理"),
-            ("广东", [5000, 30000], "历史"),
-            ("河南", [30000, 60000, 100000], "物理"),
-            ("山东", [20000, 60000], "物理"),
-            ("浙江", [20000, 60000], "综合"),
-            ("北京", [5000, 20000, 50000], "物理"),
-            ("湖北", [20000, 50000], "物理"),
-            ("湖南", [20000, 50000], "物理"),
-            ("四川", [20000, 60000], "物理"),
-            ("江苏", [20000, 60000], "物理"),
-        ]
-        warmed = 0
-        for province, ranks, subject in _WARM_TARGETS:
-            for rank in ranks:
-                try:
-                    if _rec_cache_get(province, rank, subject, True) is None:
-                        result = _run_recommend_core(
-                            province=province, rank=rank,
-                            subject=subject, mode="all",
-                            db=_db, is_paid=True
-                        )
-                        if result:
-                            warmed += 1
-                    _time.sleep(0.5)  # 避免启动时过载
-                except Exception:
-                    pass
-        _db.close()
-        logger.info(f"[Prewarm] 缓存预热完成，共预热 {warmed} 个查询组合")
-    except Exception as e:
-        logger.warning(f"[Prewarm] 预热失败（不影响服务）: {e}")
+    # 推荐缓存预热：需要时取消下一行注释
+    # start_prewarm_daemon()
 
 
 def _start_scheduler():

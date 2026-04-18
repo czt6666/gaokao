@@ -117,7 +117,7 @@ async def export_report(
 
     # 2. 调用核心推荐逻辑（is_paid=True，返回完整数据）
     try:
-        from main import _run_recommend_core
+        from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",
@@ -174,7 +174,7 @@ async def preview_report_html(
     rank     = order.rank_input or 5000
 
     try:
-        from main import _run_recommend_core
+        from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank, subject=subject,
             mode="all", db=db, is_paid=True
@@ -246,7 +246,7 @@ async def generate_report_free(
         _save_report_log(db, report_id, province, rank, user_id=user.id if user else None)
     else:
         try:
-            from main import _run_recommend_core
+            from services.recommend_core import _run_recommend_core
             recommend_data = _run_recommend_core(
                 province=province, rank=rank,
                 subject=subject, mode="all",
@@ -310,7 +310,7 @@ async def warmup_outlook(
     import threading
     def _do_warmup():
         try:
-            from main import _run_recommend_core
+            from services.recommend_core import _run_recommend_core
             data = _run_recommend_core(province=province, rank=rank, subject=subject, mode="all", db=db, is_paid=True)
             from routers.report import _flatten_results
             results = _flatten_results(data)
@@ -350,7 +350,7 @@ async def email_report(
 
     # 1. 生成推荐数据
     try:
-        from main import _run_recommend_core
+        from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",

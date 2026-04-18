@@ -1,0 +1,4412 @@
+[
+  {
+    "industry": "银行与金融服务",
+    "section": "银行",
+    "position": "客户关系经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "银行",
+    "position": "高级客户关系经理",
+    "salary_low_k": 400,
+    "salary_high_k": 1000,
+    "salary_mid_k": 700,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "银行",
+    "position": "客户关系管理负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "银行",
+    "position": "财富顾问",
+    "salary_low_k": 300,
+    "salary_high_k": 900,
+    "salary_mid_k": 600,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "产品",
+    "position": "产品经理",
+    "salary_low_k": 300,
+    "salary_high_k": 900,
+    "salary_mid_k": 600,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风险管理",
+    "position": "信用风险经理/总监",
+    "salary_low_k": 300,
+    "salary_high_k": 1000,
+    "salary_mid_k": 650,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风险管理",
+    "position": "操作风险经理/总监",
+    "salary_low_k": 200,
+    "salary_high_k": 800,
+    "salary_mid_k": 500,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风险管理",
+    "position": "市场风险经理/总监",
+    "salary_low_k": 350,
+    "salary_high_k": 1000,
+    "salary_mid_k": 675,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "运营",
+    "position": "运营经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "运营",
+    "position": "运营总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "运营",
+    "position": "首席运营官",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务经理",
+    "salary_low_k": 350,
+    "salary_high_k": 800,
+    "salary_mid_k": 575,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "首席财务官",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "审计",
+    "position": "审计经理",
+    "salary_low_k": 350,
+    "salary_high_k": 800,
+    "salary_mid_k": 575,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "审计",
+    "position": "审计负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "合规",
+    "position": "合规经理",
+    "salary_low_k": 350,
+    "salary_high_k": 800,
+    "salary_mid_k": 575,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "合规",
+    "position": "合规总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 5
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "一级市场",
+    "position": "投资分析师",
+    "salary_low_k": 250,
+    "salary_high_k": 500,
+    "salary_mid_k": 375,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "一级市场",
+    "position": "投资经理",
+    "salary_low_k": 300,
+    "salary_high_k": 800,
+    "salary_mid_k": 550,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "一级市场",
+    "position": "投资副总裁",
+    "salary_low_k": 420,
+    "salary_high_k": 1000,
+    "salary_mid_k": 710,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "一级市场",
+    "position": "投资总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1300,
+    "salary_mid_k": 950,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "一级市场",
+    "position": "董事总经理",
+    "salary_low_k": 800,
+    "salary_high_k": 2500,
+    "salary_mid_k": 1650,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资者关系",
+    "position": "投资者关系经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资者关系",
+    "position": "投资者关系副总裁/总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资者关系",
+    "position": "投资者关系负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风控及投后管理",
+    "position": "风控及投后管理经理/高级经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风控及投后管理",
+    "position": "风控及投后管理副总裁/总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "分公司总经理",
+    "salary_low_k": 700,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1000,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "个险渠道总",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "银保渠道总",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "团险渠道总",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "网络电销渠道总",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "培训经理",
+    "salary_low_k": 250,
+    "salary_high_k": 550,
+    "salary_mid_k": 400,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "培训总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "产品经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "产品总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "战略总监",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "运营经理",
+    "salary_low_k": 250,
+    "salary_high_k": 600,
+    "salary_mid_k": 425,
+    "page": 6
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "运营总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "首席运营官",
+    "salary_low_k": 1000,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1250,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "理赔经理",
+    "salary_low_k": 250,
+    "salary_high_k": 500,
+    "salary_mid_k": 375,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "理赔总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "核保经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "核保总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "首席核保师",
+    "salary_low_k": 900,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1050,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "精算经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "精算总监",
+    "salary_low_k": 650,
+    "salary_high_k": 1000,
+    "salary_mid_k": 825,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "总精算师",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "财务经理",
+    "salary_low_k": 350,
+    "salary_high_k": 650,
+    "salary_mid_k": 500,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "财务总监",
+    "salary_low_k": 650,
+    "salary_high_k": 1000,
+    "salary_mid_k": 825,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "财务负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1400,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "风控经理",
+    "salary_low_k": 400,
+    "salary_high_k": 700,
+    "salary_mid_k": 550,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "合规经理",
+    "salary_low_k": 900,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1100,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "首席风控官",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "首席合规官",
+    "salary_low_k": 250,
+    "salary_high_k": 600,
+    "salary_mid_k": 425,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "审计经理",
+    "salary_low_k": 550,
+    "salary_high_k": 900,
+    "salary_mid_k": 725,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "审计总监",
+    "salary_low_k": 550,
+    "salary_high_k": 900,
+    "salary_mid_k": 725,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "保险",
+    "position": "审计责任人",
+    "salary_low_k": 800,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1050,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "二级市场",
+    "position": "机构销售经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "二级市场",
+    "position": "机构销售总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "基金管理与交易",
+    "position": "基金经理",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "基金管理与交易",
+    "position": "交易员",
+    "salary_low_k": 250,
+    "salary_high_k": 600,
+    "salary_mid_k": 425,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "研究员",
+    "position": "研究分析师",
+    "salary_low_k": 300,
+    "salary_high_k": 800,
+    "salary_mid_k": 550,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "研究员",
+    "position": "首席研究员",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "风险管理",
+    "position": "风控经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 7
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "财务总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务",
+    "position": "首席财务官",
+    "salary_low_k": 1000,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1250,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "运营",
+    "position": "运营经理",
+    "salary_low_k": 350,
+    "salary_high_k": 700,
+    "salary_mid_k": 525,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "运营",
+    "position": "运营总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "合规",
+    "position": "合规经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "合规",
+    "position": "合规总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "财务顾问",
+    "position": "项目经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资银行",
+    "position": "副总裁",
+    "salary_low_k": 500,
+    "salary_high_k": 1200,
+    "salary_mid_k": 850,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资银行",
+    "position": "执行总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1050,
+    "page": 8
+  },
+  {
+    "industry": "银行与金融服务",
+    "section": "投资银行",
+    "position": "董事总经理",
+    "salary_low_k": 1500,
+    "salary_high_k": 2500,
+    "salary_mid_k": 2000,
+    "page": 8
+  },
+  {
+    "industry": "工程与制造",
+    "section": "自动化、机电一体化、机器人",
+    "position": "自动化经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "持续改进经理",
+    "salary_low_k": 350,
+    "salary_high_k": 500,
+    "salary_mid_k": 425,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "副总经理",
+    "salary_low_k": 600,
+    "salary_high_k": 900,
+    "salary_mid_k": 750,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "工程经理",
+    "salary_low_k": 400,
+    "salary_high_k": 700,
+    "salary_mid_k": 550,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "工程总监",
+    "salary_low_k": 750,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1025,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "工程项目经理",
+    "salary_low_k": 310,
+    "salary_high_k": 570,
+    "salary_mid_k": 440,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "工业工程经理",
+    "salary_low_k": 370,
+    "salary_high_k": 550,
+    "salary_mid_k": 460,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "工程",
+    "position": "工业工程总监",
+    "salary_low_k": 490,
+    "salary_high_k": 750,
+    "salary_mid_k": 620,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "环境、健康与安全 (EHS)",
+    "position": "健康与安全经理",
+    "salary_low_k": 350,
+    "salary_high_k": 530,
+    "salary_mid_k": 440,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "环境、健康与安全 (EHS)",
+    "position": "健康与安全总监",
+    "salary_low_k": 600,
+    "salary_high_k": 950,
+    "salary_mid_k": 775,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "现场服务与维护",
+    "position": "维护经理",
+    "salary_low_k": 300,
+    "salary_high_k": 460,
+    "salary_mid_k": 380,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "制造经理",
+    "salary_low_k": 400,
+    "salary_high_k": 700,
+    "salary_mid_k": 550,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "运营总监",
+    "salary_low_k": 850,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1175,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "厂长",
+    "salary_low_k": 600,
+    "salary_high_k": 1300,
+    "salary_mid_k": 950,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "工厂总经理",
+    "salary_low_k": 870,
+    "salary_high_k": 1900,
+    "salary_mid_k": 1385,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "生产经理",
+    "salary_low_k": 300,
+    "salary_high_k": 530,
+    "salary_mid_k": 415,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "生产，制造与运营",
+    "position": "生产主管",
+    "salary_low_k": 250,
+    "salary_high_k": 410,
+    "salary_mid_k": 330,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "质量",
+    "position": "质量经理",
+    "salary_low_k": 350,
+    "salary_high_k": 570,
+    "salary_mid_k": 460,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "质量",
+    "position": "质量总监",
+    "salary_low_k": 620,
+    "salary_high_k": 1200,
+    "salary_mid_k": 910,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "研发工程师",
+    "salary_low_k": 300,
+    "salary_high_k": 400,
+    "salary_mid_k": 350,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "研发经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 10
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "研发总监",
+    "salary_low_k": 730,
+    "salary_high_k": 1700,
+    "salary_mid_k": 1215,
+    "page": 11
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "包装经理",
+    "salary_low_k": 270,
+    "salary_high_k": 450,
+    "salary_mid_k": 360,
+    "page": 11
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "包装总监",
+    "salary_low_k": 550,
+    "salary_high_k": 1000,
+    "salary_mid_k": 775,
+    "page": 11
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "法规经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 11
+  },
+  {
+    "industry": "工程与制造",
+    "section": "研发 (R&D)",
+    "position": "法规总监",
+    "salary_low_k": 850,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1025,
+    "page": 11
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "会计",
+    "salary_low_k": 100,
+    "salary_high_k": 200,
+    "salary_mid_k": 150,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "高级会计师",
+    "salary_low_k": 200,
+    "salary_high_k": 320,
+    "salary_mid_k": 260,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "应付账款会计",
+    "salary_low_k": 150,
+    "salary_high_k": 280,
+    "salary_mid_k": 215,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "应付账款经理",
+    "salary_low_k": 270,
+    "salary_high_k": 420,
+    "salary_mid_k": 345,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "应收账款会计",
+    "salary_low_k": 150,
+    "salary_high_k": 280,
+    "salary_mid_k": 215,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "应收账款经理",
+    "salary_low_k": 270,
+    "salary_high_k": 400,
+    "salary_mid_k": 335,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "会计经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "会计总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "审计员",
+    "salary_low_k": 300,
+    "salary_high_k": 340,
+    "salary_mid_k": 320,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "审计经理",
+    "salary_low_k": 350,
+    "salary_high_k": 450,
+    "salary_mid_k": 400,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "业务管控主管",
+    "salary_low_k": 380,
+    "salary_high_k": 520,
+    "salary_mid_k": 450,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务控制",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "集团财务控制",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "高级内部审计员",
+    "salary_low_k": 350,
+    "salary_high_k": 390,
+    "salary_mid_k": 370,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "内部审计经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "内部审计总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "内部控制分析师",
+    "salary_low_k": 350,
+    "salary_high_k": 480,
+    "salary_mid_k": 415,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "工厂财务负责人",
+    "salary_low_k": 360,
+    "salary_high_k": 620,
+    "salary_mid_k": 490,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务分析师",
+    "salary_low_k": 250,
+    "salary_high_k": 400,
+    "salary_mid_k": 325,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "高级财务分析师",
+    "salary_low_k": 350,
+    "salary_high_k": 500,
+    "salary_mid_k": 425,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务分析经理",
+    "salary_low_k": 350,
+    "salary_high_k": 490,
+    "salary_mid_k": 420,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务分析负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "定价分析师",
+    "salary_low_k": 290,
+    "salary_high_k": 440,
+    "salary_mid_k": 365,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "投资者关系经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "投资者关系负责人",
+    "salary_low_k": 500,
+    "salary_high_k": 1200,
+    "salary_mid_k": 850,
+    "page": 13
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务业务伙伴",
+    "salary_low_k": 370,
+    "salary_high_k": 500,
+    "salary_mid_k": 435,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "业务财务总监",
+    "salary_low_k": 900,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1050,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务经理",
+    "salary_low_k": 360,
+    "salary_high_k": 510,
+    "salary_mid_k": 435,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1050,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "首席财务官",
+    "salary_low_k": 1500,
+    "salary_high_k": 4000,
+    "salary_mid_k": 2750,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务项目经理",
+    "salary_low_k": 400,
+    "salary_high_k": 540,
+    "salary_mid_k": 470,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "财务报表经理",
+    "salary_low_k": 350,
+    "salary_high_k": 550,
+    "salary_mid_k": 450,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "工厂财务负责人",
+    "salary_low_k": 450,
+    "salary_high_k": 1000,
+    "salary_mid_k": 725,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "高级税务专员",
+    "salary_low_k": 250,
+    "salary_high_k": 430,
+    "salary_mid_k": 340,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "税务分析师",
+    "salary_low_k": 290,
+    "salary_high_k": 400,
+    "salary_mid_k": 345,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "公司税务经理",
+    "salary_low_k": 440,
+    "salary_high_k": 580,
+    "salary_mid_k": 510,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "税务负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1300,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "转让定价经理",
+    "salary_low_k": 400,
+    "salary_high_k": 530,
+    "salary_mid_k": 465,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "资金分析师",
+    "salary_low_k": 330,
+    "salary_high_k": 490,
+    "salary_mid_k": 410,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "资金经理",
+    "salary_low_k": 380,
+    "salary_high_k": 540,
+    "salary_mid_k": 460,
+    "page": 14
+  },
+  {
+    "industry": "财务与会计",
+    "section": "研发 (R&D)",
+    "position": "资金负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 14
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "药物发现总监",
+    "salary_low_k": 600,
+    "salary_high_k": 900,
+    "salary_mid_k": 750,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "生物总监",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "药物化学总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "制剂总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "药理总监",
+    "salary_low_k": 550,
+    "salary_high_k": 800,
+    "salary_mid_k": 675,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "药代动力学总监",
+    "salary_low_k": 600,
+    "salary_high_k": 900,
+    "salary_mid_k": 750,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "毒理总监",
+    "salary_low_k": 650,
+    "salary_high_k": 1100,
+    "salary_mid_k": 875,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药与生物科技",
+    "position": "高级科学家",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "临床开发副总裁",
+    "salary_low_k": 1200,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1500,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "临床开发总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "临床运营副总裁",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "临床运营总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "医学事务总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "生物统计总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1100,
+    "salary_mid_k": 950,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "首席生物统计师",
+    "salary_low_k": 600,
+    "salary_high_k": 900,
+    "salary_mid_k": 750,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "临床研发与医药",
+    "position": "数据管理副总监/总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "法规事务 (RA)与质量",
+    "position": "法规事务副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "法规事务 (RA)与质量",
+    "position": "法规事务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药",
+    "position": "CMC高级总监",
+    "salary_low_k": 750,
+    "salary_high_k": 1250,
+    "salary_mid_k": 1000,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药",
+    "position": "工艺开发副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 1650,
+    "salary_mid_k": 1325,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药",
+    "position": "质量副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 1650,
+    "salary_mid_k": 1325,
+    "page": 16
+  },
+  {
+    "industry": "科技",
+    "section": "制药",
+    "position": "生产制造负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 16
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "企业传播总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1000,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "政府事务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1300,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "HEOR/RWE 总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "市场准入总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "业务发展总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "联盟管理总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1100,
+    "salary_mid_k": 850,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "企业传播",
+    "position": "产品组合管理总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1100,
+    "salary_mid_k": 850,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "国际销售经理",
+    "salary_low_k": 400,
+    "salary_high_k": 650,
+    "salary_mid_k": 525,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "国际销售总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "国际市场经理",
+    "salary_low_k": 350,
+    "salary_high_k": 550,
+    "salary_mid_k": 450,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "国际市场总监",
+    "salary_low_k": 550,
+    "salary_high_k": 800,
+    "salary_mid_k": 675,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "商务拓展经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "商务拓展总监",
+    "salary_low_k": 750,
+    "salary_high_k": 1200,
+    "salary_mid_k": 975,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "商务拓展副总裁",
+    "salary_low_k": 1200,
+    "salary_high_k": 2200,
+    "salary_mid_k": 1700,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "营销副总监/总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "战略规划经理",
+    "salary_low_k": 450,
+    "salary_high_k": 850,
+    "salary_mid_k": 650,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "市场营销",
+    "position": "新产品规划总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1250,
+    "salary_mid_k": 925,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "直接采购总监",
+    "salary_low_k": 750,
+    "salary_high_k": 900,
+    "salary_mid_k": 825,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "间接采购总监",
+    "salary_low_k": 700,
+    "salary_high_k": 900,
+    "salary_mid_k": 800,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应链总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "研发副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1100,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "研发总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "首席科学家",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "研发经理",
+    "salary_low_k": 350,
+    "salary_high_k": 550,
+    "salary_mid_k": 450,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "研发工程师",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "项目管理总监",
+    "salary_low_k": 550,
+    "salary_high_k": 900,
+    "salary_mid_k": 725,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "项目管理经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 17
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "医疗设备",
+    "position": "生物信息学科学家",
+    "salary_low_k": 300,
+    "salary_high_k": 550,
+    "salary_mid_k": 425,
+    "page": 17
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "法规事务 (RA)与质量",
+    "position": "法规事务经理",
+    "salary_low_k": 450,
+    "salary_high_k": 560,
+    "salary_mid_k": 505,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "法规事务 (RA)与质量",
+    "position": "法规事务总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "运营总监",
+    "salary_low_k": 500,
+    "salary_high_k": 1200,
+    "salary_mid_k": 850,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "制造经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "制造总监",
+    "salary_low_k": 500,
+    "salary_high_k": 1200,
+    "salary_mid_k": 850,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "质量经理",
+    "salary_low_k": 300,
+    "salary_high_k": 700,
+    "salary_mid_k": 500,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "质量总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "运营与生产",
+    "position": "设施/流程/工业经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "企业传播总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1000,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "政府事务高级经理",
+    "salary_low_k": 700,
+    "salary_high_k": 900,
+    "salary_mid_k": 800,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "市场准入高级经理",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "政府事务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "HEOR/RWE 总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "市场准入总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "业务发展总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "企业传播",
+    "position": "产品组合管理总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1100,
+    "salary_mid_k": 850,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "临床开发副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1250,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "临床开发总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "临床运营副总裁",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "临床运营总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "医学事务总监",
+    "salary_low_k": 750,
+    "salary_high_k": 1100,
+    "salary_mid_k": 925,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "医学事务副总裁",
+    "salary_low_k": 1000,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1400,
+    "page": 18
+  },
+  {
+    "industry": "医疗与生命科学",
+    "section": "临床运营与医学事务",
+    "position": "数据管理副总监/总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 18
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源主管",
+    "salary_low_k": 320,
+    "salary_high_k": 470,
+    "salary_mid_k": 395,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源助理",
+    "salary_low_k": 150,
+    "salary_high_k": 330,
+    "salary_mid_k": 240,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源顾问",
+    "salary_low_k": 270,
+    "salary_high_k": 480,
+    "salary_mid_k": 375,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源经理",
+    "salary_low_k": 400,
+    "salary_high_k": 550,
+    "salary_mid_k": 475,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "高级人力资源经理",
+    "salary_low_k": 450,
+    "salary_high_k": 660,
+    "salary_mid_k": 555,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "流程优化负责人",
+    "salary_low_k": 560,
+    "salary_high_k": 940,
+    "salary_mid_k": 750,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源合作伙伴",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源业务伙伴经理",
+    "salary_low_k": 400,
+    "salary_high_k": 720,
+    "salary_mid_k": 560,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "全球业务人力资源业务伙伴",
+    "salary_low_k": 700,
+    "salary_high_k": 1080,
+    "salary_mid_k": 890,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "人力资源业务伙伴总监",
+    "salary_low_k": 720,
+    "salary_high_k": 1200,
+    "salary_mid_k": 960,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "员工关系经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "员工关系总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "企业文化总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "培训经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "培训总监",
+    "salary_low_k": 450,
+    "salary_high_k": 650,
+    "salary_mid_k": 550,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "员工发展经理",
+    "salary_low_k": 480,
+    "salary_high_k": 720,
+    "salary_mid_k": 600,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "员工发展总监",
+    "salary_low_k": 720,
+    "salary_high_k": 1200,
+    "salary_mid_k": 960,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "薪酬经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "薪酬福利分析师",
+    "salary_low_k": 270,
+    "salary_high_k": 430,
+    "salary_mid_k": 350,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "薪酬福利经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 20
+  },
+  {
+    "industry": "人力资源与行政助理",
+    "section": "临床运营与医学事务",
+    "position": "薪酬绩效总监",
+    "salary_low_k": 720,
+    "salary_high_k": 1200,
+    "salary_mid_k": 960,
+    "page": 20
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "招聘专员",
+    "salary_low_k": 200,
+    "salary_high_k": 350,
+    "salary_mid_k": 275,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "招聘经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "招聘总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "组织发展经理",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "组织发展总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "行政经理",
+    "salary_low_k": 300,
+    "salary_high_k": 650,
+    "salary_mid_k": 475,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "秘书",
+    "salary_low_k": 180,
+    "salary_high_k": 300,
+    "salary_mid_k": 240,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "法务秘书",
+    "salary_low_k": 200,
+    "salary_high_k": 400,
+    "salary_mid_k": 300,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "执行助理",
+    "salary_low_k": 400,
+    "salary_high_k": 1000,
+    "salary_mid_k": 700,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "总裁办主任",
+    "salary_low_k": 400,
+    "salary_high_k": 1000,
+    "salary_mid_k": 700,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "业务助理/董事长特助",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "临床运营与医学事务",
+    "position": "翻译（笔译&口译）",
+    "salary_low_k": 210,
+    "salary_high_k": 550,
+    "salary_mid_k": 380,
+    "page": 21
+  },
+  {
+    "industry": "法务",
+    "section": "企业内部法务",
+    "position": "新手 - 3年工作经验",
+    "salary_low_k": 120,
+    "salary_high_k": 250,
+    "salary_mid_k": 185,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "企业内部法务",
+    "position": "法务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "企业内部法务",
+    "position": "总法律顾问",
+    "salary_low_k": 1500,
+    "salary_high_k": 3500,
+    "salary_mid_k": 2500,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "金融机构法务",
+    "position": "新手 - 3年工作经验",
+    "salary_low_k": 200,
+    "salary_high_k": 300,
+    "salary_mid_k": 250,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "金融机构法务",
+    "position": "法务总监",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "金融机构法务",
+    "position": "总法律顾问",
+    "salary_low_k": 1800,
+    "salary_high_k": 3500,
+    "salary_mid_k": 2650,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "知识产权 (IP)",
+    "position": "知识产权经理",
+    "salary_low_k": 450,
+    "salary_high_k": 700,
+    "salary_mid_k": 575,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "知识产权 (IP)",
+    "position": "知识产权总监",
+    "salary_low_k": 750,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1125,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "合规",
+    "position": "合规经理",
+    "salary_low_k": 350,
+    "salary_high_k": 800,
+    "salary_mid_k": 575,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "合规",
+    "position": "合规总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 23
+  },
+  {
+    "industry": "法务",
+    "section": "合规",
+    "position": "首席合规官",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 23
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销经理",
+    "salary_low_k": 370,
+    "salary_high_k": 500,
+    "salary_mid_k": 435,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "营销负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "渠道经理",
+    "salary_low_k": 400,
+    "salary_high_k": 500,
+    "salary_mid_k": 450,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "渠道推广总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播总监",
+    "salary_low_k": 900,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1200,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销总监",
+    "salary_low_k": 900,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1200,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "营销负责人",
+    "salary_low_k": 900,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1050,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "传播总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销经理",
+    "salary_low_k": 450,
+    "salary_high_k": 600,
+    "salary_mid_k": 525,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "市场营销总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "营销负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "产品经理",
+    "salary_low_k": 500,
+    "salary_high_k": 600,
+    "salary_mid_k": 550,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "高级产品经理",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "产品总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "产品经理",
+    "salary_low_k": 500,
+    "salary_high_k": 600,
+    "salary_mid_k": 550,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "高级产品经理",
+    "salary_low_k": 600,
+    "salary_high_k": 700,
+    "salary_mid_k": 650,
+    "page": 26
+  },
+  {
+    "industry": "科技",
+    "section": "合规",
+    "position": "产品总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 26
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "客户经理",
+    "salary_low_k": 250,
+    "salary_high_k": 400,
+    "salary_mid_k": 325,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "客户总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "品牌经理",
+    "salary_low_k": 350,
+    "salary_high_k": 450,
+    "salary_mid_k": 400,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "品牌高级经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "品牌总监/负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1050,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "数字内容文案",
+    "salary_low_k": 250,
+    "salary_high_k": 350,
+    "salary_mid_k": 300,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "设计经理",
+    "salary_low_k": 350,
+    "salary_high_k": 500,
+    "salary_mid_k": 425,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "UI/UX 经理",
+    "salary_low_k": 350,
+    "salary_high_k": 500,
+    "salary_mid_k": 425,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "内容/创意经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "内容/创意总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "CRM 经理",
+    "salary_low_k": 450,
+    "salary_high_k": 600,
+    "salary_mid_k": 525,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "CRM 总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "数字营销经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "高级数字营销经理",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "数字营销总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "活动经理",
+    "salary_low_k": 450,
+    "salary_high_k": 600,
+    "salary_mid_k": 525,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "活动总监",
+    "salary_low_k": 700,
+    "salary_high_k": 900,
+    "salary_mid_k": 800,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "公关经理",
+    "salary_low_k": 400,
+    "salary_high_k": 500,
+    "salary_mid_k": 450,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "公关总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "政府关系经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "政府关系总监",
+    "salary_low_k": 900,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1050,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "对外事务经理",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "对外事务总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "市场洞察经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "市场洞察总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 27
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "战略经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "合规",
+    "position": "战略总监",
+    "salary_low_k": 1500,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1750,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商总监",
+    "salary_low_k": 600,
+    "salary_high_k": 840,
+    "salary_mid_k": 720,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商经理（非阿里）",
+    "salary_low_k": 300,
+    "salary_high_k": 400,
+    "salary_mid_k": 350,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商总监（非阿里）",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商经理（私域）",
+    "salary_low_k": 200,
+    "salary_high_k": 400,
+    "salary_mid_k": 300,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商总监（私域）",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商营销经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商营销总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商销售经理",
+    "salary_low_k": 300,
+    "salary_high_k": 400,
+    "salary_mid_k": 350,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "国内电商销售总监",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "电商业务总裁",
+    "salary_low_k": 1200,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1350,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "抖音经理",
+    "salary_low_k": 400,
+    "salary_high_k": 700,
+    "salary_mid_k": 550,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "抖音总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "直播经理",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "直播总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "跨境电商运营经理（第三方平台）",
+    "salary_low_k": 240,
+    "salary_high_k": 360,
+    "salary_mid_k": 300,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "跨境电商运营经理 （第三方平台）",
+    "salary_low_k": 480,
+    "salary_high_k": 720,
+    "salary_mid_k": 600,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "跨境电商运营总监 （独立站）",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "跨境电商运营总监 （独立站）",
+    "salary_low_k": 540,
+    "salary_high_k": 960,
+    "salary_mid_k": 750,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "出海Tiktok渠道经理",
+    "salary_low_k": 200,
+    "salary_high_k": 400,
+    "salary_mid_k": 300,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "电子商务",
+    "position": "出海Tiktok渠道总监",
+    "salary_low_k": 500,
+    "salary_high_k": 700,
+    "salary_mid_k": 600,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "搜索引擎优化 (SEO)",
+    "position": "搜索引擎优化主管",
+    "salary_low_k": 220,
+    "salary_high_k": 370,
+    "salary_mid_k": 295,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "搜索引擎优化 (SEO)",
+    "position": "搜索引擎优化经理",
+    "salary_low_k": 320,
+    "salary_high_k": 400,
+    "salary_mid_k": 360,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "社交媒体",
+    "position": "社交媒体主管",
+    "salary_low_k": 180,
+    "salary_high_k": 280,
+    "salary_mid_k": 230,
+    "page": 28
+  },
+  {
+    "industry": "市场营销与电商",
+    "section": "社交媒体",
+    "position": "社交媒体经理",
+    "salary_low_k": 230,
+    "salary_high_k": 300,
+    "salary_mid_k": 265,
+    "page": 28
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "客户经理",
+    "salary_low_k": 320,
+    "salary_high_k": 430,
+    "salary_mid_k": 375,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "高级客户经理",
+    "salary_low_k": 240,
+    "salary_high_k": 500,
+    "salary_mid_k": 370,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "大客户经理",
+    "salary_low_k": 240,
+    "salary_high_k": 440,
+    "salary_mid_k": 340,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "高级大客户经理",
+    "salary_low_k": 350,
+    "salary_high_k": 500,
+    "salary_mid_k": 425,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "业务拓展经理",
+    "salary_low_k": 400,
+    "salary_high_k": 590,
+    "salary_mid_k": 495,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "高级业务发展经理",
+    "salary_low_k": 450,
+    "salary_high_k": 610,
+    "salary_mid_k": 530,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "业务拓展总监",
+    "salary_low_k": 520,
+    "salary_high_k": 800,
+    "salary_mid_k": 660,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "商务经理",
+    "salary_low_k": 330,
+    "salary_high_k": 540,
+    "salary_mid_k": 435,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "客户成功经理",
+    "salary_low_k": 340,
+    "salary_high_k": 450,
+    "salary_mid_k": 395,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "销售经理",
+    "salary_low_k": 370,
+    "salary_high_k": 550,
+    "salary_mid_k": 460,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "销售总监",
+    "salary_low_k": 500,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1250,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "总经理/销售副总裁",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "大客户/销售/业务拓展经理",
+    "salary_low_k": 240,
+    "salary_high_k": 480,
+    "salary_mid_k": 360,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "高级大客户/销售/业务拓展经理",
+    "salary_low_k": 360,
+    "salary_high_k": 700,
+    "salary_mid_k": 530,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "客户成功经理",
+    "salary_low_k": 240,
+    "salary_high_k": 600,
+    "salary_mid_k": 420,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "大客户/销售/业务拓展总监",
+    "salary_low_k": 600,
+    "salary_high_k": 800,
+    "salary_mid_k": 700,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "销售副总裁/总经理/国家/区域负责人",
+    "salary_low_k": 720,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1110,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "全国总经理",
+    "salary_low_k": 1000,
+    "salary_high_k": 3500,
+    "salary_mid_k": 2250,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "销售总经理",
+    "salary_low_k": 1000,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1500,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "销售总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "渠道销售总监",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "渠道销售经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "区域销售经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "大客户经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "高级大客户经理",
+    "salary_low_k": 400,
+    "salary_high_k": 800,
+    "salary_mid_k": 600,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "区域经理",
+    "salary_low_k": 300,
+    "salary_high_k": 420,
+    "salary_mid_k": 360,
+    "page": 31
+  },
+  {
+    "industry": "科技",
+    "section": "社交媒体",
+    "position": "部门经理",
+    "salary_low_k": 210,
+    "salary_high_k": 400,
+    "salary_mid_k": 305,
+    "page": 31
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "商品采购员",
+    "salary_low_k": 200,
+    "salary_high_k": 350,
+    "salary_mid_k": 275,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "零售品类经理",
+    "salary_low_k": 360,
+    "salary_high_k": 480,
+    "salary_mid_k": 420,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "零售运营总监",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "零售总经理",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "店铺经理",
+    "salary_low_k": 200,
+    "salary_high_k": 500,
+    "salary_mid_k": 350,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "门店拓展经理",
+    "salary_low_k": 400,
+    "salary_high_k": 800,
+    "salary_mid_k": 600,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "门店拓展总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1000,
+    "salary_mid_k": 900,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "培训经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 32
+  },
+  {
+    "industry": "销售与零售",
+    "section": "社交媒体",
+    "position": "培训总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1000,
+    "salary_mid_k": 850,
+    "page": 32
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购经理",
+    "salary_low_k": 330,
+    "salary_high_k": 540,
+    "salary_mid_k": 435,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "品类采购员",
+    "salary_low_k": 310,
+    "salary_high_k": 450,
+    "salary_mid_k": 380,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "直接采购员",
+    "salary_low_k": 230,
+    "salary_high_k": 430,
+    "salary_mid_k": 330,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "间接采购员",
+    "salary_low_k": 260,
+    "salary_high_k": 420,
+    "salary_mid_k": 340,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "合同经理",
+    "salary_low_k": 350,
+    "salary_high_k": 450,
+    "salary_mid_k": 400,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "需求规划员",
+    "salary_low_k": 300,
+    "salary_high_k": 420,
+    "salary_mid_k": 360,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "高级需求计划员",
+    "salary_low_k": 350,
+    "salary_high_k": 460,
+    "salary_mid_k": 405,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应规划员",
+    "salary_low_k": 310,
+    "salary_high_k": 410,
+    "salary_mid_k": 360,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "库存经理",
+    "salary_low_k": 300,
+    "salary_high_k": 470,
+    "salary_mid_k": 385,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "订单专员",
+    "salary_low_k": 200,
+    "salary_high_k": 300,
+    "salary_mid_k": 250,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购专员",
+    "salary_low_k": 280,
+    "salary_high_k": 400,
+    "salary_mid_k": 340,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购分析师",
+    "salary_low_k": 310,
+    "salary_high_k": 350,
+    "salary_mid_k": 330,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购经理",
+    "salary_low_k": 370,
+    "salary_high_k": 650,
+    "salary_mid_k": 510,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1150,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "采购业务伙伴",
+    "salary_low_k": 550,
+    "salary_high_k": 1100,
+    "salary_mid_k": 825,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "生产计划员",
+    "salary_low_k": 270,
+    "salary_high_k": 400,
+    "salary_mid_k": 335,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "S&OP经理",
+    "salary_low_k": 370,
+    "salary_high_k": 580,
+    "salary_mid_k": 475,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "寻源采购经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应商经理",
+    "salary_low_k": 380,
+    "salary_high_k": 550,
+    "salary_mid_k": 465,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应链协调员",
+    "salary_low_k": 250,
+    "salary_high_k": 420,
+    "salary_mid_k": 335,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应链分析师",
+    "salary_low_k": 310,
+    "salary_high_k": 430,
+    "salary_mid_k": 370,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应链经理",
+    "salary_low_k": 380,
+    "salary_high_k": 580,
+    "salary_mid_k": 480,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购与供应链",
+    "position": "供应链总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "海运/空运经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "海运总监",
+    "salary_low_k": 550,
+    "salary_high_k": 900,
+    "salary_mid_k": 725,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "空运总监",
+    "salary_low_k": 650,
+    "salary_high_k": 1100,
+    "salary_mid_k": 875,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "航线经理",
+    "salary_low_k": 370,
+    "salary_high_k": 780,
+    "salary_mid_k": 575,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "报价经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "客服经理",
+    "salary_low_k": 350,
+    "salary_high_k": 550,
+    "salary_mid_k": 450,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "客服总监",
+    "salary_low_k": 550,
+    "salary_high_k": 1000,
+    "salary_mid_k": 775,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "货代总经理",
+    "salary_low_k": 900,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1350,
+    "page": 34
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "物流跨境电商总监/副总裁",
+    "salary_low_k": 1100,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1550,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "运输经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "运输总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "仓储经理",
+    "salary_low_k": 300,
+    "salary_high_k": 470,
+    "salary_mid_k": 385,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "仓储总监",
+    "salary_low_k": 550,
+    "salary_high_k": 900,
+    "salary_mid_k": 725,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "方案总监",
+    "salary_low_k": 550,
+    "salary_high_k": 800,
+    "salary_mid_k": 675,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "物流",
+    "position": "合同物流总经理",
+    "salary_low_k": 750,
+    "salary_high_k": 1000,
+    "salary_mid_k": 875,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "采购经理",
+    "salary_low_k": 330,
+    "salary_high_k": 600,
+    "salary_mid_k": 465,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "采购总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "质量经理",
+    "salary_low_k": 450,
+    "salary_high_k": 650,
+    "salary_mid_k": 550,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "质量总监",
+    "salary_low_k": 650,
+    "salary_high_k": 1000,
+    "salary_mid_k": 825,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "项目采购经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "采购办公室",
+    "position": "可持续发展项目采购经理",
+    "salary_low_k": 550,
+    "salary_high_k": 800,
+    "salary_mid_k": 675,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "贸易和海关",
+    "position": "贸易合规经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "贸易和海关",
+    "position": "贸易合规总监",
+    "salary_low_k": 600,
+    "salary_high_k": 900,
+    "salary_mid_k": 750,
+    "page": 35
+  },
+  {
+    "industry": "采购与供应链",
+    "section": "贸易和海关",
+    "position": "进口/出口经理",
+    "salary_low_k": 220,
+    "salary_high_k": 500,
+    "salary_mid_k": 360,
+    "page": 35
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "算法工程师",
+    "salary_low_k": 400,
+    "salary_high_k": 1500,
+    "salary_mid_k": 950,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "AI 产品经理",
+    "salary_low_k": 300,
+    "salary_high_k": 800,
+    "salary_mid_k": 550,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "AI负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1400,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "商业智能经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "业务分析师",
+    "salary_low_k": 280,
+    "salary_high_k": 450,
+    "salary_mid_k": 365,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "商业分析经理",
+    "salary_low_k": 380,
+    "salary_high_k": 700,
+    "salary_mid_k": 540,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "数据分析师/ 工程师",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "数据科学家",
+    "salary_low_k": 400,
+    "salary_high_k": 800,
+    "salary_mid_k": 600,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "高级数据科学家",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "数据架构师",
+    "salary_low_k": 500,
+    "salary_high_k": 1000,
+    "salary_mid_k": 750,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "数据经理",
+    "salary_low_k": 450,
+    "salary_high_k": 700,
+    "salary_mid_k": 575,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "数据与人工智能 (AI)",
+    "position": "数据总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "企业资源规划 (ERP)",
+    "position": "ERP 顾问",
+    "salary_low_k": 250,
+    "salary_high_k": 400,
+    "salary_mid_k": 325,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "企业资源规划 (ERP)",
+    "position": "ERP 顾问经理",
+    "salary_low_k": 400,
+    "salary_high_k": 650,
+    "salary_mid_k": 525,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "企业资源规划 (ERP)",
+    "position": "信息技术应用经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "后端程序员",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "前端程序员",
+    "salary_low_k": 300,
+    "salary_high_k": 450,
+    "salary_mid_k": 375,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "全栈程序员",
+    "salary_low_k": 350,
+    "salary_high_k": 650,
+    "salary_mid_k": 500,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "高级软件工程师",
+    "salary_low_k": 450,
+    "salary_high_k": 650,
+    "salary_mid_k": 550,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "软件开发经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "软件架构师",
+    "salary_low_k": 550,
+    "salary_high_k": 800,
+    "salary_mid_k": 675,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 开发与架构",
+    "position": "软件研发总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1300,
+    "salary_mid_k": 950,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "IT 项目经理",
+    "salary_low_k": 350,
+    "salary_high_k": 600,
+    "salary_mid_k": 475,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "IT项目总监",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "解决方案架构师",
+    "salary_low_k": 450,
+    "salary_high_k": 800,
+    "salary_mid_k": 625,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "企业架构师",
+    "salary_low_k": 600,
+    "salary_high_k": 960,
+    "salary_mid_k": 780,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "IT 经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 37
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "IT 高级经理",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "IT 总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "数字化技术总监",
+    "salary_low_k": 800,
+    "salary_high_k": 1600,
+    "salary_mid_k": 1200,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "数字化转型负责人",
+    "salary_low_k": 1000,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1400,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "产品经理",
+    "salary_low_k": 300,
+    "salary_high_k": 600,
+    "salary_mid_k": 450,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "IT 管理与架构",
+    "position": "产品负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "信息安全",
+    "position": "信息安全专员",
+    "salary_low_k": 200,
+    "salary_high_k": 300,
+    "salary_mid_k": 250,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "信息安全",
+    "position": "信息安全经理",
+    "salary_low_k": 300,
+    "salary_high_k": 500,
+    "salary_mid_k": 400,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "信息安全",
+    "position": "信息安全高级经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "信息安全",
+    "position": "信息安全总监",
+    "salary_low_k": 700,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1100,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "信息安全",
+    "position": "数据隐私官",
+    "salary_low_k": 600,
+    "salary_high_k": 1500,
+    "salary_mid_k": 1050,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "基础设施与运营",
+    "position": "网络工程师",
+    "salary_low_k": 200,
+    "salary_high_k": 550,
+    "salary_mid_k": 375,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "基础设施与运营",
+    "position": "云计算工程师",
+    "salary_low_k": 500,
+    "salary_high_k": 800,
+    "salary_mid_k": 650,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "基础设施与运营",
+    "position": "基础设施架构师",
+    "salary_low_k": 420,
+    "salary_high_k": 700,
+    "salary_mid_k": 560,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "基础设施与运营",
+    "position": "基础设施经理",
+    "salary_low_k": 400,
+    "salary_high_k": 600,
+    "salary_mid_k": 500,
+    "page": 38
+  },
+  {
+    "industry": "科技",
+    "section": "基础设施与运营",
+    "position": "基础设施总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1000,
+    "salary_mid_k": 800,
+    "page": 38
+  },
+  {
+    "industry": "半导体",
+    "section": "管理层",
+    "position": "首席技术官",
+    "salary_low_k": 1500,
+    "salary_high_k": 2800,
+    "salary_mid_k": 2150,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "管理层",
+    "position": "首席运营官",
+    "salary_low_k": 1200,
+    "salary_high_k": 2000,
+    "salary_mid_k": 1600,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "无晶圆厂(模拟和数字)",
+    "position": "研发负责人",
+    "salary_low_k": 900,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1350,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "无晶圆厂(模拟和数字)",
+    "position": "销售负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1000,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "无晶圆厂(模拟和数字)",
+    "position": "产品市场负责人",
+    "salary_low_k": 750,
+    "salary_high_k": 1200,
+    "salary_mid_k": 975,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "无晶圆厂(模拟和数字)",
+    "position": "运营负责人",
+    "salary_low_k": 850,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1075,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "无晶圆厂(模拟和数字)",
+    "position": "质量负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1200,
+    "salary_mid_k": 1000,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "化合物半导体",
+    "position": "研发负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1050,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "化合物半导体",
+    "position": "销售负责人",
+    "salary_low_k": 650,
+    "salary_high_k": 1200,
+    "salary_mid_k": 925,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "化合物半导体",
+    "position": "产品市场负责人",
+    "salary_low_k": 750,
+    "salary_high_k": 1200,
+    "salary_mid_k": 975,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "封装测试",
+    "position": "研发负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "封装测试",
+    "position": "销售负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1400,
+    "salary_mid_k": 1050,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "封装测试",
+    "position": "产品市场负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "封装测试",
+    "position": "运营负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1300,
+    "salary_mid_k": 1050,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "(机电软)工程总监",
+    "salary_low_k": 600,
+    "salary_high_k": 1200,
+    "salary_mid_k": 900,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "(机电软)工程副总裁",
+    "salary_low_k": 900,
+    "salary_high_k": 1800,
+    "salary_mid_k": 1350,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "工艺总监",
+    "salary_low_k": 500,
+    "salary_high_k": 1300,
+    "salary_mid_k": 900,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "销售负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 1100,
+    "salary_mid_k": 850,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "产品市场负责人",
+    "salary_low_k": 700,
+    "salary_high_k": 1200,
+    "salary_mid_k": 950,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "设备及零部件",
+    "position": "运营负责人",
+    "salary_low_k": 600,
+    "salary_high_k": 1300,
+    "salary_mid_k": 950,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "半导体材料",
+    "position": "研发负责人",
+    "salary_low_k": 800,
+    "salary_high_k": 1100,
+    "salary_mid_k": 950,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "半导体材料",
+    "position": "销售负责人",
+    "salary_low_k": 500,
+    "salary_high_k": 900,
+    "salary_mid_k": 700,
+    "page": 40
+  },
+  {
+    "industry": "半导体",
+    "section": "半导体材料",
+    "position": "产品市场负责人",
+    "salary_low_k": 750,
+    "salary_high_k": 1000,
+    "salary_mid_k": 875,
+    "page": 40
+  }
+]

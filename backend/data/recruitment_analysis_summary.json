@@ -1,0 +1,114 @@
+{
+  "data_source": "上市公司招聘大数据2014-2025.3",
+  "analysis_date": "2026-04-07",
+  "total_records": 21083160,
+  "sample_2024_2025": 37000,
+  "key_findings": {
+    "overall_median_salary_benke_fresh": 8000,
+    "city_tier_coefficients": {
+      "tier1_avg": 1.25,
+      "new_tier1_avg": 1.0,
+      "tier2_avg": 0.94
+    },
+    "education_premium": {
+      "dazhuan": 7000,
+      "benke": 8000,
+      "shuoshi": 12500,
+      "boshi": 27500
+    },
+    "experience_growth": {
+      "0yr": 7500,
+      "1yr": 8250,
+      "2yr": 10000,
+      "3yr_plus": 12500,
+      "5yr_plus": 16500,
+      "8yr_plus": 22500,
+      "10yr_plus": 25000
+    },
+    "shuoshi_premium_by_industry": {
+      "计算机软件": "+97%",
+      "半导体/集成电路": "+65%",
+      "制药/生物工程": "+67%",
+      "机械/设备/重工": "+50%",
+      "新能源": "+39%",
+      "快消品": "+6%"
+    },
+    "industry_trends_2021_to_2024": {
+      "severe_contraction": [
+        "软件和信息技术服务业(-86%)",
+        "房地产业(-82%)",
+        "零售业(-71%)"
+      ],
+      "contraction": [
+        "计算机电子制造(-37%)",
+        "电气机械(-34%)",
+        "医药制造(-36%)",
+        "汽车制造(-26%)"
+      ],
+      "note": "几乎所有行业招聘量均下降，反映整体就业市场收紧"
+    },
+    "high_value_skills": [
+      {
+        "skill": "深度学习",
+        "salary_premium": "+94%"
+      },
+      {
+        "skill": "FPGA",
+        "salary_premium": "+82%"
+      },
+      {
+        "skill": "算法",
+        "salary_premium": "+59%"
+      },
+      {
+        "skill": "嵌入式",
+        "salary_premium": "+56%"
+      },
+      {
+        "skill": "C++",
+        "salary_premium": "+50%"
+      },
+      {
+        "skill": "Python",
+        "salary_premium": "+45%"
+      }
+    ],
+    "campus_recruitment": {
+      "guanpei_median": 7500,
+      "guanpei_top_industries": [
+        "金融/证券",
+        "快消品",
+        "机械",
+        "新能源",
+        "半导体"
+      ]
+    }
+  },
+  "model_calibration_needed": {
+    "银行与金融服务": {
+      "current": 9500,
+      "should_be": 7500,
+      "reason": "Michael Page偏资深，应届金融≠投行"
+    },
+    "财务与会计": {
+      "current": 7500,
+      "should_be": 6500,
+      "reason": "会计应届供过于求"
+    },
+    "半导体": {
+      "current": 10000,
+      "should_be": 11500,
+      "reason": "芯片抢人"
+    },
+    "销售与零售": {
+      "current": 7500,
+      "should_be": 8500,
+      "reason": "销售底薪+提成"
+    },
+    "法务": {
+      "current": 7000,
+      "should_be": 7750,
+      "reason": "合规需求增长"
+    }
+  }
+}

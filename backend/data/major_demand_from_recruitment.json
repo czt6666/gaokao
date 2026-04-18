@@ -1,0 +1,186 @@
+[
+  {
+    "major": "市场营销",
+    "demand_count": 2490,
+    "demand_pct": 7.8,
+    "median_salary": 8478,
+    "p75_salary": 10500,
+    "top_industry": "快速消费品(食品、饮料、化妆品)"
+  },
+  {
+    "major": "药学",
+    "demand_count": 2124,
+    "demand_pct": 6.65,
+    "median_salary": 8000,
+    "p75_salary": 9583,
+    "top_industry": "制药/生物工程"
+  },
+  {
+    "major": "工商管理",
+    "demand_count": 1470,
+    "demand_pct": 4.6,
+    "median_salary": 7500,
+    "p75_salary": 9000,
+    "top_industry": "金融/投资/证券"
+  },
+  {
+    "major": "机械工程",
+    "demand_count": 1436,
+    "demand_pct": 4.5,
+    "median_salary": 8500,
+    "p75_salary": 11000,
+    "top_industry": "机械/设备/重工"
+  },
+  {
+    "major": "电子信息工程",
+    "demand_count": 868,
+    "demand_pct": 2.72,
+    "median_salary": 10000,
+    "p75_salary": 12500,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "电气工程",
+    "demand_count": 661,
+    "demand_pct": 2.07,
+    "median_salary": 9000,
+    "p75_salary": 11500,
+    "top_industry": "机械/设备/重工"
+  },
+  {
+    "major": "化学工程",
+    "demand_count": 616,
+    "demand_pct": 1.93,
+    "median_salary": 7500,
+    "p75_salary": 9500,
+    "top_industry": "石油/化工/矿产/地质"
+  },
+  {
+    "major": "会计学",
+    "demand_count": 612,
+    "demand_pct": 1.92,
+    "median_salary": 6500,
+    "p75_salary": 8468,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "计算机科学与技术",
+    "demand_count": 592,
+    "demand_pct": 1.85,
+    "median_salary": 9999,
+    "p75_salary": 12500,
+    "top_industry": "计算机软件"
+  },
+  {
+    "major": "生物工程",
+    "demand_count": 454,
+    "demand_pct": 1.42,
+    "median_salary": 8500,
+    "p75_salary": 10500,
+    "top_industry": "制药/生物工程"
+  },
+  {
+    "major": "材料科学",
+    "demand_count": 432,
+    "demand_pct": 1.35,
+    "median_salary": 8000,
+    "p75_salary": 11500,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "光学/光电",
+    "demand_count": 432,
+    "demand_pct": 1.35,
+    "median_salary": 9500,
+    "p75_salary": 12500,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "临床医学",
+    "demand_count": 400,
+    "demand_pct": 1.25,
+    "median_salary": 9000,
+    "p75_salary": 12500,
+    "top_industry": "制药/生物工程"
+  },
+  {
+    "major": "自动化",
+    "demand_count": 374,
+    "demand_pct": 1.17,
+    "median_salary": 8500,
+    "p75_salary": 11500,
+    "top_industry": "机械/设备/重工"
+  },
+  {
+    "major": "法学",
+    "demand_count": 355,
+    "demand_pct": 1.11,
+    "median_salary": 7750,
+    "p75_salary": 10000,
+    "top_industry": "制药/生物工程"
+  },
+  {
+    "major": "环境工程",
+    "demand_count": 339,
+    "demand_pct": 1.06,
+    "median_salary": 7500,
+    "p75_salary": 9166,
+    "top_industry": "环保"
+  },
+  {
+    "major": "数学/统计",
+    "demand_count": 318,
+    "demand_pct": 1.0,
+    "median_salary": 8000,
+    "p75_salary": 9975,
+    "top_industry": "制药/生物工程"
+  },
+  {
+    "major": "英语",
+    "demand_count": 273,
+    "demand_pct": 0.85,
+    "median_salary": 8000,
+    "p75_salary": 10416,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "通信工程",
+    "demand_count": 267,
+    "demand_pct": 0.84,
+    "median_salary": 10000,
+    "p75_salary": 12500,
+    "top_industry": "电子技术/半导体/集成电路"
+  },
+  {
+    "major": "土木工程",
+    "demand_count": 147,
+    "demand_pct": 0.46,
+    "median_salary": 8000,
+    "p75_salary": 10000,
+    "top_industry": "建筑/建材/工程"
+  },
+  {
+    "major": "金融学",
+    "demand_count": 121,
+    "demand_pct": 0.38,
+    "median_salary": 7500,
+    "p75_salary": 9000,
+    "top_industry": "金融/投资/证券"
+  },
+  {
+    "major": "食品科��",
+    "demand_count": 109,
+    "demand_pct": 0.34,
+    "median_salary": 6500,
+    "p75_salary": 7750,
+    "top_industry": "快速消费品(食品、饮料、化妆品)"
+  },
+  {
+    "major": "物理学",
+    "demand_count": 87,
+    "demand_pct": 0.27,
+    "median_salary": 8500,
+    "p75_salary": 10500,
+    "top_industry": "电子技术/半导体/集成电路"
+  }
+]

@@ -1,0 +1,16 @@
+# 推荐使用 uv：在 backend 目录执行 `uv sync`，依赖以 pyproject.toml 为准。
+# 若仍用 pip：pip install -r requirements.txt
+fastapi>=0.115.0
+uvicorn>=0.32.0
+sqlalchemy>=2.0.0
+pydantic>=2.0.0
+python-multipart>=0.0.9
+weasyprint>=60.0
+PyJWT>=2.8.0
+tencentcloud-sdk-python>=3.0.0
+wechatpayv3>=2.0.0
+cryptography>=40.0.0
+qrcode>=7.0
+httpx>=0.24.0
+pillow>=9.0.0
+apscheduler>=3.10.0

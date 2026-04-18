@@ -1,0 +1,172 @@
+{
+  "计算机/软件/AI": {
+    "industry": "科技",
+    "sample_size": 1595,
+    "salary_p10": 6500,
+    "salary_p25": 8500,
+    "salary_median": 11500,
+    "salary_p75": 15000,
+    "salary_p90": 20833,
+    "salary_mean": 12430
+  },
+  "芯片/半导体/IC": {
+    "industry": "半导体",
+    "sample_size": 280,
+    "salary_p10": 7000,
+    "salary_p25": 8500,
+    "salary_median": 11500,
+    "salary_p75": 15000,
+    "salary_p90": 21500,
+    "salary_mean": 12737
+  },
+  "通信/网络": {
+    "industry": "科技",
+    "sample_size": 118,
+    "salary_p10": 5500,
+    "salary_p25": 6562,
+    "salary_median": 10250,
+    "salary_p75": 13500,
+    "salary_p90": 18000,
+    "salary_mean": 10985
+  },
+  "电气/自动化": {
+    "industry": "工程与制造",
+    "sample_size": 908,
+    "salary_p10": 6000,
+    "salary_p25": 7500,
+    "salary_median": 9750,
+    "salary_p75": 12500,
+    "salary_p90": 16549,
+    "salary_mean": 10781
+  },
+  "机械/制造": {
+    "industry": "工程与制造",
+    "sample_size": 1574,
+    "salary_p10": 6000,
+    "salary_p25": 7000,
+    "salary_median": 9000,
+    "salary_p75": 11500,
+    "salary_p90": 15000,
+    "salary_mean": 9609
+  },
+  "土木/建筑": {
+    "industry": "工程与制造",
+    "sample_size": 209,
+    "salary_p10": 5950,
+    "salary_p25": 7000,
+    "salary_median": 8000,
+    "salary_p75": 10000,
+    "salary_p90": 12500,
+    "salary_mean": 8658
+  },
+  "化工/材料": {
+    "industry": "工程与制造",
+    "sample_size": 568,
+    "salary_p10": 6000,
+    "salary_p25": 7000,
+    "salary_median": 8500,
+    "salary_p75": 10500,
+    "salary_p90": 14000,
+    "salary_mean": 9394
+  },
+  "生物/医药": {
+    "industry": "医疗与生命科学",
+    "sample_size": 2574,
+    "salary_p10": 5500,
+    "salary_p25": 7000,
+    "salary_median": 8500,
+    "salary_p75": 11000,
+    "salary_p90": 14583,
+    "salary_mean": 9425
+  },
+  "财务/会计": {
+    "industry": "财务与会计",
+    "sample_size": 1812,
+    "salary_p10": 4500,
+    "salary_p25": 5500,
+    "salary_median": 6500,
+    "salary_p75": 8000,
+    "salary_p90": 10000,
+    "salary_mean": 6998
+  },
+  "金融/投资": {
+    "industry": "银行与金融服务",
+    "sample_size": 559,
+    "salary_p10": 5500,
+    "salary_p25": 7250,
+    "salary_median": 7500,
+    "salary_p75": 10000,
+    "salary_p90": 12500,
+    "salary_mean": 8771
+  },
+  "法务/合规": {
+    "industry": "法务",
+    "sample_size": 317,
+    "salary_p10": 5000,
+    "salary_p25": 6500,
+    "salary_median": 7750,
+    "salary_p75": 10000,
+    "salary_p90": 12900,
+    "salary_mean": 8929
+  },
+  "市场营销/商务": {
+    "industry": "市场营销与电商",
+    "sample_size": 2381,
+    "salary_p10": 5500,
+    "salary_p25": 6500,
+    "salary_median": 8000,
+    "salary_p75": 10000,
+    "salary_p90": 12500,
+    "salary_mean": 8782
+  },
+  "销售": {
+    "industry": "销售与零售",
+    "sample_size": 5117,
+    "salary_p10": 6000,
+    "salary_p25": 7000,
+    "salary_median": 8500,
+    "salary_p75": 11000,
+    "salary_p90": 13500,
+    "salary_mean": 9481
+  },
+  "人力/行政": {
+    "industry": "人力资源与行政助理",
+    "sample_size": 2058,
+    "salary_p10": 4500,
+    "salary_p25": 5500,
+    "salary_median": 7000,
+    "salary_p75": 8750,
+    "salary_p90": 10500,
+    "salary_mean": 7376
+  },
+  "供应链/物流": {
+    "industry": "采购与供应链",
+    "sample_size": 1117,
+    "salary_p10": 5000,
+    "salary_p25": 6000,
+    "salary_median": 7000,
+    "salary_p75": 9000,
+    "salary_p90": 11500,
+    "salary_mean": 7864
+  },
+  "质量/检测": {
+    "industry": "工程与制造",
+    "sample_size": 1451,
+    "salary_p10": 5500,
+    "salary_p25": 6500,
+    "salary_median": 7500,
+    "salary_p75": 9500,
+    "salary_p90": 11500,
+    "salary_mean": 8267
+  },
+  "环保/安全": {
+    "industry": "工程与制造",
+    "sample_size": 507,
+    "salary_p10": 5500,
+    "salary_p25": 6500,
+    "salary_median": 7500,
+    "salary_p75": 10000,
+    "salary_p90": 12499,
+    "salary_mean": 8424
+  }
+}

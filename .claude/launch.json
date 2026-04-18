@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "frontend",
+      "runtimeExecutable": "/bin/bash",
+      "runtimeArgs": ["-c", "export PATH=/opt/homebrew/bin:$PATH && cd '/Users/Admin/Desktop/claunde code gaokao/frontend' && npm run dev -- --port 3001"],
+      "port": 3001
+    },
+    {
+      "name": "backend",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/Admin/Desktop/claunde code gaokao/backend' && python3 -m uvicorn main:app --host 0.0.0.0 --port 8000"],
+      "port": 8000
+    },
+    {
+      "name": "shuchu",
+      "runtimeExecutable": "bash",
+      "runtimeArgs": ["-c", "cd '/Users/Admin/Desktop/shuchu/frontend' && python3 -m http.server 5173"],
+      "port": 5173
+    }
+  ]
+}

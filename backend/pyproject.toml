@@ -1,0 +1,25 @@
+[project]
+name = "gaokao-backend"
+version = "0.1.0"
+description = "高考志愿填报决策引擎 FastAPI 后端"
+readme = false
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "sqlalchemy>=2.0.0",
+    "pydantic>=2.0.0",
+    "python-multipart>=0.0.9",
+    "weasyprint>=60.0",
+    "PyJWT>=2.8.0",
+    "tencentcloud-sdk-python>=3.0.0",
+    "wechatpayv3>=2.0.0",
+    "cryptography>=40.0.0",
+    "qrcode>=7.0",
+    "httpx>=0.24.0",
+    "pillow>=9.0.0",
+    "apscheduler>=3.10.0",
+]
+
+[tool.uv]
+package = false

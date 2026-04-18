@@ -1,0 +1,402 @@
+[
+  {
+    "company": "蓝思科技股份有限公司",
+    "total_jobs_2024": 1245,
+    "benke_ratio": 0.26,
+    "median_salary": 11500,
+    "main_city": "长沙",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "长春金赛药业有限责任公司",
+    "total_jobs_2024": 1103,
+    "benke_ratio": 0.3,
+    "median_salary": 11000,
+    "main_city": "北京",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "中国平安人寿保险股份有限公司",
+    "total_jobs_2024": 1057,
+    "benke_ratio": 0.17,
+    "median_salary": 12000,
+    "main_city": "西安",
+    "industry": "保险业"
+  },
+  {
+    "company": "杭州中美华东制药有限公司",
+    "total_jobs_2024": 994,
+    "benke_ratio": 0.45,
+    "median_salary": 10000,
+    "main_city": "杭州",
+    "industry": "零售业"
+  },
+  {
+    "company": "歌尔股份有限公司",
+    "total_jobs_2024": 969,
+    "benke_ratio": 0.61,
+    "median_salary": 14000,
+    "main_city": "潍坊",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "惠州亿纬锂能股份有限公司",
+    "total_jobs_2024": 939,
+    "benke_ratio": 0.85,
+    "median_salary": 12500,
+    "main_city": "惠州",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "欣旺达动力科技股份有限公司",
+    "total_jobs_2024": 929,
+    "benke_ratio": 0.72,
+    "median_salary": 20000,
+    "main_city": "深圳",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "新城控股集团股份有限公司",
+    "total_jobs_2024": 926,
+    "benke_ratio": 0.76,
+    "median_salary": 7000,
+    "main_city": "昭通",
+    "industry": "房地产业"
+  },
+  {
+    "company": "西安环宇芯微电子有限公司",
+    "total_jobs_2024": 926,
+    "benke_ratio": 0.83,
+    "median_salary": 11000,
+    "main_city": "西安",
+    "industry": "专业技术服务业"
+  },
+  {
+    "company": "江苏鱼跃医疗设备股份有限公司",
+    "total_jobs_2024": 883,
+    "benke_ratio": 0.48,
+    "median_salary": 10500,
+    "main_city": "南京",
+    "industry": "专用设备制造业"
+  },
+  {
+    "company": "京东方科技集团股份有限公司",
+    "total_jobs_2024": 880,
+    "benke_ratio": 0.65,
+    "median_salary": 15000,
+    "main_city": "北京",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "江苏康缘药业股份有限公司",
+    "total_jobs_2024": 837,
+    "benke_ratio": 0.24,
+    "median_salary": 7000,
+    "main_city": "南京",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "上海外服（集团）有限公司",
+    "total_jobs_2024": 831,
+    "benke_ratio": 0.44,
+    "median_salary": 10500,
+    "main_city": "上海",
+    "industry": "商务服务业"
+  },
+  {
+    "company": "亚信科技（中国）有限公司",
+    "total_jobs_2024": 809,
+    "benke_ratio": 0.92,
+    "median_salary": 20000,
+    "main_city": "北京",
+    "industry": "电信、广播电视和卫星传输服务"
+  },
+  {
+    "company": "招商信诺人寿保险有限公司",
+    "total_jobs_2024": 799,
+    "benke_ratio": 0.01,
+    "median_salary": 11500,
+    "main_city": "武汉",
+    "industry": "货币金融服务"
+  },
+  {
+    "company": "石家庄以岭药业股份有限公司",
+    "total_jobs_2024": 797,
+    "benke_ratio": 0.03,
+    "median_salary": 9000,
+    "main_city": "北京",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "内蒙古伊利实业集团股份有限公司",
+    "total_jobs_2024": 755,
+    "benke_ratio": 0.31,
+    "median_salary": 9000,
+    "main_city": "呼和浩特",
+    "industry": "食品制造业"
+  },
+  {
+    "company": "千禾味业食品股份有限公司",
+    "total_jobs_2024": 751,
+    "benke_ratio": 0.07,
+    "median_salary": 11000,
+    "main_city": "眉山",
+    "industry": "食品制造业"
+  },
+  {
+    "company": "立讯精密工业股份有限公司",
+    "total_jobs_2024": 737,
+    "benke_ratio": 0.46,
+    "median_salary": 14000,
+    "main_city": "东莞",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "华测检测认证集团股份有限公司",
+    "total_jobs_2024": 724,
+    "benke_ratio": 0.34,
+    "median_salary": 8500,
+    "main_city": "杭州",
+    "industry": "专业技术服务业"
+  },
+  {
+    "company": "伊戈尔电气股份有限公司",
+    "total_jobs_2024": 714,
+    "benke_ratio": 0.71,
+    "median_salary": 9500,
+    "main_city": "佛山",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "无锡先导智能装备股份有限公司",
+    "total_jobs_2024": 705,
+    "benke_ratio": 0.87,
+    "median_salary": 19500,
+    "main_city": "无锡",
+    "industry": "专用设备制造业，电气机械和器材制造业"
+  },
+  {
+    "company": "中顺洁柔纸业股份有限公司",
+    "total_jobs_2024": 690,
+    "benke_ratio": 0.09,
+    "median_salary": 7000,
+    "main_city": "广州",
+    "industry": "造纸和纸制品业"
+  },
+  {
+    "company": "佛山市海天调味食品股份有限公司",
+    "total_jobs_2024": 657,
+    "benke_ratio": 0.82,
+    "median_salary": 10500,
+    "main_city": "佛山",
+    "industry": "食品制造业"
+  },
+  {
+    "company": "广东海大集团股份有限公司",
+    "total_jobs_2024": 656,
+    "benke_ratio": 0.38,
+    "median_salary": 6708,
+    "main_city": "清远",
+    "industry": "农副食品加工业"
+  },
+  {
+    "company": "京北方信息技术股份有限公司",
+    "total_jobs_2024": 643,
+    "benke_ratio": 0.72,
+    "median_salary": 13500,
+    "main_city": "北京",
+    "industry": "软件和信息技术服务业"
+  },
+  {
+    "company": "保利和润房地产投资顾问有限公司",
+    "total_jobs_2024": 638,
+    "benke_ratio": 0.36,
+    "median_salary": 10000,
+    "main_city": "南京",
+    "industry": "房地产业"
+  },
+  {
+    "company": "天马微电子股份有限公司",
+    "total_jobs_2024": 633,
+    "benke_ratio": 0.74,
+    "median_salary": 13000,
+    "main_city": "武汉",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "东鹏饮料（集团）股份有限公司",
+    "total_jobs_2024": 626,
+    "benke_ratio": 0.09,
+    "median_salary": 7000,
+    "main_city": "长沙",
+    "industry": "酒、饮料和精制茶制造业"
+  },
+  {
+    "company": "浙江我武生物科技股份有限公司",
+    "total_jobs_2024": 622,
+    "benke_ratio": 0.1,
+    "median_salary": 7500,
+    "main_city": "湖州",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "国轩高科股份有限公司",
+    "total_jobs_2024": 612,
+    "benke_ratio": 0.73,
+    "median_salary": 11500,
+    "main_city": "合肥",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "东风汽车集团股份有限公司",
+    "total_jobs_2024": 608,
+    "benke_ratio": 0.92,
+    "median_salary": 15000,
+    "main_city": "武汉",
+    "industry": "汽车制造业"
+  },
+  {
+    "company": "云南白药集团股份有限公司",
+    "total_jobs_2024": 597,
+    "benke_ratio": 0.66,
+    "median_salary": 5000,
+    "main_city": "昆明",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "东莞领益精密制造科技有限公司",
+    "total_jobs_2024": 595,
+    "benke_ratio": 0.21,
+    "median_salary": 12500,
+    "main_city": "东莞",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "华润三九医药股份有限公司",
+    "total_jobs_2024": 584,
+    "benke_ratio": 0.3,
+    "median_salary": 7000,
+    "main_city": "深圳",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "蜂巢能源科技股份有限公司",
+    "total_jobs_2024": 579,
+    "benke_ratio": 0.46,
+    "median_salary": 11500,
+    "main_city": "常州",
+    "industry": "汽车制造业"
+  },
+  {
+    "company": "苏州领裕电子科技有限公司",
+    "total_jobs_2024": 568,
+    "benke_ratio": 0.38,
+    "median_salary": 13500,
+    "main_city": "盐城",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "重庆华邦制药有限公司",
+    "total_jobs_2024": 566,
+    "benke_ratio": 0.16,
+    "median_salary": 9583,
+    "main_city": "重庆",
+    "industry": "化学原料和化学制品制造业"
+  },
+  {
+    "company": "鞍钢集团有限公司",
+    "total_jobs_2024": 560,
+    "benke_ratio": 0.58,
+    "median_salary": 5250,
+    "main_city": "鞍山",
+    "industry": "黑色金属冶炼和压延加工业"
+  },
+  {
+    "company": "江苏精研科技股份有限公司",
+    "total_jobs_2024": 559,
+    "benke_ratio": 0.53,
+    "median_salary": 15000,
+    "main_city": "常州",
+    "industry": "计算机、通信和其他电子设备制造业"
+  },
+  {
+    "company": "广州王老吉大健康产业有限公司",
+    "total_jobs_2024": 555,
+    "benke_ratio": 0.09,
+    "median_salary": 5833,
+    "main_city": "梅州",
+    "industry": "医药制造业"
+  },
+  {
+    "company": "浙江宇视科技有限公司",
+    "total_jobs_2024": 543,
+    "benke_ratio": 0.89,
+    "median_salary": 12000,
+    "main_city": "杭州",
+    "industry": "软件和信息技术服务业"
+  },
+  {
+    "company": "阳光电源股份有限公司",
+    "total_jobs_2024": 534,
+    "benke_ratio": 0.79,
+    "median_salary": 12500,
+    "main_city": "合肥",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "湛江国联水产开发股份有限公司",
+    "total_jobs_2024": 532,
+    "benke_ratio": 0.46,
+    "median_salary": 10500,
+    "main_city": "湛江",
+    "industry": "农副食品加工业"
+  },
+  {
+    "company": "光筑农业集团有限公司",
+    "total_jobs_2024": 530,
+    "benke_ratio": 0.49,
+    "median_salary": 9000,
+    "main_city": "昆明",
+    "industry": "化学原料和化学制品制造业"
+  },
+  {
+    "company": "湖北亿纬动力有限公司",
+    "total_jobs_2024": 527,
+    "benke_ratio": 0.9,
+    "median_salary": 11500,
+    "main_city": "荆门",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "深圳市裕同包装科技股份有限公司",
+    "total_jobs_2024": 521,
+    "benke_ratio": 0.13,
+    "median_salary": 9000,
+    "main_city": "东莞",
+    "industry": "造纸和纸制品业"
+  },
+  {
+    "company": "广东新宝电器股份有限公司",
+    "total_jobs_2024": 519,
+    "benke_ratio": 0.76,
+    "median_salary": 12000,
+    "main_city": "佛山",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "深圳麦格米特电气股份有限公司",
+    "total_jobs_2024": 511,
+    "benke_ratio": 0.53,
+    "median_salary": 11500,
+    "main_city": "深圳",
+    "industry": "电气机械和器材制造业"
+  },
+  {
+    "company": "成都倍特药业股份有限公司",
+    "total_jobs_2024": 501,
+    "benke_ratio": 0.51,
+    "median_salary": 10000,
+    "main_city": "成都",
+    "industry": "房屋建筑业"
+  }
+]

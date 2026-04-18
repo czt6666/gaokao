@@ -694,6 +694,10 @@ function ResultsContent() {
   useEffect(() => {
     if (!rank) return;
     track("page_view", { page: "/results", province, rankInput: Number(rank) });
+    setFetchError(null);
+    setLoading(true);
+
+    let stale = false;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
@@ -707,11 +711,14 @@ function ResultsContent() {
       }
     )
       .then((r) => {
+        if (stale) return null;
         if (!r.ok) throw new Error(`服务器错误 ${r.status}`);
         return r.json();
       })
       .then((d) => {
+        if (stale || d == null) return;
         setData(d);
+        setFetchError(null);
         setLoading(false);
         // Save to query history (max 5 entries)
         try {
@@ -722,15 +729,21 @@ function ResultsContent() {
         } catch {}
       })
       .catch((e: any) => {
-        const msg = e?.name === "AbortError"
-          ? "分析超时（30秒），服务器可能繁忙，请稍后重试"
-          : "加载失败，请检查网络连接后重试";
+        if (stale) return;
+        const msg =
+          e?.name === "AbortError"
+            ? "分析超时（30秒），服务器可能繁忙，请稍后重试"
+            : "加载失败，请检查网络连接后重试";
         setFetchError(msg);
         setLoading(false);
       })
       .finally(() => clearTimeout(timeout));
 
-    return () => { controller.abort(); clearTimeout(timeout); };
+    return () => {
+      stale = true;
+      controller.abort();
+      clearTimeout(timeout);
+    };
   }, [rank, province, subject, orderNo]);
 
   if (loading) {

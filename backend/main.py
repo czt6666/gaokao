@@ -51,12 +51,18 @@ _SITE_URL = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
 _ALLOWED_ORIGINS = [
     "https://theyuanxi.cn",
     "https://www.theyuanxi.cn",
+    "https://mega.theyuanxi.cn",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
 # 从环境变量动态追加（支持域名切换无需改代码）
 if _SITE_URL and _SITE_URL not in _ALLOWED_ORIGINS:
     _ALLOWED_ORIGINS.append(_SITE_URL)
+# 逗号分隔，例如: https://a.cn,https://b.cn
+for _o in os.getenv("CORS_EXTRA_ORIGINS", "").split(","):
+    _o = _o.strip()
+    if _o and _o not in _ALLOWED_ORIGINS:
+        _ALLOWED_ORIGINS.append(_o)
 
 app.add_middleware(
     CORSMiddleware,

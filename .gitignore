@@ -63,3 +63,6 @@ Thumbs.db
 
 # --- Claude 本地配置（不含团队共享的 launch 等） ---
 .claude/settings.local.json
+
+# --- 部署（含 SSH 目标等，勿提交）---
+deploy/deploy.env

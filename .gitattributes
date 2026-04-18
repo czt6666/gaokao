@@ -1,0 +1,2 @@
+# Shell / macOS launcher：在 Windows 检出时仍保持 LF，避免乱码与换行问题。
+*.command text eol=lf

@@ -671,6 +671,7 @@ def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result
 # ── 数据层：加载全部 cache + 组合候选学校画像 ──────────────────
 def _build_recommend_data(
     province: str,
+    rank: int,
     subject: str,
     db: Session,
 ) -> dict:
@@ -683,9 +684,6 @@ def _build_recommend_data(
       ⑥ major_subject_cache + _subject_match 闭包
       ⑦ school_majors_raw + school_prior_rank（贝叶斯平滑用）
       ⑧ 组装 candidates（每条含录取统计 + 画像 + 薪资回退源标记）
-
-    供 `_run_recommend_core` 一次调用取全部 context；也供 `fetch_candidate_schools`
-    对外薄封装使用。
 
     返回各键一句说明：
       candidates — 各校各专业一条：录取统计 + 学校画像 + 薪资与就业摘要 + 口碑计数。
@@ -757,17 +755,46 @@ def _build_recommend_data(
 
     # ── 2. SQL 级过滤 + 拉取 admission_records ───────────────────
     _sql_extra = ""
+    _sql_params: dict = {"prov": province}
     if _student_pool == "物理":
         _sql_extra += " AND COALESCE(subject_req,'') NOT IN ('历史类','历史','文科')"
     elif _student_pool == "历史":
         _sql_extra += " AND COALESCE(subject_req,'') NOT IN ('物理类','物理','理科')"
     for _bkw in ("提前批", "艺术", "专科", "高职", "专项", "预科", "蒙授", "民航飞行"):
         _sql_extra += f" AND COALESCE(batch,'') NOT LIKE '%{_bkw}%'"
+    # ── 位次区间过滤：根据省总人数 + 考生百分位动态计算冲/保窗口 ─
+    # 逻辑：
+    #   pct = rank / province_total（考生百分位，0=最优，1=最差）
+    #   冲区下界系数 surge_ratio：pct 越小（高排名）→ 系数越小（能冲更靠前的学校）
+    #     pct≈0.01 → surge_ratio≈0.15；pct≈0.80 → surge_ratio≈0.55
+    #   保区上界系数 safe_ratio：pct 越小 → 系数越大（保底区间更宽）
+    #     pct≈0.01 → safe_ratio≈3.0；pct≈0.80 → safe_ratio≈1.5
+    #   绝对缓冲 abs_buf = max(3000, province_total * 1.5%)
+    #     防止小省份或高分段窗口过窄，同时覆盖多年加权均值的边缘偏差
+    if rank > 0:
+        _province_total = _get_province_total(province, 2025)
+        if _province_total > 0:
+            _pct = min(1.0, rank / _province_total)
+            # 冲区系数：[0.15, 0.55]，随百分位线性增大
+            _surge_ratio = max(0.15, min(0.55, 0.15 + 0.50 * _pct))
+            # 保区系数：[1.50, 3.00]，随百分位线性减小
+            _safe_ratio  = max(1.50, min(3.00, 3.00 - 1.875 * _pct))
+            # 绝对缓冲（防高分段窗口过窄）
+            _abs_buf = max(3000, int(_province_total * 0.015))
+            _rank_lo = max(1, int(rank * _surge_ratio) - _abs_buf)
+            _rank_hi = min(_province_total, int(rank * _safe_ratio) + _abs_buf)
+        else:
+            # 无省份人数数据时退回保守固定区间
+            _rank_lo = max(1, int(rank * 0.35))
+            _rank_hi = int(rank * 2.8) + 4000
+        _sql_extra += " AND (min_rank IS NULL OR min_rank = 0 OR (min_rank >= :rank_lo AND min_rank <= :rank_hi))"
+        _sql_params["rank_lo"] = _rank_lo
+        _sql_params["rank_hi"] = _rank_hi
     raw_rows = db.execute(_sqla_text(
         "SELECT school_name, major_name, year, min_rank, min_score, "
         "COALESCE(admit_count,0), COALESCE(subject_req,''), COALESCE(batch,'') "
         f"FROM admission_records WHERE province=:prov AND year>=2017{_sql_extra}"
-    ), {"prov": province}).fetchall()
+    ), _sql_params).fetchall()
 
     # ── 3. 按 (校, 专业) 分组 + Python 层兜底过滤 ────────────────
     _EXCLUDE_BATCH_KW = ("提前批", "艺术", "专科", "高职", "专项", "预科", "蒙授", "民航飞行")
@@ -1199,44 +1226,6 @@ def _build_recommend_data(
     }
 
 
-# ── 对外接口：按位次区间查"该学生能报考的学校+专业"──────────────
-def fetch_candidate_schools(
-    province: str,
-    rank_min: int,
-    rank_max: int,
-    subject: str = "",
-    db: Session = None,
-) -> list[dict]:
-    """
-    纯数据层：给定省份 + 位次区间 [rank_min, rank_max] + 选科，
-    返回该区间内考生「可以报考」的全部 (学校, 专业) 及其多源画像。
-
-    本函数只做 "查数据 + 组合"，**不做** 概率预测 / 冷门打分 / 冲稳保分桶。
-    推荐主流程 `_run_recommend_core` 内部使用 `_build_recommend_data` 拿完整 context。
-
-    参数
-    ----
-    province   考生所在省（与 admission_records.province 对齐）
-    rank_min   位次下限（数值小 = 难 = 冲的目标，例如 3000）
-    rank_max   位次上限（数值大 = 易 = 保底，例如 10000）
-    subject    选科字符串，如 "物理+化学+生物"；留空则不过滤选科
-    db         SQLAlchemy Session（必填）
-
-    返回
-    ----
-    在 ``_build_recommend_data`` 的 candidates 上按位次区间过滤后按 median_rank 升序排列的列表；
-    字段含义见 ``_build_recommend_data`` 文档里 candidates 下列出的各键。
-    """
-    assert rank_min <= rank_max, "rank_min 必须 ≤ rank_max"
-    assert db is not None, "db (Session) 必填"
-
-    data = _build_recommend_data(province, subject, db)
-    out = [c for c in data["candidates"]
-           if rank_min <= c["median_rank"] <= rank_max]
-    out.sort(key=lambda x: x["median_rank"])
-    return out
-
-
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
 def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False) -> dict:
@@ -1274,13 +1263,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     )
 
     # ── 数据层：一次性加载全部 cache + 组合候选画像 ───────────
-    # 原 ① SQL 拉取 / ② 分组过滤 / ③ P6 历史池剔除 / ④ baseline 补充 /
-    #    ⑤ School / ⑥ 学科评估 / ⑦ MajorEmployment 双 cache /
-    #    ⑧ SchoolEmployment 多源交叉验证 / ⑨ SchoolReview /
-    #    ⑩ major_subject_cache / ⑪ school_majors_raw /
-    #    ⑫ _subject_match 闭包 / ⑬ 学校先验位次
-    # 全部合并到 _build_recommend_data() 一次完成
-    data = _build_recommend_data(province, subject, db)
+    data = _build_recommend_data(province, rank, subject, db)
     grouped                = data["grouped"]
     school_cache           = data["school_cache"]
     _school_baseline_cache = data["school_baseline_cache"]
@@ -1311,30 +1294,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     def _serialize_data_for_debug_log(d: dict, str_max: int = 20) -> dict:
         from sqlalchemy.inspection import inspect as sa_inspect
 
-        def _school_to_plain(sch) -> dict:
-            m = sa_inspect(sch).mapper
-            return {c.key: getattr(sch, c.key) for c in m.column_attrs}
-
         out: dict = {}
-        for key, val in d.items():
-            if key == "subject_match":
-                fn = val
-                out[key] = f"<callable {getattr(fn, '__name__', 'subject_match')}>"
-            elif key == "school_cache":
-                out[key] = {name: _school_to_plain(sch) for name, sch in val.items()}
-            elif key == "grouped":
-                out[key] = [
-                    {"school": k[0], "major": k[1], "recs": v}
-                    for k, v in val.items()
-                ]
-            elif key == "user_subjects":
-                out[key] = sorted(val)
-            elif key == "major_subject_cache":
-                out[key] = {f"{sk}###{mj}": vv for (sk, mj), vv in val.items()}
-            elif isinstance(val, defaultdict):
-                out[key] = dict(val)
-            else:
-                out[key] = val
         return _truncate_log_strings(out, str_max)
 
     print("=" * 72, flush=True)

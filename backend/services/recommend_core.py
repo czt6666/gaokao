@@ -1241,10 +1241,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             print(f"[recommend_core] {step}", flush=True)
 
     # 缓存命中快速返回
-    # _cached = _rec_cache_get(province, rank, subject, is_paid)
-    # if _cached is not None:
-    #     _rc("① 缓存命中，直接返回（未执行后续阶段）", province=province, rank=rank, subject=subject, is_paid=is_paid)
-    #     return _cached
+    _cached = _rec_cache_get(province, rank, subject, is_paid)
+    if _cached is not None:
+        _rc("① 缓存命中，直接返回（未执行后续阶段）", province=province, rank=rank, subject=subject, is_paid=is_paid)
+        return _cached
 
     _rc(
         "② 开始全量计算",
@@ -1397,22 +1397,16 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         school_info = school_cache.get(school_name)
 
         # 预测录取概率（小样本专业使用学校先验做贝叶斯平滑）
-        prediction = predict_admission(rank, records,
+        prediction = predict_admission(rank, records, province=province,
                                        school_prior_rank=_school_prior_rank.get(school_name, 0))
 
-        # 加权平均录取最低分（与 avg_min_rank_3yr 使用相同衰减权重）
-        _score_recs = sorted(
-            [r for r in records if (r.get("min_score") or 0) > 0],
+        # 去年（基础集中年份最新、且有录取位次的一条）最低分；与 predict_admission 相同的基础记录集
+        _base_recs = sorted(
+            [r for r in records if (r.get("min_rank") or 0) > 0],
             key=lambda r: r["year"], reverse=True
         )[:5]
-        if _score_recs:
-            _sw = [2.0, 1.4, 1.0, 0.7, 0.5][:len(_score_recs)]
-            _avg_score = round(
-                sum(_score_recs[i]["min_score"] * _sw[i] for i in range(len(_score_recs)))
-                / sum(_sw)
-            )
-        else:
-            _avg_score = 0
+        _latest_ms = (_base_recs[0].get("min_score") or 0) if _base_recs else 0
+        _avg_score = round(float(_latest_ms)) if _latest_ms > 0 else 0
 
         # 从真实学科评估表获取该校A类学科（用于Type A冷门检测）
         strong_subjects = subject_eval_cache.get(school_name, [])

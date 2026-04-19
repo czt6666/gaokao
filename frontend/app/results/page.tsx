@@ -321,13 +321,13 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
 
         </div>
 
-        {/* Right: 均分（左）+ 均位次（右）并排 */}
+        {/* Right: 去年最低分（左）+ 均位次（右）并排 */}
         <div className="result-card-right" style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "flex-end", marginBottom: 8 }}>
-            {/* 均分 */}
+            {/* 去年最低分 */}
             {item.avg_min_score_3yr ? (
               <div style={{ textAlign: "center" }}>
-                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>近年均分</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>去年最低分</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: "var(--color-accent)", fontVariantNumeric: "tabular-nums" }}>
                   {item.avg_min_score_3yr}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-text-tertiary)", marginLeft: 2 }}>分</span>
                 </div>
@@ -628,7 +628,7 @@ function ResultsContent() {
   const subject = searchParams.get("subject") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
-  /** 与卡片「近年均分」对比用：显式 ?score= 或模考链路的 mock_score */
+  /** 与卡片「去年最低分」对比用：显式 ?score= 或模考链路的 mock_score */
   const score = searchParams.get("score") || (fromMock ? mockScore : "");
 
   const [data, setData] = useState<RecommendResult | null>(null);

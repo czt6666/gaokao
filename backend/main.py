@@ -304,7 +304,7 @@ def recommend(
 
     try:
         return _run_recommend_core(province=province, rank=rank, subject=subject,
-                                   mode=mode, db=db, is_paid=is_paid)
+                                   mode=mode, db=db, is_paid=True)
     except Exception as e:
         logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")
@@ -671,7 +671,7 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
     latest_year = q.order_by(RankTable.year.desc()).limit(1).scalar()
 
     if latest_year:
-        # 模考偏难，高考分数通常略低（约96%）
+        # 模考偏难，高考分数通常比模考低（经验系数 0.96，各省/各校差异约 ±2%）
         target_score = round(mock_score * 0.96)
         q2 = db.query(RankTable).filter(
             RankTable.province == province,
@@ -684,16 +684,26 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
 
         if rank_row:
             estimated_rank = rank_row.count_cum
+            # 位次区间：按省总人数的 0.8% 浮动（比固定 ±3000 更合理）
+            # 广东(84万)→±6720，北京(7.9万)→至少±2000，河南(135万)→±10800
+            from algorithms.population_data import get_province_total as _pop_total
+            _prov_total = _pop_total(province, latest_year) or _pop_total(province, 2025) or 500_000
+            _range_margin = max(2000, int(_prov_total * 0.008))
             return {
                 "mock_score": mock_score,
                 "estimated_real_score": target_score,
                 "estimated_rank": estimated_rank,
                 "estimated_rank_range": [
-                    max(100, estimated_rank - 3000),
-                    estimated_rank + 3000
+                    max(100, estimated_rank - _range_margin),
+                    min(_prov_total, estimated_rank + _range_margin),
                 ],
                 "based_on_year": latest_year,
-                "note": f"基于{latest_year}年{province}一分一段估算，高考难度有波动，请以实际出分为准"
+                "reliability": "high",   # 有一分一段官方数据，可靠
+                "note": (
+                    f"基于{latest_year}年{province}一分一段表估算（模考×0.96折算）。"
+                    f"高考难度年际波动约±2%，实际位次可能偏差±{_range_margin:,}名，"
+                    f"出分后请用真实位次重查以获得精确推荐。"
+                ),
             }
 
     # P0.2：该省份无一分一段 → 尝试从录取记录插值估算
@@ -707,11 +717,13 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
             "estimated_rank_range": [admission_est["range_lo"], admission_est["range_hi"]],
             "based_on_year": "2022-2024录取数据",
             "method": "admission_records",
+            "reliability": "low",   # 无一分一段，插值误差大，不可靠
             "no_data": False,
             "note": (
-                f"⚠️ {province}暂无一分一段官方数据，以下位次由历年录取记录插值估算（{admission_est['data_points']}个采样点），"
-                f"误差约±35%，仅供参考。建议出分后用实际高考位次重新查询。"
-            )
+                f"⚠️【可靠性：低】{province}暂无一分一段官方数据，"
+                f"以下位次由历年录取记录插值估算（{admission_est['data_points']}个采样点），"
+                f"误差约±35%。推荐结果仅供参考，强烈建议出分后用实际位次重新查询。"
+            ),
         }
 
     # 确实无任何数据可用 → 返回明确错误

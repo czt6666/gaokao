@@ -40,6 +40,7 @@ type SchoolResult = {
   probability_tier?: string;
   suggested_action: string | null;
   avg_min_rank_3yr: number;
+  avg_min_score_3yr?: number;
   rank_diff: number;
   confidence: string;
   quality_score?: number;
@@ -129,11 +130,12 @@ function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
   } catch {}
 }
 
-function SchoolCard({ item, province, rank, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
+function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; score?: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
   const prob = item.probability ?? 0;
+  const scoreDiff = (score && item.avg_min_score_3yr) ? (Number(score) - item.avg_min_score_3yr) : null;
   const isGem = item.is_hidden_gem && item.top_gem;
   const isSwarm = item.swarm_discovery && !isGem;
 
@@ -319,16 +321,39 @@ function SchoolCard({ item, province, rank, subject, isPaid, onUnlock }: { item:
 
         </div>
 
-        {/* Right: 3年均位次 */}
-        <div className="result-card-right" style={{ textAlign: "right", flexShrink: 0 }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 4 }}>3年均位次</div>
-          <div className="rank-val" style={{ fontSize: 18, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
-            {item.avg_min_rank_3yr?.toLocaleString()}
+        {/* Right: 均分（左）+ 均位次（右）并排 */}
+        <div className="result-card-right" style={{ flexShrink: 0 }}>
+          <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "flex-end", marginBottom: 8 }}>
+            {/* 均分 */}
+            {item.avg_min_score_3yr ? (
+              <div style={{ textAlign: "center" }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>近年均分</div>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "var(--color-accent)", fontVariantNumeric: "tabular-nums" }}>
+                  {item.avg_min_score_3yr}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-text-tertiary)", marginLeft: 2 }}>分</span>
+                </div>
+                {scoreDiff !== null && (
+                  <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: scoreDiff > 0 ? "#059669" : "#DC2626" }}>
+                    {scoreDiff > 0 ? "+" : ""}{scoreDiff} 分
+                  </div>
+                )}
+              </div>
+            ) : null}
+            {/* 分隔线 */}
+            {item.avg_min_score_3yr ? (
+              <div style={{ width: 1, background: "var(--color-border)", alignSelf: "stretch", margin: "2px 0" }} />
+            ) : null}
+            {/* 均位次 */}
+            <div style={{ textAlign: "center" }}>
+              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>近年均位次</div>
+              <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
+                {item.avg_min_rank_3yr?.toLocaleString()}
+              </div>
+              <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: item.rank_diff > 0 ? "#059669" : "#DC2626" }}>
+                {item.rank_diff > 0 ? "+" : ""}{item.rank_diff?.toLocaleString()} 位
+              </div>
+            </div>
           </div>
-          <div style={{ fontSize: 11, marginTop: 3, fontWeight: 600, color: item.rank_diff > 0 ? "#059669" : "#DC2626" }}>
-            {item.rank_diff > 0 ? "+" : ""}{item.rank_diff?.toLocaleString()} 位
-          </div>
-          <div className="rank-actions" style={{ display: "flex", flexDirection: "column", gap: 5, marginTop: 10 }}>
+          <div className="rank-actions" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             <button onClick={() => addToForm(item, (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); })} className="card-action-primary">
               加入志愿
             </button>
@@ -603,6 +628,8 @@ function ResultsContent() {
   const subject = searchParams.get("subject") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
+  /** 与卡片「近年均分」对比用：显式 ?score= 或模考链路的 mock_score */
+  const score = searchParams.get("score") || (fromMock ? mockScore : "");
 
   const [data, setData] = useState<RecommendResult | null>(null);
   const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("surge");
@@ -1163,7 +1190,7 @@ function ResultsContent() {
               return (
                 <div>
                   {freeItems.map((item, i) => (
-                    <SchoolCard key={`free-${item.school_name}-${item.major_name}-${i}`} item={item} province={province} rank={rank} subject={subject} isPaid={data?.is_paid ?? false} onUnlock={doUnlock} />
+                    <SchoolCard key={`free-${item.school_name}-${item.major_name}-${i}`} item={item} province={province} rank={rank} score={score} subject={subject} isPaid={data?.is_paid ?? false} onUnlock={doUnlock} />
                   ))}
                   {visibleLocked.map((item, i) => (
                     <LockedSchoolCard key={`locked-${item.school_name}-${item.major_name}-${i}`} item={item} onUnlock={doUnlock} />

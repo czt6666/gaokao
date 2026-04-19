@@ -2,6 +2,7 @@
 import datetime
 import json
 import os
+import random
 import re
 import statistics
 import time
@@ -762,34 +763,26 @@ def _build_recommend_data(
         _sql_extra += " AND COALESCE(subject_req,'') NOT IN ('物理类','物理','理科')"
     for _bkw in ("提前批", "艺术", "专科", "高职", "专项", "预科", "蒙授", "民航飞行"):
         _sql_extra += f" AND COALESCE(batch,'') NOT LIKE '%{_bkw}%'"
-    # ── 位次区间过滤：根据省总人数 + 考生百分位动态计算冲/保窗口 ─
-    # 逻辑：
-    #   pct = rank / province_total（考生百分位，0=最优，1=最差）
-    #   冲区下界系数 surge_ratio：pct 越小（高排名）→ 系数越小（能冲更靠前的学校）
-    #     pct≈0.01 → surge_ratio≈0.15；pct≈0.80 → surge_ratio≈0.55
-    #   保区上界系数 safe_ratio：pct 越小 → 系数越大（保底区间更宽）
-    #     pct≈0.01 → safe_ratio≈3.0；pct≈0.80 → safe_ratio≈1.5
-    #   绝对缓冲 abs_buf = max(3000, province_total * 1.5%)
-    #     防止小省份或高分段窗口过窄，同时覆盖多年加权均值的边缘偏差
+    # ── 位次区间过滤（gap_rate 方法）────────────────────────────
+    # gap_rate = (avg_school_rank - student_rank) / student_rank
+    # 冲区：[-0.20, -0.10)  → school_rank ∈ [0.80X, 0.90X)
+    # 稳区：[-0.10, +0.10]  → school_rank ∈ [0.90X, 1.10X]
+    # 保区：(+0.10, +0.40]  → school_rank ∈ (1.10X, 1.40X]
+    # SQL 预过滤取 ±5% 额外缓冲（单年 min_rank 与多年加权均值有偏差）
     if rank > 0:
-        _province_total = _get_province_total(province, 2025)
-        if _province_total > 0:
-            _pct = min(1.0, rank / _province_total)
-            # 冲区系数：[0.15, 0.55]，随百分位线性增大
-            _surge_ratio = max(0.15, min(0.55, 0.15 + 0.50 * _pct))
-            # 保区系数：[1.50, 3.00]，随百分位线性减小
-            _safe_ratio  = max(1.50, min(3.00, 3.00 - 1.875 * _pct))
-            # 绝对缓冲（防高分段窗口过窄）
-            _abs_buf = max(3000, int(_province_total * 0.015))
-            _rank_lo = max(1, int(rank * _surge_ratio) - _abs_buf)
-            _rank_hi = min(_province_total, int(rank * _safe_ratio) + _abs_buf)
-        else:
-            # 无省份人数数据时退回保守固定区间
-            _rank_lo = max(1, int(rank * 0.35))
-            _rank_hi = int(rank * 2.8) + 4000
+        _rank_lo = max(1, int(rank * 0.75))   # 冲下界 0.80 - 5% 缓冲
+        _rank_hi = int(rank * 1.45)            # 保上界 1.40 + 5% 缓冲
+        _prov_cap = _get_province_total(province, 2025)
+        if _prov_cap > 0:
+            _rank_hi = min(_prov_cap, _rank_hi)
         _sql_extra += " AND (min_rank IS NULL OR min_rank = 0 OR (min_rank >= :rank_lo AND min_rank <= :rank_hi))"
         _sql_params["rank_lo"] = _rank_lo
         _sql_params["rank_hi"] = _rank_hi
+        print(
+            f"[_build_recommend_data] gap_rate filter: rank={rank} "
+            f"min_rank ∈ [{_rank_lo}, {_rank_hi}]（gap_rate±5%缓冲）",
+            flush=True,
+        )
     raw_rows = db.execute(_sqla_text(
         "SELECT school_name, major_name, year, min_rank, min_score, "
         "COALESCE(admit_count,0), COALESCE(subject_req,''), COALESCE(batch,'') "
@@ -1279,7 +1272,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     user_subjects          = data["user_subjects"]
     _student_pool          = data["student_pool"]
 
-    # 调试：打印 _build_recommend_data 返回的全量 data（长字符串截断；ORM/闭包先转成可 JSON）
+    # 调试：随机打印至多 5 条 candidates（长字符串截断便于终端阅读）
     def _truncate_log_strings(obj: object, maxlen: int = 20) -> object:
         if isinstance(obj, str):
             return obj[:maxlen] + ("..." if len(obj) > maxlen else "")
@@ -1291,27 +1284,33 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             return tuple(_truncate_log_strings(v, maxlen) for v in obj)
         return obj
 
-    def _serialize_data_for_debug_log(d: dict, str_max: int = 20) -> dict:
-        from sqlalchemy.inspection import inspect as sa_inspect
-
-        out: dict = {}
-        return _truncate_log_strings(out, str_max)
-
     print("=" * 72, flush=True)
-    _n_cand = len(data.get("candidates") or [])
+    _cands = data.get("candidates") or []
+    _n_cand = len(_cands)
+    _sample = random.sample(_cands, min(5, _n_cand)) if _cands else []
     print(
         f"[_run_recommend_core] 省={province} rank={rank} 选科={subject or '(空)'} "
-        f"_build_recommend_data 全量 JSON（candidates={_n_cand} 条，字符串字段≤20字）",
+        f"candidates={_n_cand} 条 — 随机抽样 {len(_sample)} 条（字符串字段≤20字）",
         flush=True,
     )
-    print(
-        json.dumps(
-            _serialize_data_for_debug_log(data),
-            ensure_ascii=False,
-            default=str,
-        ),
-        flush=True,
-    )
+    for _ci, _crow in enumerate(_sample, 1):
+        _row = _truncate_log_strings(_crow, 20)
+        _rest = {k: v for k, v in _row.items() if k not in ("median_rank", "median_score")}
+        print(
+            json.dumps(
+                {
+                    "_i": _ci,
+                    "_n_sample": len(_sample),
+                    "_n_total": _n_cand,
+                    "◆ median_rank": _crow.get("median_rank"),
+                    "◆ median_score": _crow.get("median_score"),
+                    **_rest,
+                },
+                ensure_ascii=False,
+                default=str,
+            ),
+            flush=True,
+        )
     print("=" * 72, flush=True)
 
     _rc("③ 位次池/选科解析", student_pool=_student_pool or "(未指定)")
@@ -1400,6 +1399,20 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         # 预测录取概率（小样本专业使用学校先验做贝叶斯平滑）
         prediction = predict_admission(rank, records,
                                        school_prior_rank=_school_prior_rank.get(school_name, 0))
+
+        # 加权平均录取最低分（与 avg_min_rank_3yr 使用相同衰减权重）
+        _score_recs = sorted(
+            [r for r in records if (r.get("min_score") or 0) > 0],
+            key=lambda r: r["year"], reverse=True
+        )[:5]
+        if _score_recs:
+            _sw = [2.0, 1.4, 1.0, 0.7, 0.5][:len(_score_recs)]
+            _avg_score = round(
+                sum(_score_recs[i]["min_score"] * _sw[i] for i in range(len(_score_recs)))
+                / sum(_sw)
+            )
+        else:
+            _avg_score = 0
 
         # 从真实学科评估表获取该校A类学科（用于Type A冷门检测）
         strong_subjects = subject_eval_cache.get(school_name, [])
@@ -1524,11 +1537,18 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if avg_rank == 0:
             _scan["skip_avg_rank_0"] += 1
             continue
-        # P0.1修复：收窄rank窗口（原4倍过宽，导致680/690/700分结果相同）
-        # 新逻辑：上界=考生位次×2.5（够看到冲志愿），下界=考生位次×0.4（够看到保底）
-        # 最小缓冲3000防止顶尖分段窗口过窄
-        _rank_buf = max(3000, rank * 0.3)
-        if avg_rank > rank * 2.5 + _rank_buf or avg_rank < rank * 0.4 - _rank_buf:
+
+        # ── gap_rate 分桶预计算 ──────────────────────────────────
+        # gap_rate = (avg_school_rank - student_rank) / student_rank
+        #   < 0 → 学校更难（冲刺方向）；> 0 → 学校更容易（保底方向）
+        # 分桶边界：
+        #   冲：[-0.20, -0.10)   学校比学生难 10~20%
+        #   稳：[-0.10, +0.10]   学校与学生位次相近 ±10%
+        #   保：(+0.10, +0.40]   学校比学生容易 10~40%
+        # 超出范围（< -0.20 或 > +0.40）直接跳过
+        _gap_rate = (avg_rank - rank) / rank if rank > 0 else 0
+
+        if _gap_rate < -0.20 or _gap_rate > 0.40:
             _scan["skip_rank_window"] += 1
             continue
 
@@ -1556,6 +1576,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             "prob_high": prediction.get("prob_high"),
             "suggested_action": prediction["suggested_action"],
             "avg_min_rank_3yr": prediction.get("avg_min_rank_3yr", 0),
+            "avg_min_score_3yr": _avg_score,
             "rank_diff": prediction.get("rank_diff", 0),
             "confidence": prediction["confidence"],
             "big_small_year": prediction.get("big_small_year", {}),
@@ -1580,6 +1601,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             ),
             "opportunity_score": _opp_score,
             "opportunity_signals": _opp_signals,
+            "gap_rate": round(_gap_rate, 4),   # (avg_school_rank - student_rank) / student_rank
+            "surge_label": (
+                "大冲" if _gap_rate < -0.15      # 学校难15~20%
+                else "小冲" if _gap_rate < -0.10  # 学校难10~15%
+                else ""
+            ),
             "reason": "",  # filled after result dict is built
         }
         result["reason"] = _build_reason(result, rank)
@@ -1619,7 +1646,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         results.append(result)
         _scan["kept"] += 1
 
-    _rank_buf_dbg = max(3000, rank * 0.3)
     _rc(
         "⑯ 逐专业评分结束",
         grouped=len(grouped),
@@ -1627,56 +1653,63 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         skip_subject=_scan["skip_subject"],
         skip_avg_rank_0=_scan["skip_avg_rank_0"],
         skip_rank_window=_scan["skip_rank_window"],
-        rank_window_lo=round(rank * 0.4 - _rank_buf_dbg, 1),
-        rank_window_hi=round(rank * 2.5 + _rank_buf_dbg, 1),
+        gap_rate_surge=f"[{-0.20}, {-0.10})",
+        gap_rate_stable=f"[{-0.10}, {+0.10}]",
+        gap_rate_safe=f"({+0.10}, {+0.40}]",
+        rank_surge_lo=int(rank * 0.80),
+        rank_stable_hi=int(rank * 1.10),
+        rank_safe_hi=int(rank * 1.40),
     )
 
-    # 6. 综合排序：质量 × 概率 × 冷门价值
-    # 对每类桶按 quality_score 二次排序，保证同等概率下优质学校在前
-    def _sort_score(x):
-        # 综合排序：概率 × 质量 × 冷门价值 × 机会分
-        # opportunity_score（-20~45）归一化到 0~1 范围后参与加权，权重10%
-        # 这使得同概率区间内，有大年反转/扩招信号的学校优先展示——这是竞品算法的盲区。
-        opp_norm = (x.get("opportunity_score", 0) + 20) / 65  # map [-20,45]→[0,1]
-        score = -(x["probability"] * 0.40 + x["quality_score"] * 0.35
-                  + x["gem_score"] * 0.15 + opp_norm * 100 * 0.10)
-        return (score, x.get("school_name", ""), x.get("major_name", ""))
+    # 6. 按桶定义独立排序函数（各桶权重不同，体现不同决策逻辑）
+    def _opp_n(x): return (x.get("opportunity_score", 0) + 20) / 65  # [-20,45]→[0,1]
 
-    results.sort(key=_sort_score)
-    _rc("⑰ 全局综合排序完成（概率+质量+冷门+机会分）")
+    def _surge_sort(x):
+        # 冲区：学生在冒险 → 冷门价值优先（同样是冲，选更值钱的险）
+        return (-(x["gem_score"] * 0.40 + x["quality_score"] * 0.35 + _opp_n(x) * 100 * 0.25),
+                x.get("school_name", ""), x.get("major_name", ""))
 
-    # 7. 冲稳保分层（先分桶，再对少量结果做精细调整）
-    # 宪法准则：surge 门槛降至 10%，10-24% 标记"极冲"，确保高排名考生也有足够数量
-    for _r in results:
-        if 10 <= _r["probability"] < 25:
-            _r["suggested_action"] = "极冲"
-    surge  = [r for r in results if 10 <= r["probability"] < 55]
-    stable = [r for r in results if 55 <= r["probability"] < 82]
-    safe   = [r for r in results if r["probability"] >= 82]
-    # 截取展示数量（目标96所，覆盖高考平行志愿全部可填槽位）
-    # 分配：冲25 + 稳46 + 保25 = 96
-    # P7修复：每所学校最多展示 _SCHOOL_CAP 个专业，防止单校霸屏（如西南交通大学占13/96槽）
-    # 计数器跨三个桶共享，避免同校在冲/稳/保中各出现 cap 次（总共 3×cap）
+    def _stable_sort(x):
+        # 稳区：核心推荐区 → 质量优先
+        return (-(x["quality_score"] * 0.50 + x["gem_score"] * 0.30 + _opp_n(x) * 100 * 0.20),
+                x.get("school_name", ""), x.get("major_name", ""))
+
+    def _safe_sort(x):
+        # 保区：安全网 → 质量压倒性（保底就保最好的）
+        return (-(x["quality_score"] * 0.60 + x["gem_score"] * 0.25 + _opp_n(x) * 100 * 0.15),
+                x.get("school_name", ""), x.get("major_name", ""))
+
+    _rc("⑰ 三桶独立排序函数就绪（冲:gem0.4/质0.35 稳:质0.5/gem0.3 保:质0.6/gem0.25）")
+
+    # 7. 冲/稳/保硬排名分桶（gap_rate = (avg_school_rank - student_rank) / student_rank）
+    # ─────────────────────────────────────────────────────────────────────────────────
+    # 冲：[-0.20, -0.10)  学校比学生难10~20%，有希望但需要努力
+    # 稳：[-0.10, +0.10]  学校与学生位次相近±10%，录取把握大
+    # 保：(+0.10, +0.40]  学校明显容易，学生位次高于录取线10%以上
+    surge  = [r for r in results if -0.20 <= r["gap_rate"] < -0.10]
+    stable = [r for r in results if -0.10 <= r["gap_rate"] <= 0.10]
+    safe   = [r for r in results if  0.10 <  r["gap_rate"] <= 0.40]
+
+    # 每所学校各桶独立计数（原来跨桶共享导致某桶学校不足）
     _SCHOOL_CAP = 5
-    _sch_cnt: dict = defaultdict(int)
 
-    def _capped_pick(pool: list, n: int) -> list:
+    def _capped_pick(pool: list, n: int, cnt: dict) -> list:
         out = []
         for r in pool:
             if len(out) >= n:
                 break
             sn = r.get("school_name", "")
-            if _sch_cnt[sn] < _SCHOOL_CAP:
+            if cnt[sn] < _SCHOOL_CAP:
                 out.append(r)
-                _sch_cnt[sn] += 1
+                cnt[sn] += 1
         return out
 
-    surge_list  = _capped_pick(surge, 25)
-    stable_list = _capped_pick(stable, 46)
-    safe_list   = _capped_pick(safe, 25)
+    surge_list  = _capped_pick(sorted(surge,  key=_surge_sort),  25, defaultdict(int))
+    stable_list = _capped_pick(sorted(stable, key=_stable_sort), 46, defaultdict(int))
+    safe_list   = _capped_pick(sorted(safe,   key=_safe_sort),   25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
     _rc(
-        "⑱ 冲/稳/保初分桶与校名额 cap",
+        "⑱ 冲/稳/保初分桶（gap_rate硬边界）与校名额 cap",
         surge_pool=len(surge),
         stable_pool=len(stable),
         safe_pool=len(safe),
@@ -1686,11 +1719,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         school_cap=_SCHOOL_CAP,
     )
 
-    # 冷门宝藏：从96所中提取并按冷门价值×录取概率复合排序
-    # P0.3：probability 权重0.6确保与考生位次匹配的冷门排在前面
+    # 冷门宝藏：从冲+稳区（gap_rate ≤ 0.10）提取，保区宝藏价值低不展示
     gems_list = sorted(
-        [r for r in combined_96 if r["is_hidden_gem"] and r["probability"] >= 10],
-        key=lambda x: -(x["gem_score"] * 0.4 + x["probability"] * 0.6)
+        [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
+        key=lambda x: -(x["gem_score"] * 0.55 + x["quality_score"] * 0.30 + _opp_n(x) * 100 * 0.15)
     )
     _rc("⑲ 冷门 gems_list（惩罚前）", n=len(gems_list))
 
@@ -1772,20 +1804,16 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if ph is not None and ph < p:
             r["prob_high"] = p
 
-    # 7d. 惩罚后重新分桶（热门惩罚可能改变冲/稳/保归属）
-    # 用与初始排序相同的 deterministic key（含机会分）重排，保证查询稳定性
-    def _resort_key(x):
-        opp_norm = (x.get("opportunity_score", 0) + 20) / 65
-        return (-(x["probability"]*0.40 + x["quality_score"]*0.35
-                  + x["gem_score"]*0.15 + opp_norm * 100 * 0.10),
-                x.get("school_name",""), x.get("major_name",""))
-
-    surge_list  = sorted([r for r in display_list if 10 <= r["probability"] < 55],
-                         key=_resort_key)[:25]
-    stable_list = sorted([r for r in display_list if 55 <= r["probability"] < 82],
-                         key=_resort_key)[:46]
-    safe_list   = sorted([r for r in display_list if r["probability"] >= 82],
-                         key=_resort_key)[:25]
+    # 7d. 惩罚后重新分桶（gap_rate 不因惩罚变化，按各桶 sort_key 重排）
+    surge_list  = _capped_pick(
+        sorted([r for r in display_list if -0.20 <= r["gap_rate"] < -0.10], key=_surge_sort),
+        25, defaultdict(int))
+    stable_list = _capped_pick(
+        sorted([r for r in display_list if -0.10 <= r["gap_rate"] <= 0.10],  key=_stable_sort),
+        46, defaultdict(int))
+    safe_list   = _capped_pick(
+        sorted([r for r in display_list if  0.10 <  r["gap_rate"] <= 0.40],  key=_safe_sort),
+        25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
     _rc(
         "㉒ 惩罚后重分桶+截断",
@@ -1800,17 +1828,17 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 场景B：combined_96不足30条 → 用概率最高的未入桶结果补齐至30条
     _p8_note = "无需"
     if not combined_96 and results:
-        _fallback = sorted(results, key=lambda x: -x["probability"])[:30]
+        # 三桶皆空：取 gap_rate 最接近稳区中心（0）的30条，标"参考"
+        _fallback = sorted(results, key=lambda x: abs(x["gap_rate"]))[:30]
         for _fb in _fallback:
             _fb["suggested_action"] = "参考"
         safe_list   = _fallback
         combined_96 = _fallback
-        _p8_note = "三桶皆空→取高概率30条标「参考」"
+        _p8_note = "三桶皆空→取gap_rate最近30条标「参考」"
     elif len(combined_96) < 30 and results:
-        # 补齐：把已选的school-major组合排除，补入剩余高概率结果
         _in_96 = {(r["school_name"], r["major_name"]) for r in combined_96}
         _extras = [r for r in results if (r["school_name"], r["major_name"]) not in _in_96]
-        _extras_sorted = sorted(_extras, key=lambda x: -x["probability"])
+        _extras_sorted = sorted(_extras, key=lambda x: abs(x["gap_rate"]))
         _need = 30 - len(combined_96)
         for _ex in _extras_sorted[:_need]:
             _ex["suggested_action"] = "参考"
@@ -1820,8 +1848,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     _rc("㉓ P8 数量兜底", action=_p8_note, combined=len(combined_96))
 
     gems_list = sorted(
-        [r for r in combined_96 if r["is_hidden_gem"] and r["probability"] >= 10],
-        key=lambda x: (-(x["gem_score"]*0.4 + x["probability"]*0.6),
+        [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
+        key=lambda x: (-(x["gem_score"]*0.55 + x["quality_score"]*0.30 + _opp_n(x)*100*0.15),
                        x.get("school_name",""), x.get("major_name",""))
     )
     _rc("㉔ 冷门 gems_list（惩罚+P8 后）", n=len(gems_list))

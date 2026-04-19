@@ -152,11 +152,11 @@ export default function Home() {
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span className="nav-brand-sub" style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px" }}>袁希团队出品</span>
-            <Link href="/shuchu" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>输出工作台</Link>
-            <Link href="/crisis-pr" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>MIROFISH危机预测</Link>
-            <Link href="/major-trend" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
-            <Link href="/search" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
-            <Link href="/form" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
+            <Link href="/shuchu" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>输出工作台</Link>
+            <Link href="/crisis-pr" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>MIROFISH危机预测</Link>
+            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
+            <Link href="/search" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
+            <Link href="/form" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
             <AuthNav />
           </div>
         </div>

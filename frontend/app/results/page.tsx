@@ -641,6 +641,7 @@ function ResultsContent() {
   const [emailSending, setEmailSending] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [showEmailInput, setShowEmailInput] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [lockedExpanded, setLockedExpanded] = useState(false);
   // Per-query order_no: keyed by province+rank+subject so one payment can't unlock other queries
@@ -717,6 +718,16 @@ function ResultsContent() {
       setEmailSending(false);
     }
   }
+
+  useEffect(() => {
+    if (!showMobileMenu) return;
+    function handleOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".nav-mobile-menu")) setShowMobileMenu(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showMobileMenu]);
 
   useEffect(() => {
     if (!rank) return;
@@ -813,12 +824,14 @@ function ResultsContent() {
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
       {/* Nav */}
-      <nav className="apple-nav">
-        <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <button onClick={() => router.push("/")} className="btn-ghost" style={{ fontSize: 14 }}>
+      <nav className="apple-nav" style={{ position: "relative" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <button onClick={() => router.push("/")} className="btn-ghost" style={{ fontSize: 14, paddingLeft: 0, paddingRight: 0, flexShrink: 0 }}>
             ← 重新查询
           </button>
-          <div style={{ textAlign: "center" }}>
+
+          {/* 中间：查询信息 */}
+          <div style={{ textAlign: "center", flex: 1, padding: "0 12px" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
               {fromMock
                 ? `模考 ${mockScore}分 · 估算 ${Number(rank).toLocaleString()}`
@@ -828,7 +841,9 @@ function ResultsContent() {
               <div style={{ fontSize: 11, color: "#ff9500" }}>此为估算位次，出分后请用真实位次重查</div>
             )}
           </div>
-          <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+
+          {/* 桌面端右侧操作 */}
+          <div className="nav-link-mobile-hide" style={{ display: "flex", gap: 8, alignItems: "center" }}>
             {data?.is_paid ? (
               <button
                 onClick={handleExportPDF}
@@ -859,7 +874,6 @@ function ResultsContent() {
             <button
               onClick={() => setShowEmailInput(!showEmailInput)}
               disabled={!data || data.total_matched === 0}
-              className="hide-on-mobile"
               style={{
                 fontSize: 12, padding: "6px 12px", borderRadius: 980,
                 border: "1px solid var(--color-separator)",
@@ -873,6 +887,86 @@ function ResultsContent() {
               我的志愿表
             </Link>
             <AuthNav />
+          </div>
+
+          {/* 移动端：我的 按钮 */}
+          <div className="nav-mobile-only nav-mobile-menu" style={{ position: "relative", flexShrink: 0 }}>
+            <button
+              onClick={() => setShowMobileMenu((v) => !v)}
+              style={{
+                fontSize: 13, padding: "6px 14px", borderRadius: 980,
+                border: "1px solid var(--color-separator)",
+                background: showMobileMenu ? "var(--color-bg-secondary)" : "transparent",
+                color: "var(--color-text-secondary)", cursor: "pointer",
+              }}
+            >
+              我的 {showMobileMenu ? "▴" : "▾"}
+            </button>
+            {showMobileMenu && (
+              <div
+                style={{
+                  position: "fixed", top: 52, right: 0, left: 0,
+                  background: "var(--color-bg-secondary)",
+                  borderBottom: "1px solid var(--color-separator)",
+                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                  padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10,
+                  zIndex: 200,
+                }}
+                onClick={() => setShowMobileMenu(false)}
+              >
+                {data?.is_paid ? (
+                  <button
+                    onClick={handleExportPDF}
+                    disabled={exporting || !data || data.total_matched === 0}
+                    style={{
+                      fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                      border: "1px solid var(--color-accent)",
+                      background: "rgba(201,146,42,0.08)", color: "var(--color-accent)",
+                      cursor: "pointer", opacity: exporting ? 0.6 : 1, fontWeight: 500, textAlign: "left",
+                    }}
+                  >
+                    {exporting ? "生成中…" : "↓ 下载PDF报告"}
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => { setShowMobileMenu(false); setShowPayModal(true); }}
+                    disabled={!data || data.total_matched === 0}
+                    style={{
+                      fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                      background: "var(--color-navy)", color: "#fff",
+                      border: "none", cursor: "pointer", fontWeight: 600, textAlign: "left",
+                    }}
+                  >
+                    ¥1.99 解锁完整报告
+                  </button>
+                )}
+                <Link
+                  href="/form"
+                  style={{
+                    fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                    background: "var(--color-accent)", color: "#fff",
+                    textDecoration: "none", fontWeight: 500, display: "block",
+                  }}
+                >
+                  我的志愿表
+                </Link>
+                <button
+                  onClick={() => { setShowMobileMenu(false); setShowEmailInput(!showEmailInput); }}
+                  disabled={!data || data.total_matched === 0}
+                  style={{
+                    fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                    border: "1px solid var(--color-separator)",
+                    background: "transparent", color: "var(--color-text-secondary)",
+                    cursor: "pointer", textAlign: "left",
+                  }}
+                >
+                  发送邮件报告
+                </button>
+                <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
+                  <AuthNav redirectOnLogin={typeof window !== "undefined" ? window.location.pathname + window.location.search : undefined} />
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -1073,7 +1167,7 @@ function ResultsContent() {
         </div>
 
         {/* Tier filter */}
-        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "wrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "nowrap", alignItems: "center" }}>
           {["", "985", "211", "双一流", "普通"].map((t) => (
             <button
               key={t}

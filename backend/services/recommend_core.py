@@ -778,11 +778,11 @@ def _build_recommend_data(
         _sql_extra += " AND (min_rank IS NULL OR min_rank = 0 OR (min_rank >= :rank_lo AND min_rank <= :rank_hi))"
         _sql_params["rank_lo"] = _rank_lo
         _sql_params["rank_hi"] = _rank_hi
-        print(
-            f"[_build_recommend_data] gap_rate filter: rank={rank} "
-            f"min_rank ∈ [{_rank_lo}, {_rank_hi}]（gap_rate±5%缓冲）",
-            flush=True,
-        )
+        # print(
+        #     f"[_build_recommend_data] gap_rate filter: rank={rank} "
+        #     f"min_rank ∈ [{_rank_lo}, {_rank_hi}]（gap_rate±5%缓冲）",
+        #     flush=True,
+        # )
     raw_rows = db.execute(_sqla_text(
         "SELECT school_name, major_name, year, min_rank, min_score, "
         "COALESCE(admit_count,0), COALESCE(subject_req,''), COALESCE(batch,'') "
@@ -1227,8 +1227,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     供 /api/recommend 端点和 PDF 报告生成共同调用。
     主推荐接口：输入位次，返回冲稳保分层推荐 + 冷门挖掘（接入真实学科评估）
     """
-    print(11, province,rank,subject)
-    _debug_rc = 1
+    # print(11, province,rank,subject)
+    _debug_rc = os.getenv("GAOKAO_RECOMMEND_DEBUG", "0")
 
     def _rc(step: str, **kw: object) -> None:
         """调试：统一前缀打印各阶段状态。关闭：环境变量 GAOKAO_RECOMMEND_DEBUG=0"""
@@ -1284,34 +1284,34 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             return tuple(_truncate_log_strings(v, maxlen) for v in obj)
         return obj
 
-    print("=" * 72, flush=True)
-    _cands = data.get("candidates") or []
-    _n_cand = len(_cands)
-    _sample = random.sample(_cands, min(5, _n_cand)) if _cands else []
-    print(
-        f"[_run_recommend_core] 省={province} rank={rank} 选科={subject or '(空)'} "
-        f"candidates={_n_cand} 条 — 随机抽样 {len(_sample)} 条（字符串字段≤20字）",
-        flush=True,
-    )
-    for _ci, _crow in enumerate(_sample, 1):
-        _row = _truncate_log_strings(_crow, 20)
-        _rest = {k: v for k, v in _row.items() if k not in ("median_rank", "median_score")}
-        print(
-            json.dumps(
-                {
-                    "_i": _ci,
-                    "_n_sample": len(_sample),
-                    "_n_total": _n_cand,
-                    "◆ median_rank": _crow.get("median_rank"),
-                    "◆ median_score": _crow.get("median_score"),
-                    **_rest,
-                },
-                ensure_ascii=False,
-                default=str,
-            ),
-            flush=True,
-        )
-    print("=" * 72, flush=True)
+    # print("=" * 72, flush=True)
+    # _cands = data.get("candidates") or []
+    # _n_cand = len(_cands)
+    # _sample = random.sample(_cands, min(5, _n_cand)) if _cands else []
+    # print(
+    #     f"[_run_recommend_core] 省={province} rank={rank} 选科={subject or '(空)'} "
+    #     f"candidates={_n_cand} 条 — 随机抽样 {len(_sample)} 条（字符串字段≤20字）",
+    #     flush=True,
+    # )
+    # for _ci, _crow in enumerate(_sample, 1):
+    #     _row = _truncate_log_strings(_crow, 20)
+    #     _rest = {k: v for k, v in _row.items() if k not in ("median_rank", "median_score")}
+    #     print(
+    #         json.dumps(
+    #             {
+    #                 "_i": _ci,
+    #                 "_n_sample": len(_sample),
+    #                 "_n_total": _n_cand,
+    #                 "◆ median_rank": _crow.get("median_rank"),
+    #                 "◆ median_score": _crow.get("median_score"),
+    #                 **_rest,
+    #             },
+    #             ensure_ascii=False,
+    #             default=str,
+    #         ),
+    #         flush=True,
+    #     )
+    # print("=" * 72, flush=True)
 
     _rc("③ 位次池/选科解析", student_pool=_student_pool or "(未指定)")
     _rc(

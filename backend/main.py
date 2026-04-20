@@ -304,8 +304,8 @@ def recommend(
 
     try:
         return _run_recommend_core(province=province, rank=rank, subject=subject,
-                                #    mode=mode, db=db, is_paid=True)
-                                   mode=mode, db=db, is_paid=is_paid)
+                                   mode=mode, db=db, is_paid=True)
+                                #    mode=mode, db=db, is_paid=is_paid)
     except Exception as e:
         logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")

@@ -3,8 +3,13 @@ from sqlalchemy import create_engine, Column, Integer, String, Float, Text, Inde
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 import datetime
+import os
+from pathlib import Path
 
-DATABASE_URL = "sqlite:///./gaokao.db"
+# 勿用 sqlite:///./gaokao.db：./ 相对进程 cwd，与 systemd/启动目录强绑定，易连错库。
+# 默认固定为「本文件所在目录下的 gaokao.db」；可选环境变量 DATABASE_URL 覆盖（main 会先加载 .env）
+_DEFAULT_DB = Path(__file__).resolve().parent / "gaokao.db"
+DATABASE_URL = os.getenv("DATABASE_URL") or f"sqlite:///{_DEFAULT_DB.as_posix()}"
 def _set_wal(conn, conn_record):
     """启用 WAL 日志模式，允许并发读写（解决爬虫写入时API读阻塞问题）"""
     conn.execute("PRAGMA journal_mode=WAL")

@@ -19,7 +19,7 @@ build/
 # --- 本地环境与密钥 ---
 .env
 .env.*
-!.env.example
+!**/.env.example
 
 # --- 本地数据库文件（不含 migrations 里的结构 SQL）---
 *.db

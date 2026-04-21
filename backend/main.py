@@ -9,15 +9,8 @@ from typing import List, Optional
 from collections import defaultdict
 import sys, os, json, datetime, logging, re, time
 
-# 加载 .env 文件（优先于系统环境变量）
-_env_path = os.path.join(os.path.dirname(__file__), ".env")
-if os.path.exists(_env_path):
-    with open(_env_path) as _f:
-        for _line in _f:
-            _line = _line.strip()
-            if _line and not _line.startswith("#") and "=" in _line:
-                _k, _, _v = _line.partition("=")
-                os.environ.setdefault(_k.strip(), _v.strip())
+from dotenv import load_dotenv
+load_dotenv()
 
 logger = logging.getLogger("gaokao")
 
@@ -86,6 +79,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 app.add_middleware(SecurityHeadersMiddleware)
 
 
+@app.get("/")
+def root():
+    return {"status": "ok"}
 
 @app.on_event("startup")
 def on_startup():
@@ -304,8 +300,8 @@ def recommend(
 
     try:
         return _run_recommend_core(province=province, rank=rank, subject=subject,
-                                   mode=mode, db=db, is_paid=True)
-                                #    mode=mode, db=db, is_paid=is_paid)
+                                #    mode=mode, db=db, is_paid=True)
+                                   mode=mode, db=db, is_paid=is_paid)
     except Exception as e:
         logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")

@@ -1228,10 +1228,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     主推荐接口：输入位次，返回冲稳保分层推荐 + 冷门挖掘（接入真实学科评估）
     """
     # print(11, province,rank,subject)
-    _debug_rc = os.getenv("GAOKAO_RECOMMEND_DEBUG", "0")
+    _debug_rc = os.getenv("GAOKAO_DEBUG", "0") not in {"", "0", "false", "off", "no"}
 
     def _rc(step: str, **kw: object) -> None:
-        """调试：统一前缀打印各阶段状态。关闭：环境变量 GAOKAO_RECOMMEND_DEBUG=0"""
+        """调试：统一前缀打印各阶段状态。关闭：环境变量 GAOKAO_DEBUG=0"""
         if not _debug_rc:
             return
         if kw:

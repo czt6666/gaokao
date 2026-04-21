@@ -66,3 +66,4 @@ Thumbs.db
 
 # --- 部署（含 SSH 目标等，勿提交）---
 deploy/deploy.env
+certs/

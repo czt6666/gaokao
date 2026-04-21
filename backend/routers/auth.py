@@ -83,7 +83,7 @@ def _check_rate_limit(phone: str, client_ip: str, db: Session):
 
 async def _send_sms(phone: str, code: str):
     """
-    发送短信验证码。优先使用腾讯云短信，其次阿里云，否则打印日志（开发模式）。
+    发送短信验证码。使用腾讯云短信，否则打印日志（开发模式）。
     真实渠道发送失败时抛出 HTTPException(503)，由调用方回滚DB记录。
     """
     # ── 腾讯云短信（优先）──────────────────────────────────────
@@ -122,38 +122,6 @@ async def _send_sms(phone: str, code: str):
             print(f"[TENCENT SMS ERROR] {phone}: {e}")
             raise HTTPException(status_code=503, detail="短信服务暂时不可用，请稍后重试")
 
-    # ── 阿里云短信（备选）──────────────────────────────────────
-    access_key_id     = os.getenv("ALIYUN_ACCESS_KEY_ID", "")
-    access_key_secret = os.getenv("ALIYUN_ACCESS_KEY_SECRET", "")
-    sign_name         = os.getenv("ALIYUN_SMS_SIGN", "水卢冷门高报引擎")
-    template_code     = os.getenv("ALIYUN_SMS_TEMPLATE", "")
-
-    if access_key_id and access_key_secret and template_code:
-        try:
-            from alibabacloud_dysmsapi20170525 import models as sms_models
-            from alibabacloud_dysmsapi20170525.client import Client
-            from alibabacloud_tea_openapi import models as open_api_models
-
-            config = open_api_models.Config(
-                access_key_id=access_key_id,
-                access_key_secret=access_key_secret,
-                endpoint="dysmsapi.aliyuncs.com",
-            )
-            client = Client(config)
-            req = sms_models.SendSmsRequest(
-                phone_numbers=phone,
-                sign_name=sign_name,
-                template_code=template_code,
-                template_param=json.dumps({"code": code}),
-            )
-            client.send_sms(req)
-            print(f"[ALIYUN SMS SENT] {phone}: {code}")
-            return
-        except HTTPException:
-            raise
-        except Exception as e:
-            print(f"[ALIYUN SMS ERROR] {phone}: {e}")
-            raise HTTPException(status_code=503, detail="短信服务暂时不可用，请稍后重试")
 
     # ── 开发模式（无凭证）——始终成功 ──────────────────────────
     print(f"[DEV SMS] {phone}: {code}  (配置 TENCENT_SECRET_ID 等环境变量以启用真实发送)")
@@ -272,11 +240,11 @@ async def wechat_qr():
     """
     获取微信扫码登录二维码。
     需要配置：
-      WECHAT_OPEN_APP_ID     — 微信开放平台 AppID（需开放平台认证，300元/年）
-      WECHAT_OPEN_APP_SECRET — 微信开放平台 AppSecret
-    当前状态：等待ICP备案 + 微信开放平台认证后启用。
+      WECHAT_MP_APP_ID     — 微信公众号 AppID（需开放平台认证，300元/年）
+      WECHAT_MP_APP_SECRET — 微信公众号 AppSecret
+    当前状态：等待ICP备案 + 微信公众号认证后启用。
     """
-    app_id = os.getenv("WECHAT_OPEN_APP_ID", "")
+    app_id = os.getenv("WECHAT_MP_APP_ID", "")
     if not app_id:
         return {
             "available": False,
@@ -463,8 +431,8 @@ async def wechat_callback(code: str, state: str, db: Session = Depends(get_db)):
     微信扫码登录回调。用 code 换取 openid，登录/注册用户。
     """
     import httpx
-    app_id     = os.getenv("WECHAT_OPEN_APP_ID", "")
-    app_secret = os.getenv("WECHAT_OPEN_APP_SECRET", "")
+    app_id     = os.getenv("WECHAT_MP_APP_ID", "")
+    app_secret = os.getenv("WECHAT_MP_APP_SECRET", "")
 
     if not app_id or not app_secret:
         raise HTTPException(status_code=503, detail="微信登录暂未开放，请使用手机号登录")

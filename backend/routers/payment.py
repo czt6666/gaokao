@@ -450,10 +450,8 @@ def _aes_gcm_decrypt(key: str, nonce: str, ciphertext: str, associated_data: str
 
 def _verify_wechat_signature(timestamp: str, nonce: str, body: str, signature: str) -> bool:
     """验证微信支付回调签名 — RSA-SHA256。
-    支持两种密钥格式：
-      1. 微信支付公钥（新版，PEM 公钥文件）→ WECHAT_PUBKEY_PATH
-      2. 平台证书（旧版，X.509 证书）       → WECHAT_PLATFORM_CERT_PATH
-    优先读取公钥；两者都未配置时记录错误并拒绝回调（return False）。
+    支持微信支付公钥（新版，PEM 公钥文件）→ WECHAT_PUBKEY_PATH
+    优先读取公钥；未配置时记录错误并拒绝回调（return False）。
     """
     import time as _time
 
@@ -472,11 +470,7 @@ def _verify_wechat_signature(timestamp: str, nonce: str, body: str, signature: s
         return False
 
     # 优先：微信支付公钥（新版商户，2024+）
-    pubkey_path = os.getenv("WECHAT_PUBKEY_PATH", "/app/backend/certs/wechatpay_pubkey.pem")
-    # 备选：平台证书（旧版商户）
-    cert_path = os.getenv("WECHAT_PLATFORM_CERT_PATH", "/app/backend/certs/wechatpay_platform.pem")
-
-    key_file = pubkey_path if os.path.exists(pubkey_path) else (cert_path if os.path.exists(cert_path) else None)
+    key_file = os.getenv("WECHAT_PUBKEY_PATH", "/app/backend/certs/wechatpay_pubkey.pem")
 
     if key_file is None:
         logger.error(

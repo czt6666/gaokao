@@ -19,6 +19,7 @@ dependencies = [
     "httpx>=0.24.0",
     "pillow>=9.0.0",
     "apscheduler>=3.10.0",
+    "python-dotenv>=1.2.2",
 ]
 
 [tool.uv]

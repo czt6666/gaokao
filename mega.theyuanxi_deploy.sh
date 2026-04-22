@@ -1,6 +1,7 @@
 #!/bin/bash
 # 部署 mega.theyuanxi.cn（后端 8100 / 前端 3100）
 # 用法: bash mega.theyuanxi_deploy.sh
+# 注意：服务器上的 backend/.env 与 frontend/.env.production 由运维手动维护，本脚本不覆盖。
 set -e
 
 SERVER="root@43.143.206.19"
@@ -15,26 +16,20 @@ echo "========================================"
 echo "  袁希高报 · mega.theyuanxi.cn 部署"
 echo "========================================"
 
-# ── 1. 同步后端代码 ──
+# ── 1. 同步后端代码（保留服务器上的 .env / .venv / 数据库）──
 echo ""
-echo "→ [1/5] 同步后端代码..."
+echo "→ [1/4] 同步后端代码..."
 rsync -av --delete --no-owner --no-group \
   --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
   --exclude='.venv' \
+  --exclude='.env' \
   --exclude='data/' \
   "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"
 
-# ── 2. 写入后端 .env ──
+# ── 2. 注册 systemd 服务（仅首次；不使用 EnvironmentFile，由 python-dotenv 读 .env）──
 echo ""
-echo "→ [2/5] 写入后端 .env..."
-ssh "$SERVER" "cat > $REMOTE_BACKEND/.env" <<'EOF'
-SITE_URL=https://mega.theyuanxi.cn
-EOF
-
-# ── 3. 注册 systemd 服务（仅首次）──
-echo ""
-echo "→ [3/5] 注册 systemd 服务（若不存在）..."
+echo "→ [2/4] 注册 systemd 服务（若不存在）..."
 ssh "$SERVER" "
   if [ ! -f /etc/systemd/system/gaokao-mega-backend.service ]; then
     echo '  创建 gaokao-mega-backend.service...'
@@ -47,7 +42,6 @@ After=network.target
 Type=simple
 User=ubuntu
 WorkingDirectory=/app/mega/backend
-EnvironmentFile=/app/mega/backend/.env
 Environment=PYTHONUNBUFFERED=1
 ExecStart=/app/mega/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8100 --workers 1
 Restart=on-failure
@@ -85,29 +79,27 @@ UNIT
   fi
 "
 
-# ── 4. 同步前端、构建 ──
+# ── 3. 同步前端源码并构建（保留服务器上的 .env.production / node_modules）──
 echo ""
-echo "→ [4/5] 同步前端源码并构建..."
+echo "→ [3/4] 同步前端源码并构建..."
 rsync -av --delete --no-owner --no-group \
   --exclude='node_modules' --exclude='.next' \
+  --exclude='.venv' \
   --exclude='.env.local' --exclude='.env.production' \
   "$LOCAL_FRONTEND/" "$SERVER:$REMOTE_FRONTEND/"
 
 ssh "$SERVER" "
   set -e
-  echo 'NEXT_PUBLIC_API_URL=https://mega.theyuanxi.cn' > $REMOTE_FRONTEND/.env.production
   cd $REMOTE_FRONTEND
   if [ ! -d node_modules ]; then pnpm install; fi
   pnpm run build 2>&1 | tail -20
 "
 
-# ── 5. 安装后端依赖并重启 ──
+# ── 4. 重启服务（如需更新依赖，手动 ssh 后执行：cd /app/mega/backend && uv sync --index-url $PYPI_MIRROR）──
 echo ""
-echo "→ [5/5] uv sync 并重启服务..."
+echo "→ [4/4] 重启服务..."
 ssh "$SERVER" "
   set -e
-  cd $REMOTE_BACKEND
-  uv sync -q --index-url $PYPI_MIRROR
   sudo systemctl restart gaokao-mega-backend
   sleep 2
   sudo systemctl restart gaokao-mega-frontend

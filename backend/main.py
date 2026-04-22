@@ -83,6 +83,13 @@ app.add_middleware(SecurityHeadersMiddleware)
 def root():
     return {"status": "ok"}
 
+
+@app.get("/api/version")
+def version():
+    return {
+        "version": os.getenv("BACKEND_VERSION", "3.0.1"),
+    }
+
 @app.on_event("startup")
 def on_startup():
     init_db()

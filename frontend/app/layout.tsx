@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import Script from "next/script";
 import "./globals.css";
 import FloatingService from "@/components/FloatingService";
 
@@ -99,6 +100,18 @@ export default function RootLayout({
       <body>
         {children}
         <FloatingService />
+        {/* 百度统计 hm.js */}
+        <Script id="baidu-analytics" strategy="afterInteractive">
+          {`
+            var _hmt = _hmt || [];
+            (function() {
+              var hm = document.createElement("script");
+              hm.src = "https://hm.baidu.com/hm.js?49f1e8897e3961600fcd76d504307049";
+              var s = document.getElementsByTagName("script")[0];
+              s.parentNode.insertBefore(hm, s);
+            })();
+          `}
+        </Script>
       </body>
     </html>
   );

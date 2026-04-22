@@ -337,6 +337,48 @@ def get_db():
         db.close()
 
 
+def _ensure_schema():
+    """轻量级自动迁移：给已存在的表补齐新增列，保证老库也能跟上模型。
+    仅做 ADD COLUMN（SQLite 安全幂等），不改类型/删除。
+    """
+    import sqlite3 as _sqlite3
+    db_path = str(_DEFAULT_DB) if not os.getenv("DATABASE_URL") else DATABASE_URL.replace("sqlite:///", "")
+    try:
+        conn = _sqlite3.connect(db_path)
+        cur = conn.cursor()
+
+        def _cols(table: str) -> set[str]:
+            try:
+                cur.execute(f"PRAGMA table_info({table})")
+                return {r[1] for r in cur.fetchall()}
+            except Exception:
+                return set()
+
+        plans: dict[str, list[tuple[str, str]]] = {
+            "users": [
+                ("wechat_mini_openid",  "VARCHAR(64)"),
+                ("subscription_type",   "VARCHAR(20) DEFAULT ''"),
+                ("subscription_end_at", "DATETIME"),
+            ],
+        }
+        for table, cols in plans.items():
+            existing = _cols(table)
+            if not existing:
+                continue
+            for name, ddl in cols:
+                if name not in existing:
+                    try:
+                        cur.execute(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}")
+                        print(f"[migrate] {table}.{name} added")
+                    except Exception as e:
+                        print(f"[migrate] {table}.{name} failed: {e}")
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"[migrate] _ensure_schema skipped: {e}")
+
+
 def init_db():
     Base.metadata.create_all(bind=engine)
-    print("✅ 数据库表结构初始化完成")
+    _ensure_schema()
+    print("[db] schema ready")

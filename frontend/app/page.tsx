@@ -172,8 +172,8 @@ export default function Home() {
           </h1>
 
           {/* One sentence */}
-          <p style={{ fontSize: "clamp(16px, 2vw, 19px)", color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 48, maxWidth: 500, margin: "0 auto 48px", fontWeight: 400 }}>
-            <span style={{ color: "var(--color-text-primary)", fontWeight: 500 }}>他只做了一件你没做的事。</span><br />
+          <p style={{ fontSize: "clamp(16px, 2vw, 19px)", color: "var(--color-text-secondary)", lineHeight: 1.7, maxWidth: 520, margin: "0 auto 48px", fontWeight: 400 }}>
+            <span style={{ color: "var(--color-text-primary)", fontWeight: 600, display: "block", marginBottom: 10 }}>他只做了一件你没做的事。</span>
             每年都有数万名考生，靠同样的分数进了差别悬殊的大学——<br />
             不是因为更聪明，而是因为他们发现了那些「名字普通、实力被严重低估」的学校。
           </p>
@@ -193,7 +193,7 @@ export default function Home() {
             ["127,439名", "考生通过这里发现了隐藏的好学校"],
             ["追踪9年", "告诉你今年哪所学校分数线在下滑"],
             ["真实口碑", "宿舍·就业·转专业难度，骗不了人"],
-            ["3分钟", "今天填报季，今天知道你还有哪些选择"],
+            ["3分钟", "今天填报季，知道你还有哪些选择"],
           ].map(([num, label]) => (
             <div key={label} style={{ textAlign: "center" }}>
               <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--color-text-primary)" }}>{num}</div>
@@ -204,54 +204,6 @@ export default function Home() {
 
         {/* Query card */}
         <div ref={queryRef} className="apple-card-elevated query-card-mobile" style={{ width: "100%", maxWidth: 480 }}>
-          <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 14, background: "#111", color: "#e2e2e2", textAlign: "left" }}>
-            <div style={{ fontSize: 10, letterSpacing: 2, opacity: 0.8, marginBottom: 6 }}>SHUCHU FRONTEND</div>
-            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.25, marginBottom: 6 }}>输出工作台已经挂到前端里了</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#b8b8b8", marginBottom: 10 }}>
-              上传 PDF、Word、图片或直接输入想法，把材料编译成知识库，再继续创作。
-            </div>
-            <Link
-              href="/shuchu"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "9px 14px",
-                borderRadius: 999,
-                background: "#7c6af7",
-                color: "#fff",
-                textDecoration: "none",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              打开输出工作台
-            </Link>
-          </div>
-          <div style={{ marginBottom: 18, padding: "12px 14px", borderRadius: 14, background: "linear-gradient(135deg, #211A17 0%, #4C3229 100%)", color: "#F8F1E8", textAlign: "left" }}>
-            <div style={{ fontSize: 10, letterSpacing: 2, opacity: 0.8, marginBottom: 6 }}>MIROFISH FRONT DESK</div>
-            <div style={{ fontSize: 18, fontWeight: 700, lineHeight: 1.25, marginBottom: 6 }}>公司危机公关预测模型已前置</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#E6D7CC", marginBottom: 10 }}>
-              直接进入前台控制台，模拟用户、媒体、KOL 与监管反应，提前看舆情如何升级。
-            </div>
-            <Link
-              href="/crisis-pr"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                padding: "9px 14px",
-                borderRadius: 999,
-                background: "#F8F1E8",
-                color: "#211A17",
-                textDecoration: "none",
-                fontSize: 12,
-                fontWeight: 700,
-              }}
-            >
-              打开 MIROFISH 预测台
-            </Link>
-          </div>
           <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 16, textAlign: "center", lineHeight: 1.6 }}>
             输入你的全省位次，看看你「还能去哪些被低估的学校」
           </p>
@@ -337,6 +289,30 @@ export default function Home() {
             ⚠️ 每年都有人在填报截止前一天才发现这里——别成为那个人
           </p>
         </div>
+
+        {/* ── 工具入口 ── */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, width: "100%", maxWidth: 480, marginTop: 16 }}>
+          <div style={{ padding: "14px 16px", borderRadius: 14, background: "#111", color: "#e2e2e2" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>SHUCHU</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>输出工作台</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#b8b8b8", marginBottom: 12 }}>
+              上传 PDF 或图片，编译知识库，快速创作输出
+            </div>
+            <Link href="/shuchu" style={{ fontSize: 12, fontWeight: 600, color: "#a89cf7", textDecoration: "none" }}>
+              打开工作台 →
+            </Link>
+          </div>
+          <div style={{ padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #211A17 0%, #4C3229 100%)", color: "#F8F1E8" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>MIROFISH</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>危机公关预测</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#E6D7CC", marginBottom: 12 }}>
+              模拟媒体与舆情反应，提前预判危机走向
+            </div>
+            <Link href="/crisis-pr" style={{ fontSize: 12, fontWeight: 600, color: "#e8c99a", textDecoration: "none" }}>
+              打开预测台 →
+            </Link>
+          </div>
+        </div>
       </section>
 
       {/* ── Section 2: Value Props (3 columns) ── */}
@@ -400,8 +376,8 @@ export default function Home() {
             <div className="apple-card-elevated" style={{ padding: "28px 24px", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, right: 0, background: "var(--color-accent)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 12px", borderBottomLeftRadius: 10, letterSpacing: ".5px" }}>行业首创</div>
               <div style={{ fontSize: 28, marginBottom: 16 }}>📊</div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>置信区间</h3>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>置信区间</h3>
+              <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
                 不说「63%录取」，说「63% [55%–71%]」。区间越宽，说明该校今年波动越大、越要小心。
               </p>
               {/* 可视化示例 */}
@@ -422,8 +398,8 @@ export default function Home() {
             <div className="apple-card-elevated" style={{ padding: "28px 24px", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, right: 0, background: "var(--color-accent)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 12px", borderBottomLeftRadius: 10, letterSpacing: ".5px" }}>行业首创</div>
               <div style={{ fontSize: 28, marginBottom: 16 }}>📈</div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>大年/小年周期检测</h3>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>大年/小年周期检测</h3>
+              <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
                 热门学校往往呈现「大年→小年→大年」周期。我们识别今年处于哪个阶段，告诉你是进攻窗口还是危险陷阱。
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -445,8 +421,8 @@ export default function Home() {
             <div className="apple-card-elevated" style={{ padding: "28px 24px", position: "relative", overflow: "hidden" }}>
               <div style={{ position: "absolute", top: 0, right: 0, background: "var(--color-accent)", color: "#fff", fontSize: 10, fontWeight: 700, padding: "4px 12px", borderBottomLeftRadius: 10, letterSpacing: ".5px" }}>行业首创</div>
               <div style={{ fontSize: 28, marginBottom: 16 }}>🎯</div>
-              <h3 style={{ fontSize: 17, fontWeight: 700, marginBottom: 10 }}>竞争密度修正</h3>
-              <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 600, marginBottom: 10 }}>竞争密度修正</h3>
+              <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 16 }}>
                 你在某位次段，和你竞争同一个学校的人越多，概率越低。我们实时检测该位次段的拥挤程度，自动修正概率。
               </p>
               <div style={{ background: "var(--color-bg-secondary)", borderRadius: 10, padding: "14px 16px" }}>
@@ -491,7 +467,7 @@ export default function Home() {
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 700, marginBottom: 16, letterSpacing: "-0.3px" }}>
             什么是「冷门好学校」？
           </h2>
-          <p style={{ fontSize: 17, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 48, maxWidth: 600 }}>
+          <p style={{ fontSize: 16, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 48, maxWidth: 600 }}>
             很多学校名气高，但毕业生真实反馈是「学校很水」。我们的算法抓取社区论坛口碑，主动将这类虚高学校降权——同时把就业强、排名低的冷门院校挖掘出来。
           </p>
 
@@ -616,10 +592,10 @@ export default function Home() {
       {/* ── Section 7: Social Proof / Testimonials ── */}
       <section style={{ padding: "72px 20px", background: "var(--color-bg)" }}>
         <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
-          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(24px, 4vw, 36px)", fontWeight: 700, marginBottom: 8, letterSpacing: "-0.3px" }}>
+          <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 700, marginBottom: 8, letterSpacing: "-0.3px" }}>
             他们怎么说
           </h2>
-          <p style={{ fontSize: 14, color: "var(--color-text-tertiary)", marginBottom: 40 }}>来自真实用户的反馈</p>
+          <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 40 }}>来自真实用户的反馈</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, textAlign: "left" }}>
             {[
               {
@@ -650,7 +626,7 @@ export default function Home() {
                   </div>
                   <div style={{ marginLeft: "auto", color: "#FFB800", fontSize: 12, letterSpacing: 1 }}>★★★★★</div>
                 </div>
-                <p style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.7, margin: 0 }}>{t.text}</p>
+                <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, margin: 0 }}>{t.text}</p>
               </div>
             ))}
           </div>

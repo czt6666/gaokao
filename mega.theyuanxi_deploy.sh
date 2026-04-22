@@ -3,7 +3,7 @@
 # 用法: bash mega.theyuanxi_deploy.sh
 set -e
 
-SERVER="ubuntu@43.143.206.19"
+SERVER="root@43.143.206.19"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCAL_BACKEND="$SCRIPT_DIR/backend"
 LOCAL_FRONTEND="$SCRIPT_DIR/frontend"
@@ -21,8 +21,7 @@ echo "→ [1/5] 同步后端代码..."
 rsync -av --delete --no-owner --no-group \
   --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
-  --exclude='.env' \
-  --exclude='.venv' --exclude='venv' \
+  --exclude='.venv' \
   --exclude='data/' \
   "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"
 

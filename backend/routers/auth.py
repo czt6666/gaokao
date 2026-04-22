@@ -240,11 +240,11 @@ async def wechat_qr():
     """
     获取微信扫码登录二维码。
     需要配置：
-      WECHAT_MP_APP_ID     — 微信公众号 AppID（需开放平台认证，300元/年）
-      WECHAT_MP_APP_SECRET — 微信公众号 AppSecret
+      WECHAT_SERVICE_APP_ID     — 微信公众号 AppID（需开放平台认证，300元/年）
+      WECHAT_SERVICE_APP_SECRET — 微信公众号 AppSecret
     当前状态：等待ICP备案 + 微信公众号认证后启用。
     """
-    app_id = os.getenv("WECHAT_MP_APP_ID", "")
+    app_id = os.getenv("WECHAT_SERVICE_APP_ID", "")
     if not app_id:
         return {
             "available": False,
@@ -273,7 +273,7 @@ async def qr_create():
     前端轮询 /api/auth/qr/poll/{session_id}；手机扫码完成OAuth后会话标记为 success。
     """
     import urllib.parse
-    app_id  = os.getenv("WECHAT_MP_APP_ID", "")
+    app_id  = os.getenv("WECHAT_SERVICE_APP_ID", "")
     if not app_id:
         raise HTTPException(status_code=503, detail="微信登录暂未配置")
 
@@ -319,10 +319,10 @@ async def qr_poll(session_id: str):
 async def wechat_mp_authorize(redirect_to: str = "/"):
     """
     公众号网页授权登录入口（支持手机微信直接授权 + PC二维码扫码）。
-    WECHAT_MP_APP_ID / WECHAT_MP_APP_SECRET — 公众号 AppID/AppSecret
+    WECHAT_SERVICE_APP_ID / WECHAT_SERVICE_APP_SECRET — 公众号 AppID/AppSecret
     """
     import urllib.parse
-    app_id = os.getenv("WECHAT_MP_APP_ID", "")
+    app_id = os.getenv("WECHAT_SERVICE_APP_ID", "")
     if not app_id:
         return {"available": False, "message": "公众号未配置"}
 
@@ -353,8 +353,8 @@ async def wechat_mp_callback(code: str, state: str = "", db: Session = Depends(g
     import httpx, urllib.parse
     from fastapi.responses import RedirectResponse
 
-    app_id     = os.getenv("WECHAT_MP_APP_ID", "")
-    app_secret = os.getenv("WECHAT_MP_APP_SECRET", "")
+    app_id     = os.getenv("WECHAT_SERVICE_APP_ID", "")
+    app_secret = os.getenv("WECHAT_SERVICE_APP_SECRET", "")
     site_url   = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
 
     if not app_id or not app_secret:
@@ -431,8 +431,8 @@ async def wechat_callback(code: str, state: str, db: Session = Depends(get_db)):
     微信扫码登录回调。用 code 换取 openid，登录/注册用户。
     """
     import httpx
-    app_id     = os.getenv("WECHAT_MP_APP_ID", "")
-    app_secret = os.getenv("WECHAT_MP_APP_SECRET", "")
+    app_id     = os.getenv("WECHAT_SERVICE_APP_ID", "")
+    app_secret = os.getenv("WECHAT_SERVICE_APP_SECRET", "")
 
     if not app_id or not app_secret:
         raise HTTPException(status_code=503, detail="微信登录暂未开放，请使用手机号登录")

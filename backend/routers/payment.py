@@ -25,7 +25,7 @@ AMOUNT_FEN = 199  # 默认兜底 ¥1.99
 
 # ── 微信支付 V3 配置（从环境变量读取）──
 WECHAT_MCH_ID       = os.getenv("WECHAT_MCH_ID", "")
-WECHAT_APP_ID       = os.getenv("WECHAT_APP_ID", "")
+WECHAT_MINI_APP_ID       = os.getenv("WECHAT_MINI_APP_ID", "")
 WECHAT_API_V3_KEY   = os.getenv("WECHAT_API_V3_KEY", "")   # 32位
 WECHAT_CERT_SERIAL  = os.getenv("WECHAT_CERT_SERIAL", "")  # 证书序列号
 WECHAT_PRIVATE_KEY  = os.getenv("WECHAT_PRIVATE_KEY_PATH", "/app/backend/certs/apiclient_key.pem")
@@ -77,7 +77,7 @@ async def create_order(req: CreateOrderRequest, request: Request, db: Session = 
     error_msg = None
 
     if req.pay_method == "wechat":
-        if WECHAT_MCH_ID and WECHAT_APP_ID and WECHAT_API_V3_KEY:
+        if WECHAT_MCH_ID and WECHAT_MINI_APP_ID and WECHAT_API_V3_KEY:
             try:
                 qr_code = await _wechat_create_native(order_no, req.province, req.rank_input, amount_fen)
             except Exception as e:
@@ -304,7 +304,7 @@ async def _wechat_create_native(order_no: str, province: str = "", rank: int = 0
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 
-    if not WECHAT_MCH_ID or not WECHAT_APP_ID or not WECHAT_API_V3_KEY:
+    if not WECHAT_MCH_ID or not WECHAT_MINI_APP_ID or not WECHAT_API_V3_KEY:
         raise RuntimeError("微信支付未配置（缺少 MCH_ID/APP_ID/API_V3_KEY）")
 
     if not os.path.exists(WECHAT_PRIVATE_KEY):
@@ -317,7 +317,7 @@ async def _wechat_create_native(order_no: str, province: str = "", rank: int = 0
         desc = f"水卢冷门高报引擎·{province}"
 
     body = json.dumps({
-        "appid": WECHAT_APP_ID,
+        "appid": WECHAT_MINI_APP_ID,
         "mchid": WECHAT_MCH_ID,
         "description": desc,
         "out_trade_no": order_no,
@@ -367,7 +367,7 @@ async def _wechat_create_jsapi(order_no: str, openid: str, province: str = "", a
     from cryptography.hazmat.primitives.asymmetric import padding as asym_padding
 
     # 小程序的 AppID（与商户号关联的小程序 AppID）
-    mini_app_id = os.getenv("WECHAT_MINI_APP_ID", WECHAT_APP_ID)
+    mini_app_id = os.getenv("WECHAT_MINI_APP_ID", WECHAT_MINI_APP_ID)
 
     if not os.path.exists(WECHAT_PRIVATE_KEY):
         raise RuntimeError(f"商户私钥文件不存在: {WECHAT_PRIVATE_KEY}")

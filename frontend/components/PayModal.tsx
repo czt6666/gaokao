@@ -47,6 +47,24 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
   const isWeChat = typeof window !== "undefined" && /MicroMessenger/i.test(navigator.userAgent);
   const isLoggedIn = typeof window !== "undefined" && !!localStorage.getItem("auth_token");
 
+  // 支付环境分支：微信内 JSAPI / 手机外 H5 / 桌面 Native 二维码
+  type PayEnv = "wechat_jsapi" | "h5" | "native";
+  const payEnv: PayEnv = isMobile && isWeChat ? "wechat_jsapi" : isMobile ? "h5" : "native";
+
+  // 微信内 JSAPI 需要的 openid（由 results 页 OAuth2 静默授权后写入 sessionStorage）
+  const [openid, setOpenid] = useState<string>("");
+  useEffect(() => {
+    if (payEnv !== "wechat_jsapi") return;
+    try {
+      const s = sessionStorage.getItem("wx_openid");
+      if (s) setOpenid(s);
+    } catch {}
+  }, [payEnv]);
+
+  const [h5Url, setH5Url] = useState<string | null>(null);
+  const [jsapiError, setJsapiError] = useState<string>("");
+  const [fallbackUsed, setFallbackUsed] = useState(false); // 当原本应该 H5/JSAPI 但失败回退到二维码
+
   // QR 倒计时
   useEffect(() => {
     if (qrExpiry <= 0) return;
@@ -90,11 +108,8 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createOrder() {
-    if (pollRef.current) clearInterval(pollRef.current);
-    setCreating(true);
-    setQrCode(null);
-    setStatus("pending");
+  async function fallbackToNative(): Promise<boolean> {
+    // H5/JSAPI 失败兜底：调 Native 接口拿 code_url 渲染二维码
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
       const res = await fetch(`${API}/api/payment/create`, {
@@ -111,26 +126,186 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           subject: queryParams?.subject || "",
         }),
       });
-      if (res.ok) {
+      if (!res.ok) return false;
+      const d = await res.json();
+      const qr = d.qr_code || d.code_url || null;
+      if (!qr || d.error) return false;
+      setOrderNo(d.order_no);
+      setQrCode(qr);
+      setQrExpiry(7200);
+      setFallbackUsed(true);
+      setStatus("pending");
+      try {
+        localStorage.setItem(pendingKey, JSON.stringify({
+          orderNo: d.order_no, qrCode: qr, timestamp: Date.now(),
+        }));
+      } catch {}
+      startPolling(d.order_no);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  async function createOrder() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setCreating(true);
+    setQrCode(null);
+    setH5Url(null);
+    setJsapiError("");
+    setFallbackUsed(false);
+    setStatus("pending");
+
+    const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+    const basePayload = {
+      product_type: PRODUCT.productType,
+      province: queryParams?.province || "",
+      rank_input: queryParams?.rank || 0,
+      subject: queryParams?.subject || "",
+    };
+
+    try {
+      if (payEnv === "native") {
+        // 桌面端：Native 二维码
+        const res = await fetch(`${API}/api/payment/create`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ ...basePayload, pay_method: "wechat" }),
+        });
+        if (!res.ok) { setStatus("failed"); return; }
         const d = await res.json();
+        if (d.error) { setStatus("failed"); return; }
         const resolvedQr = d.qr_code || d.code_url || null;
         setOrderNo(d.order_no);
         setQrCode(resolvedQr);
-        setQrExpiry(7200); // 微信 Native 二维码有效期 2 小时
-        // 持久化，防止 iOS 后台杀页面后状态丢失
+        setQrExpiry(7200);
         try {
           localStorage.setItem(pendingKey, JSON.stringify({
             orderNo: d.order_no, qrCode: resolvedQr, timestamp: Date.now(),
           }));
         } catch {}
         startPolling(d.order_no);
+
+      } else if (payEnv === "h5") {
+        // 手机浏览器（非微信）：H5 支付，跳微信 App
+        const res = await fetch(`${API}/api/payment/wechat/h5`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(basePayload),
+        });
+        const httpFailed = !res.ok;
+        let d: any = null;
+        if (!httpFailed) { try { d = await res.json(); } catch {} }
+        if (httpFailed || !d || d.error || !d.h5_url) {
+          // H5 失败（多半是商户号未开通 H5 支付）→ 兜底到 Native 二维码
+          const ok = await fallbackToNative();
+          if (!ok) { setJsapiError("当前网络不支持 H5 支付"); setStatus("failed"); }
+          return;
+        }
+        setOrderNo(d.order_no);
+        // 持久化，等用户从微信返回时继续查单
+        try {
+          localStorage.setItem(pendingKey, JSON.stringify({
+            orderNo: d.order_no, h5: true, timestamp: Date.now(),
+          }));
+        } catch {}
+        // 构造 redirect_url：支付完成后用户点"返回商家"回到本页，URL 带 ?paid=<order_no>
+        const origin = window.location.origin;
+        const qp = new URLSearchParams({
+          province: queryParams?.province || "",
+          rank: String(queryParams?.rank || ""),
+          subject: queryParams?.subject || "",
+          paid: d.order_no,
+        });
+        const redirectUrl = `${origin}/results?${qp.toString()}`;
+        const finalUrl = `${d.h5_url}${d.h5_url.includes("?") ? "&" : "?"}redirect_url=${encodeURIComponent(redirectUrl)}`;
+        setH5Url(finalUrl);
+        // 直接跳转到微信 H5 支付中间页
+        window.location.href = finalUrl;
+
+      } else {
+        // 微信内：公众号 JSAPI
+        if (!openid) {
+          const SERVICE_APPID = process.env.NEXT_PUBLIC_WECHAT_SERVICE_APP_ID || "";
+          if (!SERVICE_APPID) {
+            setJsapiError("服务号未配置，请联系客服（NEXT_PUBLIC_WECHAT_SERVICE_APP_ID 缺失）");
+            setStatus("failed");
+            return;
+          }
+          // 主动跳 OAuth2 静默授权，回跳后由 results 页换 openid 写入 sessionStorage
+          setJsapiError("正在跳转微信授权…");
+          try { sessionStorage.removeItem("wx_openid"); } catch {}
+          const redirect = encodeURIComponent(window.location.href);
+          window.location.href =
+            `https://open.weixin.qq.com/connect/oauth2/authorize` +
+            `?appid=${SERVICE_APPID}&redirect_uri=${redirect}` +
+            `&response_type=code&scope=snsapi_base&state=wxpay#wechat_redirect`;
+          return;
+        }
+        const res = await fetch(`${API}/api/payment/wechat/jsapi_web`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({ ...basePayload, openid }),
+        });
+        const httpFailed = !res.ok;
+        let d: any = null;
+        if (!httpFailed) { try { d = await res.json(); } catch {} }
+        if (httpFailed || !d || d.error || !d.pay_params) {
+          // JSAPI 创建失败 → 兜底二维码（在微信内只能由其他设备扫，但比报错强）
+          const ok = await fallbackToNative();
+          if (!ok) { setJsapiError(d?.error || "下单失败"); setStatus("failed"); }
+          return;
+        }
+        setOrderNo(d.order_no);
+        try {
+          localStorage.setItem(pendingKey, JSON.stringify({
+            orderNo: d.order_no, jsapi: true, timestamp: Date.now(),
+          }));
+        } catch {}
+        invokeWxJsapi(d.pay_params, d.order_no);
+      }
+    } catch (e) {
+      if (payEnv !== "native") {
+        const ok = await fallbackToNative();
+        if (!ok) setStatus("failed");
       } else {
         setStatus("failed");
       }
-    } catch {
-      setStatus("failed");
     } finally {
       setCreating(false);
+    }
+  }
+
+  function invokeWxJsapi(payParams: any, orderNoVal: string) {
+    const invoke = () => {
+      const bridge: any = (window as any).WeixinJSBridge;
+      if (!bridge) {
+        setJsapiError("当前环境不支持微信支付");
+        setStatus("failed");
+        return;
+      }
+      bridge.invoke("getBrandWCPayRequest", payParams, (res: any) => {
+        const msg = res && res.err_msg;
+        if (msg === "get_brand_wcpay_request:ok") {
+          // 调起成功，开始轮询订单状态（最终以回调为准）
+          startPolling(orderNoVal);
+        } else if (msg === "get_brand_wcpay_request:cancel") {
+          setJsapiError("您已取消支付");
+          setStatus("failed");
+        } else {
+          setJsapiError(msg || "支付调起失败");
+          setStatus("failed");
+        }
+      });
+    };
+    if (typeof (window as any).WeixinJSBridge === "undefined") {
+      document.addEventListener("WeixinJSBridgeReady", invoke, false);
+    } else {
+      invoke();
     }
   }
 
@@ -355,7 +530,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
                   background: "var(--color-accent)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700,
                 }}
               >
-                确认，显示支付码 →
+                {payEnv === "native" ? "确认，显示支付码 →" : payEnv === "h5" ? "确认，微信支付 →" : "确认，调起微信支付 →"}
               </button>
             )}
           </div>
@@ -369,87 +544,98 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           }}>
             {creating ? (
               <div className="spinner" style={{ width: 28, height: 28 }} />
-            ) : qrCode && qrCode !== "placeholder" && status !== "timeout" ? (
-              <>
-                {isMobile && !isWeChat ? (
-                  /* 手机非微信浏览器：唤起微信（用 onClick 防止导航离开本页） */
-                  <div style={{ textAlign: "center", width: "100%" }}>
-                    <button
-                      onClick={() => { try { window.open(qrCode, "_blank", "noopener"); } catch {} }}
-                      style={{
-                        display: "block", width: "100%", padding: "14px",
-                        background: "#07C160", color: "#fff", borderRadius: 10,
-                        fontSize: 16, fontWeight: 700, border: "none", cursor: "pointer", marginBottom: 10,
-                      }}
-                    >
-                      点击唤起微信支付
-                    </button>
-                    <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
-                      点击后跳转到微信完成支付，支付完成后自动解锁
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    {isWeChat && isMobile && (
-                      /* 微信内置浏览器：引导外部打开 */
-                      <div style={{ textAlign: "center", width: "100%", padding: "0 4px" }}>
-                        <div style={{ fontSize: 32, marginBottom: 8 }}>📤</div>
-                        <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>请在外部浏览器打开</div>
-                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 12 }}>
-                          微信内置浏览器暂不支持直接支付。<br />
-                          点击右上角 <strong>「···」→ 在浏览器打开」</strong><br />
-                          然后再扫码支付即可完成解锁。
-                        </div>
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrCode)}&size=110x110&bgcolor=ffffff&color=000000&margin=0`}
-                          alt="微信支付二维码"
-                          style={{ width: 110, height: 110, borderRadius: 6, opacity: 0.6 }}
-                        />
-                        <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 4 }}>或让另一台手机扫码</div>
-                      </div>
-                    )}
-                    {!(isWeChat && isMobile) && (
-                      /* 桌面端：展示二维码 */
-                      <>
-                        <img
-                          src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrCode)}&size=140x140&bgcolor=ffffff&color=000000&margin=0`}
-                          alt="微信支付二维码"
-                          style={{ width: 140, height: 140, borderRadius: 6 }}
-                        />
-                        <div style={{ marginTop: 8, fontSize: 12, color: "var(--color-text-tertiary)", textAlign: "center" }}>
-                          微信扫码支付 · 自动确认解锁
-                        </div>
-                        {qrExpiry > 0 && (
-                          <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3 }}>
-                            二维码 {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, "0")} 后失效
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </>
-                )}
-              </>
-            ) : (
-              /* ━━ 付费验证 Layer 3/3：支付失败 UI ━━━━━━━━━━━━━━━━━
+            ) : status === "failed" || status === "timeout" ? (
+              /* ━━ 付费验证 Layer 3/3：失败/超时 UI ━━━━━━━━━━━━━━━━━
                * Layer 1/3 订单级匹配 → backend/main.py recommend (order_no+province/rank/subject)
                * Layer 2/3 订阅过期   → backend/routers/auth.py:573-623 (lazy expiry)
-               * 订阅到期时间设置     → backend/routers/payment.py:246-261 (_finalize_order)
-               * 本层：创建失败 → "点击重试"；超时 → "重新获取"  */
+               * 订阅到期时间设置     → backend/routers/payment.py:246-261 (_finalize_order) */
               <div style={{ textAlign: "center" }}>
                 <div style={{ width: 100, height: 100, background: "var(--color-separator)", borderRadius: 6, margin: "0 auto 10px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 32 }}>
                   {status === "timeout" ? "⏱" : "💚"}
                 </div>
                 <div style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>
-                  {status === "failed" ? (
-                    <span>
-                      创建订单失败，<button onClick={createOrder} style={{ color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>点击重试</button>
-                    </span>
-                  ) : status === "timeout" ? (
+                  {status === "timeout" ? (
                     <span style={{ color: "var(--color-text-secondary)" }}>
                       二维码已过期，<button onClick={createOrder} style={{ color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>重新获取</button>
                     </span>
-                  ) : "加载中…"}
+                  ) : (
+                    <span>
+                      {jsapiError || "创建订单失败"}，
+                      <button onClick={createOrder} style={{ color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 600 }}>点击重试</button>
+                    </span>
+                  )}
                 </div>
+              </div>
+            ) : (payEnv === "native" || fallbackUsed) ? (
+              /* 桌面 Native 二维码 / H5/JSAPI 失败兜底二维码 */
+              qrCode && qrCode !== "placeholder" ? (
+                <>
+                  {fallbackUsed && (
+                    <div style={{
+                      fontSize: 11, color: "#c0392b", textAlign: "center", marginBottom: 8,
+                      padding: "6px 10px", background: "rgba(255,59,48,0.06)", borderRadius: 6, lineHeight: 1.5,
+                    }}>
+                      当前环境暂不支持直接调起，请用<strong>另一台手机的微信</strong>扫下方二维码完成支付
+                    </div>
+                  )}
+                  <div style={{ background: "#fff", padding: 8, borderRadius: 6 }}>
+                    <img
+                      src={`https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(qrCode)}&size=140x140&bgcolor=ffffff&color=000000&margin=0`}
+                      alt="微信支付二维码"
+                      width={140}
+                      height={140}
+                      style={{ display: "block", borderRadius: 6 }}
+                    />
+                  </div>
+                  <div style={{ marginTop: 8, fontSize: 12, color: "var(--color-text-tertiary)", textAlign: "center" }}>
+                    微信扫码支付 · 自动确认解锁
+                  </div>
+                  {qrExpiry > 0 && (
+                    <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 3 }}>
+                      二维码 {Math.floor(qrExpiry / 60)}:{String(qrExpiry % 60).padStart(2, "0")} 后失效
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>加载中…</div>
+              )
+            ) : payEnv === "h5" ? (
+              /* 手机浏览器（非微信）：H5 跳转到微信 App */
+              <div style={{ textAlign: "center", width: "100%" }}>
+                <div className="spinner" style={{ width: 28, height: 28, margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>正在打开微信支付…</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", lineHeight: 1.6 }}>
+                  支付完成后请点击"返回商家"回到本页
+                </div>
+                {h5Url && (
+                  <a
+                    href={h5Url}
+                    style={{
+                      display: "inline-block", marginTop: 12, fontSize: 12,
+                      color: "var(--color-accent)", textDecoration: "underline",
+                    }}
+                  >
+                    未自动跳转？点此手动打开
+                  </a>
+                )}
+              </div>
+            ) : (
+              /* 微信内置浏览器：调起 JSAPI */
+              <div style={{ textAlign: "center", width: "100%" }}>
+                <div className="spinner" style={{ width: 28, height: 28, margin: "0 auto 12px" }} />
+                <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>正在调起微信支付…</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
+                  若未弹出支付框，请点击下方重试
+                </div>
+                <button
+                  onClick={createOrder}
+                  style={{
+                    marginTop: 10, fontSize: 12, color: "var(--color-accent)",
+                    background: "none", border: "none", cursor: "pointer", fontWeight: 600,
+                  }}
+                >
+                  重新调起 →
+                </button>
               </div>
             )}
           </div>

@@ -17,74 +17,73 @@ echo "  袁希高报 · theyuanxi.cn 部署"
 echo "========================================"
 
 # ── 1. 同步后端代码（保留服务器上的 .env / .venv / 数据库）──
-echo ""
-echo "→ [1/4] 同步后端代码..."
-rsync -av --delete --no-owner --no-group \
-  --exclude='__pycache__' --exclude='*.pyc' \
-  --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
-  --exclude='.venv' --exclude='venv/' \
-  --exclude='data/' \
-  "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"
-# --exclude='.env' \
+# echo ""
+# echo "→ [1/4] 同步后端代码..."
+# rsync -av --delete --no-owner --no-group \
+#   --exclude='__pycache__' --exclude='*.pyc' \
+#   --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
+#   --exclude='.venv' --exclude='venv/' \
+#   --exclude='data/' \
+#   --exclude='.env' \
+#   "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"
 
 # ── 2. 注册 systemd 服务（仅首次；不使用 EnvironmentFile，由 python-dotenv 读 .env）──
-echo ""
-echo "→ [2/4] 注册 systemd 服务（若不存在）..."
-ssh "$SERVER" "
-  if [ ! -f /etc/systemd/system/gaokao-backend.service ]; then
-    echo '  创建 gaokao-backend.service...'
-    sudo tee /etc/systemd/system/gaokao-backend.service > /dev/null <<'UNIT'
-[Unit]
-Description=Gaokao Backend API (theyuanxi.cn)
-After=network.target
+# echo ""
+# echo "→ [2/4] 注册 systemd 服务（若不存在）..."
+# ssh "$SERVER" "
+#   if [ ! -f /etc/systemd/system/gaokao-backend.service ]; then
+#     echo '  创建 gaokao-backend.service...'
+#     sudo tee /etc/systemd/system/gaokao-backend.service > /dev/null <<'UNIT'
+# [Unit]
+# Description=Gaokao Backend API (theyuanxi.cn)
+# After=network.target
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/app/backend
-Environment=PYTHONUNBUFFERED=1
-ExecStart=/app/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
-Restart=on-failure
-RestartSec=3
+# [Service]
+# Type=simple
+# User=ubuntu
+# WorkingDirectory=/app/backend
+# Environment=PYTHONUNBUFFERED=1
+# ExecStart=/app/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
+# Restart=on-failure
+# RestartSec=3
 
-[Install]
-WantedBy=multi-user.target
-UNIT
-    sudo systemctl daemon-reload
-    sudo systemctl enable gaokao-backend
-  fi
+# [Install]
+# WantedBy=multi-user.target
+# UNIT
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable gaokao-backend
+#   fi
 
-  if [ ! -f /etc/systemd/system/gaokao-frontend.service ]; then
-    echo '  创建 gaokao-frontend.service...'
-    sudo tee /etc/systemd/system/gaokao-frontend.service > /dev/null <<'UNIT'
-[Unit]
-Description=Gaokao Frontend Next.js (theyuanxi.cn)
-After=network.target gaokao-backend.service
+#   if [ ! -f /etc/systemd/system/gaokao-frontend.service ]; then
+#     echo '  创建 gaokao-frontend.service...'
+#     sudo tee /etc/systemd/system/gaokao-frontend.service > /dev/null <<'UNIT'
+# [Unit]
+# Description=Gaokao Frontend Next.js (theyuanxi.cn)
+# After=network.target gaokao-backend.service
 
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/app/frontend
-Environment=NODE_ENV=production
-Environment=PORT=3000
-ExecStart=pnpm run start
-Restart=on-failure
-RestartSec=5
+# [Service]
+# Type=simple
+# User=ubuntu
+# WorkingDirectory=/app/frontend
+# Environment=NODE_ENV=production
+# Environment=PORT=3000
+# ExecStart=pnpm run start
+# Restart=on-failure
+# RestartSec=5
 
-[Install]
-WantedBy=multi-user.target
-UNIT
-    sudo systemctl daemon-reload
-    sudo systemctl enable gaokao-frontend
-  fi
-"
+# [Install]
+# WantedBy=multi-user.target
+# UNIT
+#     sudo systemctl daemon-reload
+#     sudo systemctl enable gaokao-frontend
+#   fi
+# "
 
 # ── 3. 同步前端源码并构建（保留服务器上的 .env.production / node_modules）──
 echo ""
 echo "→ [3/4] 同步前端源码并构建..."
 rsync -av --delete --no-owner --no-group \
   --exclude='node_modules' --exclude='.next' \
-  --exclude='.venv' \
   --exclude='.env.local' --exclude='.env.production' \
   "$LOCAL_FRONTEND/" "$SERVER:$REMOTE_FRONTEND/"
 

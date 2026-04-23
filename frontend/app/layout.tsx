@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
 import FloatingService from "@/components/FloatingService";
+import VConsoleLoader from "@/components/VConsoleLoader";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -96,11 +97,7 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
-      </head>
-      <body>
-        {children}
-        <FloatingService />
-        {/* 百度统计 hm.js */}
+        {/* 百度统计：官方建议放在全站 </head> 前；此处用 next/script 等价注入 */}
         <Script id="baidu-analytics" strategy="afterInteractive">
           {`
             var _hmt = _hmt || [];
@@ -112,6 +109,11 @@ export default function RootLayout({
             })();
           `}
         </Script>
+      </head>
+      <body>
+        {children}
+        <FloatingService />
+        <VConsoleLoader />
       </body>
     </html>
   );

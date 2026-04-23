@@ -729,6 +729,79 @@ function ResultsContent() {
     return () => document.removeEventListener("mousedown", handleOutside);
   }, [showMobileMenu]);
 
+  // ── 微信浏览器 OAuth2 静默授权（snsapi_base，无弹窗）──
+  // 1) 进页面时若是微信内 + 没 openid + URL 没 code → 跳授权
+  // 2) 微信回跳后 URL 带 ?code=...&state=wxpay → 换 openid 存 sessionStorage 后清理 URL
+  // 3) H5 支付跳回时 URL 带 ?paid=<order_no> → 自动查单
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const isWeChat = /MicroMessenger/i.test(navigator.userAgent);
+    const url = new URL(window.location.href);
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
+    const paidOrderNo = url.searchParams.get("paid");
+    const SERVICE_APPID = process.env.NEXT_PUBLIC_WECHAT_SERVICE_APP_ID || "";
+
+    // —— H5 跳回兜底：不论环境，URL 带 paid=<order_no> 就查一次单 ——
+    if (paidOrderNo) {
+      (async () => {
+        try {
+          const res = await fetch(`${API}/api/payment/status/${paidOrderNo}`);
+          if (res.ok) {
+            const d = await res.json();
+            if (d.status === "paid") {
+              try {
+                localStorage.setItem(queryOrderKey, paidOrderNo);
+                localStorage.setItem(ORDER_KEY, paidOrderNo);
+              } catch {}
+              setOrderNo(paidOrderNo);
+            }
+          }
+        } catch {}
+        // 清理 paid 参数避免刷新重复查
+        url.searchParams.delete("paid");
+        window.history.replaceState({}, "", url.toString());
+      })();
+    }
+
+    // —— 微信回跳：用 code 换 openid ——
+    if (code && state === "wxpay") {
+      (async () => {
+        try {
+          const res = await fetch(`${API}/api/payment/wechat/code_to_openid`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code }),
+          });
+          if (res.ok) {
+            const d = await res.json();
+            if (d.openid) {
+              try { sessionStorage.setItem("wx_openid", d.openid); } catch {}
+            }
+          }
+        } catch {}
+        // 不论成败，清理 code/state 避免重复换（微信 code 仅一次性有效）
+        url.searchParams.delete("code");
+        url.searchParams.delete("state");
+        window.history.replaceState({}, "", url.toString());
+      })();
+      return;
+    }
+
+    // —— 进页面静默跳 OAuth2（仅微信内 + 无 openid + 没正在回跳）——
+    let hasOpenid = false;
+    try { hasOpenid = !!sessionStorage.getItem("wx_openid"); } catch {}
+    if (isWeChat && !hasOpenid && SERVICE_APPID && !code) {
+      const redirect = encodeURIComponent(window.location.href);
+      const oauthUrl =
+        `https://open.weixin.qq.com/connect/oauth2/authorize` +
+        `?appid=${SERVICE_APPID}&redirect_uri=${redirect}` +
+        `&response_type=code&scope=snsapi_base&state=wxpay#wechat_redirect`;
+      window.location.href = oauthUrl;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!rank) return;
     track("page_view", { page: "/results", province, rankInput: Number(rank) });

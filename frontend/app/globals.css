@@ -420,7 +420,7 @@ body {
     }
 }
 
-/* Result card inner flex → stack on mobile */
+/* Result card inner flex → keep side-by-side on mobile */
 .result-card-inner {
     display: flex;
     gap: 16px;
@@ -429,25 +429,38 @@ body {
 @media (max-width: 600px) {
     .result-card-inner {
         flex-wrap: wrap;
+        gap: 0;
+    }
+    .result-card-inner > div:first-child {
+        width: 100%;
     }
     .result-card-right {
         display: flex !important;
         flex-direction: row !important;
-        gap: 20px;
-        text-align: left !important;
-        width: 100%;
+        gap: 12px;
         align-items: center;
+        width: 100%;
         border-top: 1px solid var(--color-border-light);
         padding-top: 10px;
-        margin-top: 4px;
+        margin-top: 10px;
+        justify-content: space-between;
     }
-    .result-card-right .rank-val {
-        font-size: 14px !important;
+    .result-card-right > div:first-child {
+        display: flex !important;
+        gap: 12px;
+        align-items: center;
     }
     .result-card-right .rank-actions {
-        flex-direction: row;
+        flex-direction: column !important;
         justify-content: flex-start !important;
         margin-top: 0 !important;
+        gap: 5px;
+        flex-shrink: 0;
+    }
+    /* Employment bar at bottom */
+    .employment-bar {
+        margin-top: 8px;
+        padding: 8px 0 !important;
     }
 }
 
@@ -776,6 +789,15 @@ body {
 }
 @media (min-width: 601px) {
     .nav-mobile-only {
+        display: none !important;
+    }
+    .show-on-mobile {
+        display: none !important;
+    }
+}
+
+@media (max-width: 600px) {
+    .hide-on-mobile {
         display: none !important;
     }
 }

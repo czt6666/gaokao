@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
@@ -67,6 +68,7 @@ function Row({ label, cells }: { label: string; cells: (React.ReactNode)[] }) {
 }
 
 export default function ComparePage() {
+  const router = useRouter();
   const [items, setItems] = useState<CompareItem[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ name: string; tier: string; province: string }>>([]);
@@ -145,7 +147,7 @@ export default function ComparePage() {
       {/* 顶部导航 */}
       <nav className="apple-nav">
         <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", gap: 16 }}>
-          <Link href="/" style={{ fontSize: 14, color: "var(--color-text-secondary)", textDecoration: "none" }}>← 首页</Link>
+          <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ color: "var(--color-separator)" }}>|</span>
           <h1 style={{ fontSize: 14, fontWeight: 600 }}>学校对比</h1>
           <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>最多对比 {MAX_COMPARE} 所</span>

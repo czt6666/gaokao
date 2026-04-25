@@ -234,8 +234,13 @@ def recommend(
     rank: int = Query(..., description="考生全省位次"),
     province: str = Query("北京", description="考生所在省份"),
     subject: str = Query("", description="选科，如：物理+化学"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     mode: str = Query("all", description="模式：all/gem(只看冷门)/safe(保守)"),
     order_no: str = Query("", description="付费订单号，有效则解锁完整分析"),
+    c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
+    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_nature: str = Query("", description="办学性质，逗号分隔"),
+    c_tier: str = Query("", description="院校档次，逗号分隔"),
     db: Session = Depends(get_db)
 ):
     """主推荐接口（wrapper，调用核心逻辑）"""
@@ -245,6 +250,8 @@ def recommend(
         raise HTTPException(status_code=422, detail=f"rank 必须大于 0，当前值: {rank}")
     if rank > 2000000:
         raise HTTPException(status_code=422, detail=f"rank 超出合理范围（最大 2,000,000），当前值: {rank}")
+    if len(province) > 20 or not province.strip():
+        raise HTTPException(status_code=422, detail="省份格式不正确")
 
     # ━━━ 付费验证（多层链路，勿误判为缺失） ━━━━━━━━━━━━━━━━━━━━━━
     # 本层（Layer 1/3）：订单级匹配 — order_no + province + rank_bucket + subject
@@ -304,10 +311,19 @@ def recommend(
                     if matching_order:
                         is_paid = True
 
+    constraints = {}
+    if c_major.strip():
+        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+    if c_city.strip():
+        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+    if c_nature.strip():
+        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+    if c_tier.strip():
+        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+
     try:
         return _run_recommend_core(province=province, rank=rank, subject=subject,
-                                #    mode=mode, db=db, is_paid=True)
-                                   mode=mode, db=db, is_paid=is_paid)
+                                   exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid, constraints=constraints or None)
     except Exception as e:
         logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")
@@ -938,7 +954,7 @@ def portfolio_optimize(
     # 复用推荐引擎获取候选学校
     recommend_data = _run_recommend_core(
         province=province, rank=rank, subject=subject,
-        mode="all", db=db, is_paid=True
+        exam_mode=exam_mode, mode="all", db=db, is_paid=True
     )
 
     # 将冲稳保结果展平为候选列表
@@ -1015,7 +1031,7 @@ def portfolio_simulate(
 
     recommend_data = _run_recommend_core(
         province=province, rank=rank, subject=subject,
-        mode="all", db=db, is_paid=True
+        exam_mode=exam_mode, mode="all", db=db, is_paid=True
     )
     candidates = []
     all_results = (
@@ -1157,6 +1173,26 @@ def major_search(q: str = Query(..., min_length=1), db: Session = Depends(get_db
         .all()
     )
     return {"suggestions": [r.major_name for r in results]}
+
+
+# ── 用户反馈 ──────────────────────────────────────────────────
+from pydantic import BaseModel as _BaseModel
+
+class _FeedbackPayload(_BaseModel):
+    content: str
+    contact: str = ""
+
+@app.post("/api/feedback")
+def submit_feedback(req: _FeedbackPayload, request: Request, db: Session = Depends(get_db)):
+    from database import Feedback
+    fb = Feedback(
+        content=req.content[:2000],
+        contact=req.contact[:100],
+        ip=request.headers.get("X-Forwarded-For", request.client.host if request.client else ""),
+    )
+    db.add(fb)
+    db.commit()
+    return {"ok": True}
 
 
 # ── 健康检查 ──────────────────────────────────────────────────

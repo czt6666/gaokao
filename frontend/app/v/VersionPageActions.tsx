@@ -1,8 +1,9 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function VersionPageActions() {
+  const router = useRouter();
   return (
     <div style={{ marginTop: 20, display: "flex", flexWrap: "wrap", gap: 10 }}>
       <button
@@ -21,8 +22,8 @@ export default function VersionPageActions() {
       >
         刷新
       </button>
-      <Link
-        href="/"
+      <button
+        onClick={() => router.push("/")}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -31,13 +32,14 @@ export default function VersionPageActions() {
           borderRadius: 8,
           fontSize: 14,
           fontWeight: 600,
-          textDecoration: "none",
+          border: "none",
+          cursor: "pointer",
           background: "var(--color-accent, #0071e3)",
           color: "#fff",
         }}
       >
         返回首页
-      </Link>
+      </button>
     </div>
   );
 }

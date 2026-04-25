@@ -1,6 +1,8 @@
-import Link from "next/link";
+"use client";
+import { useRouter } from "next/navigation";
 
 export default function ShuchuPage() {
+  const router = useRouter();
   return (
     <main
       style={{
@@ -27,20 +29,21 @@ export default function ShuchuPage() {
           <div style={{ fontSize: 22, fontWeight: 800 }}>输出</div>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <Link
-            href="/"
+          <button
+            onClick={() => router.back()}
             style={{
               padding: "10px 14px",
               borderRadius: 999,
               border: "1px solid #2c2c2c",
               color: "#e2e2e2",
-              textDecoration: "none",
+              background: "transparent",
+              cursor: "pointer",
               fontSize: 12,
               fontWeight: 700,
             }}
           >
-            返回首页
-          </Link>
+            返回
+          </button>
           <a
             href="/shuchu/index.html"
             target="_blank"

@@ -41,6 +41,8 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
   const [qrExpiry, setQrExpiry] = useState(0);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number>(0);
+  const onSuccessRef = useRef(onSuccess);
+  useEffect(() => { onSuccessRef.current = onSuccess; }, [onSuccess]);
   const POLL_TIMEOUT_MS = 8 * 60 * 1000;
 
   const isMobile = typeof window !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -330,7 +332,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
               localStorage.setItem("gaokao_order", no);
               localStorage.removeItem(pendingKey); // 清除待付款记录
             } catch {}
-            setTimeout(() => { onSuccess?.(no); }, 1500);
+            setTimeout(() => { onSuccessRef.current?.(no); }, 1500);
           }
         }
       } catch {}

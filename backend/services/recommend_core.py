@@ -1,5 +1,6 @@
 """高考志愿智能推荐核心逻辑（由 main.py 抽离）。"""
 import datetime
+import hashlib
 import json
 import os
 import random
@@ -653,15 +654,22 @@ _rec_cache: dict = {}   # key → (result_dict, timestamp)
 _REC_CACHE_TTL = 1800   # 30分钟
 _REC_RANK_BUCKET = 1000 # 每1000位次共用一个缓存桶
 
-def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool):
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}"
+def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = ""):
+    _c_key = ""
+    if constraints:
+        # 稳定的字符串表示，用于缓存 key
+        _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}"
     entry = _rec_cache.get(key)
     if entry and time.time() - entry[1] < _REC_CACHE_TTL:
         return entry[0]
     return None
 
-def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict):
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}"
+def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = ""):
+    _c_key = ""
+    if constraints:
+        _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}"
     _rec_cache[key] = (result, time.time())
     if len(_rec_cache) > 500:  # 超过500项时清理最旧的50项
         oldest = sorted(_rec_cache.items(), key=lambda x: x[1][1])[:50]
@@ -675,6 +683,7 @@ def _build_recommend_data(
     rank: int,
     subject: str,
     db: Session,
+    exam_mode: str = "",
 ) -> dict:
     """
     推荐主流程的**数据基座**：一次性完成
@@ -769,9 +778,16 @@ def _build_recommend_data(
     # 稳区：[-0.10, +0.10]  → school_rank ∈ [0.90X, 1.10X]
     # 保区：(+0.10, +0.40]  → school_rank ∈ (1.10X, 1.40X]
     # SQL 预过滤取 ±5% 额外缓冲（单年 min_rank 与多年加权均值有偏差）
+    #
+    # 【高位次特殊处理】rank≤2000 时固定拉取到 top 6000，避免清北被 rank*0.75 截断；
+    # 中低位次保持原有逻辑，防止 3w 位次推荐到 6w 位次的过差学校。
     if rank > 0:
-        _rank_lo = max(1, int(rank * 0.75))   # 冲下界 0.80 - 5% 缓冲
-        _rank_hi = int(rank * 1.45)            # 保上界 1.40 + 5% 缓冲
+        if rank <= 2000:
+            _rank_lo = 1
+            _rank_hi = max(6000, int(rank * 3))
+        else:
+            _rank_lo = max(1, int(rank * 0.75))   # 冲下界 0.80 - 5% 缓冲
+            _rank_hi = int(rank * 1.45)            # 保上界 1.40 + 5% 缓冲
         _prov_cap = _get_province_total(province, 2025)
         if _prov_cap > 0:
             _rank_hi = min(_prov_cap, _rank_hi)
@@ -975,32 +991,27 @@ def _build_recommend_data(
     except Exception:
         pass
 
-    # ── 11. major_subject_cache（识别双轨专业：同时招物理/历史视为不限）──
+    # ── 11. major_subject_cache（保留最新年份的原始选科要求，不简化）──
     major_subject_cache: dict = {}
     if subject:
-        _sr_sets: dict = defaultdict(set)
+        # 先从 Major 表取（最新、最准确，含再选科目细节）
+        for m in db.query(Major).filter(Major.province == province).all():
+            sr = (m.subject_req or "").strip()
+            if sr and sr not in ("不限", "nan", "-", "综合"):
+                major_subject_cache[(m.school_name, m.major_name)] = sr
+
+        # 再从 admission_records 补充最新年份的选科要求（不简化）
+        _latest_req: dict = {}
         for row in raw_rows:
+            s_name, m_name, year = row[0], row[1], row[2]
             sr = (row[6] or "").strip()
             if sr and sr not in ("不限", "nan", "-", "综合"):
-                _sr_sets[(row[0], row[1])].add(sr)
-        for key, sr_set in _sr_sets.items():
-            _has_phys = bool(sr_set & _POOL_PHYSICS)
-            _has_hist = bool(sr_set & _POOL_HISTORY)
-            if _has_phys and _has_hist:
-                pass  # 双轨 → 不入 cache → _subject_match 返回 True（视为不限）
-            elif _has_phys:
-                major_subject_cache[key] = "物理类"
-            elif _has_hist:
-                major_subject_cache[key] = "历史类"
-            else:
-                major_subject_cache[key] = next(iter(sr_set))
-        # 从 Major 表补充再选科目（主要覆盖北京）
-        for m in db.query(Major).filter(Major.province == province).all():
-            key = (m.school_name, m.major_name)
+                key = (s_name, m_name)
+                if key not in _latest_req or year > _latest_req[key][0]:
+                    _latest_req[key] = (year, sr)
+        for key, (_, sr) in _latest_req.items():
             if key not in major_subject_cache:
-                sr = (m.subject_req or "").strip()
-                if sr and sr not in ("不限", "nan", "-"):
-                    major_subject_cache[key] = sr
+                major_subject_cache[key] = sr
 
     # ── 12. school_majors_raw（供下游 school_available_majors_cache 生成）──
     school_majors_raw: dict = defaultdict(list)
@@ -1027,7 +1038,7 @@ def _build_recommend_data(
     _user_has_lishi = "历史" in user_subjects
 
     def _subject_match(school_nm: str, major_nm: str) -> bool:
-        """新高考选科匹配 v2（首选物理/历史 + 再选 AND/OR 逻辑）"""
+        """选科匹配 v5：支持 3+1+2 / 3+3 / 旧高考 三种模式"""
         if not subject:
             return True
         req = major_subject_cache.get((school_nm, major_nm), "")
@@ -1038,7 +1049,40 @@ def _build_recommend_data(
         if req_norm in _OPEN:
             return True
 
-        # 1. 首选科目逻辑（新高考 3+1+2）
+        # ── 3+3 模式：纯科目集合匹配，无首选/再选之分 ────────────────
+        if exam_mode == "3+3":
+            # 去掉前缀噪音，提取纯科目列表
+            _clean = req_norm.replace("首选物理，再选", "").replace("首选历史，再选", "")
+            _clean = _clean.replace("物+", "").replace("史+", "")
+            _clean = _clean.replace("（", "(").replace("）", ")").strip()
+            _clean = re.sub(r"\(.*?\)", "", _clean).strip()
+            _clean = _clean.replace("思想政治", "政治").replace("思政", "政治").replace("生物学", "生物")
+            or_groups = _clean.split("/")
+            for grp in or_groups:
+                parts = [p.strip() for p in re.split(r"[,，、+]", grp)
+                         if p.strip() and p.strip() not in _OPEN]
+                parts_norm = {_alias.get(p, p) for p in parts}
+                user_norm  = {_alias.get(s, s) for s in user_subjects}
+                if not parts_norm or parts_norm.issubset(user_norm):
+                    return True
+            return False
+
+        # ── 旧高考模式：只看科类（理科/文科），不受再选限制 ──────────
+        if exam_mode == "old":
+            if subject == "理科":
+                # 理科生能报所有不含"历史类"/"文科"标识的专业
+                if "历史类" in req_norm or req_norm == "文科":
+                    return False
+                return True
+            if subject == "文科":
+                # 文科生能报所有不含"物理类"/"理科"标识的专业
+                if "物理类" in req_norm or req_norm == "理科":
+                    return False
+                return True
+            return True
+
+        # ── 3+1+2 模式（默认）：首选池 + 再选精细校验 ─────────────────
+        # 1. 首选科目逻辑
         if ("首选物理" in req_norm or req_norm in ("物理类", "理科", "物理必选")
                 or req_norm.startswith("物+") or req_norm == "物理"):
             if not _user_has_wuli:
@@ -1221,7 +1265,7 @@ def _build_recommend_data(
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
-def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False) -> dict:
+def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "") -> dict:
     """
     核心推荐逻辑（纯函数，不依赖 Request）。
     供 /api/recommend 端点和 PDF 报告生成共同调用。
@@ -1241,9 +1285,9 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             print(f"[recommend_core] {step}", flush=True)
 
     # 缓存命中快速返回
-    _cached = _rec_cache_get(province, rank, subject, is_paid)
+    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode)
     if _cached is not None:
-        _rc("① 缓存命中，直接返回（未执行后续阶段）", province=province, rank=rank, subject=subject, is_paid=is_paid)
+        _rc("① 缓存命中，直接返回（未执行后续阶段）", province=province, rank=rank, subject=subject, is_paid=is_paid, constraints=constraints, exam_mode=exam_mode)
         return _cached
 
     _rc(
@@ -1256,7 +1300,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     )
 
     # ── 数据层：一次性加载全部 cache + 组合候选画像 ───────────
-    data = _build_recommend_data(province, rank, subject, db)
+    data = _build_recommend_data(province, rank, subject, db, exam_mode)
     grouped                = data["grouped"]
     school_cache           = data["school_cache"]
     _school_baseline_cache = data["school_baseline_cache"]
@@ -1271,6 +1315,62 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     _subject_match         = data["subject_match"]
     user_subjects          = data["user_subjects"]
     _student_pool          = data["student_pool"]
+
+    # ── 约束过滤（结构化，预留自然语言扩展）─────────────────────
+    if constraints:
+        _pre = len(grouped)
+        _major_kw = [k.lower() for k in constraints.get("major_keywords", []) if k]
+        _city_lv = set(constraints.get("city_levels", []))
+        _natures = set(constraints.get("natures", []))
+        _tiers = set(constraints.get("tiers", []))
+
+        def _pass_constraint(school_name: str, major_name: str) -> bool:
+            sch = school_cache.get(school_name)
+            # 专业关键词：只匹配 major_name（flagship_majors 是学校级字段，
+            # 若混进来会导致该校所有专业都误匹配，如王牌专业含"计算机"则
+            # 纺织工程也会通过）
+            if _major_kw:
+                _text = major_name.lower()
+                if not any(kw in _text for kw in _major_kw):
+                    return False
+            # 城市等级
+            if _city_lv:
+                _cl = (sch.city_level if sch else "") or ""
+                # 兼容 "一线城市" vs "一线" 的写法
+                if not any(_cl.startswith(c) or c.startswith(_cl) for c in _city_lv if c):
+                    return False
+            # 办学性质
+            if _natures:
+                _nat = (sch.nature if sch else "") or ""
+                if _nat not in _natures:
+                    return False
+            # 院校档次（tier 字段或 is_985/is_211/is_shuangyiliu）
+            if _tiers:
+                _tier = (sch.tier if sch else "") or ""
+                _is_985 = (sch.is_985 if sch else "") == "是"
+                _is_211 = (sch.is_211 if sch else "") == "是"
+                _is_syl = (sch.is_shuangyiliu if sch else "") == "是"
+                _matched = False
+                if "985" in _tiers and _is_985:
+                    _matched = True
+                if "211" in _tiers and _is_211:
+                    _matched = True
+                if "双一流" in _tiers and _is_syl:
+                    _matched = True
+                if "普通" in _tiers and not (_is_985 or _is_211 or _is_syl):
+                    _matched = True
+                if _tier in _tiers:
+                    _matched = True
+                if not _matched:
+                    return False
+            return True
+
+        grouped = {
+            k: v for k, v in grouped.items()
+            if _pass_constraint(k[0], k[1])
+        }
+        _rc("②-① 约束过滤", before=_pre, after=len(grouped), constraints=constraints)
+    # ── 约束过滤结束 ───────────────────────────────────────────
 
     # 调试：随机打印至多 5 条 candidates（长字符串截断便于终端阅读）
     def _truncate_log_strings(obj: object, maxlen: int = 20) -> object:
@@ -1540,11 +1640,17 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         #   稳：[-0.10, +0.10]   学校与学生位次相近 ±10%
         #   保：(+0.10, +0.40]   学校比学生容易 10~40%
         # 超出范围（< -0.20 或 > +0.40）直接跳过
+        # 【高位次特殊处理】rank≤2000 时取消上界，避免清北被截断。
         _gap_rate = (avg_rank - rank) / rank if rank > 0 else 0
 
-        if _gap_rate < -0.20 or _gap_rate > 0.40:
-            _scan["skip_rank_window"] += 1
-            continue
+        if rank <= 2000:
+            if _gap_rate < -0.80:
+                _scan["skip_rank_window"] += 1
+                continue
+        else:
+            if _gap_rate < -0.20 or _gap_rate > 0.40:
+                _scan["skip_rank_window"] += 1
+                continue
 
         # 展示名称清理：CDN 校级占位行转为对用户友好的名称
         _display_major = major_name
@@ -1919,6 +2025,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         hidden_gems=len(_result["hidden_gems"]),
         is_paid=is_paid,
     )
-    _rec_cache_set(province, rank, subject, is_paid, _result)
+    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode)
     _rc("㉗ 完成（已写入进程内缓存）")
     return _result

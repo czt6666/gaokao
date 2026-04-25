@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense, Fragment } from "react";
+import { useEffect, useState, useRef, Suspense, Fragment } from "react";
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -133,7 +133,13 @@ function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
 function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; score?: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+  const toastRef = useRef<NodeJS.Timeout | null>(null);
+  const showToast = (msg: string) => {
+    if (toastRef.current) clearTimeout(toastRef.current);
+    setToast(msg);
+    toastRef.current = setTimeout(() => setToast(null), 2500);
+  };
+  useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);
   const prob = item.probability ?? 0;
   const scoreDiff = (score && item.avg_min_score_3yr) ? (Number(score) - item.avg_min_score_3yr) : null;
   const isGem = item.is_hidden_gem && item.top_gem;
@@ -148,7 +154,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
       style={{ marginBottom: 12, position: "relative" }}
     >
       <div className="result-card-inner" style={{ justifyContent: "space-between" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1 }}>
           {/* Badges — 最多3个，无emoji */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
             {item.is_top_pick && (
@@ -254,57 +260,6 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             </div>
           )}
 
-          {/* 就业数据 — 未付费时模糊锁定 */}
-          {item.employment && item.employment.avg_salary > 0 && (
-            isPaid ? (
-              <div style={{
-                display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 8, paddingTop: 12, marginTop: 4,
-                borderTop: "1px solid var(--color-separator)"
-              }}>
-                <div className="data-cell">
-                  <span className="data-cell-label">月薪{item.employment.data_reliability === "数据存疑" ? <span title={item.employment.reliability_note || ""} style={{ color: "#DC2626", fontSize: 9, marginLeft: 2 }}>⚠</span> : item.employment.data_reliability === "多源验证" ? <span style={{ color: "#059669", fontSize: 9, marginLeft: 2 }}>✓</span> : null}</span>
-                  <span className="data-cell-value">¥{(Math.min(item.employment.avg_salary, 18000) / 1000).toFixed(1)}k</span>
-                </div>
-                {item.employment.school_employment_rate != null && item.employment.school_employment_rate > 0 && (
-                  <div className="data-cell">
-                    <span className="data-cell-label">就业率</span>
-                    <span className="data-cell-value">{(item.employment.school_employment_rate * 100).toFixed(1)}%</span>
-                  </div>
-                )}
-                {item.employment.school_postgrad_rate != null && item.employment.school_postgrad_rate > 0 && (
-                  <div className="data-cell">
-                    <span className="data-cell-label">深造率</span>
-                    <span className="data-cell-value">{(item.employment.school_postgrad_rate * 100).toFixed(1)}%</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div
-                onClick={() => onUnlock && onUnlock()}
-                style={{
-                  display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 8, paddingTop: 12, marginTop: 4,
-                  borderTop: "1px solid var(--color-separator)",
-                  cursor: "pointer", position: "relative",
-                }}
-              >
-                {[["月薪", "¥X.Xk"], ["就业率", "XX%"], ["深造率", "XX%"]].map(([label, val]) => (
-                  <div key={label} className="data-cell" style={{ filter: "blur(4px)", userSelect: "none" }}>
-                    <span className="data-cell-label">{label}</span>
-                    <span className="data-cell-value">{val}</span>
-                  </div>
-                ))}
-                <div style={{
-                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, color: "var(--color-accent)", fontWeight: 600, letterSpacing: "0.02em",
-                }}>
-                  🔒 解锁查看就业数据
-                </div>
-              </div>
-            )
-          )}
-
           {/* Big/small year hint */}
           {item.big_small_year?.status && (
             <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 8 }}>
@@ -321,7 +276,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
 
         </div>
 
-        {/* Right: 去年最低分（左）+ 均位次（右）并排 */}
+        {/* Right: 分数信息 + 操作按钮 */}
         <div className="result-card-right" style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "flex-end", marginBottom: 8 }}>
             {/* 去年最低分 */}
@@ -348,9 +303,14 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
               </div>
-              <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: item.rank_diff > 0 ? "#059669" : "#DC2626" }}>
-                {item.rank_diff > 0 ? "+" : ""}{item.rank_diff?.toLocaleString()} 位
-              </div>
+              {(() => {
+                const diff = (item.avg_min_rank_3yr ?? 0) - Number(rank);
+                return (
+                  <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: diff > 0 ? "#059669" : "#DC2626" }}>
+                    {diff > 0 ? `领先 ${diff.toLocaleString()} 位` : `落后 ${Math.abs(diff).toLocaleString()} 位`}
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <div className="rank-actions" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -378,6 +338,58 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
           </div>
         </div>
       </div>
+
+      {/* 就业数据 — 放到卡片底部 */}
+      {item.employment && item.employment.avg_salary > 0 && (
+        isPaid ? (
+          <div className="employment-bar" style={{
+            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 8, padding: "10px 0", marginTop: 8,
+            borderTop: "1px solid var(--color-separator)"
+          }}>
+            <div className="data-cell">
+              <span className="data-cell-label">月薪{item.employment.data_reliability === "数据存疑" ? <span title={item.employment.reliability_note || ""} style={{ color: "#DC2626", fontSize: 9, marginLeft: 2 }}>⚠</span> : item.employment.data_reliability === "多源验证" ? <span style={{ color: "#059669", fontSize: 9, marginLeft: 2 }}>✓</span> : null}</span>
+              <span className="data-cell-value">¥{(Math.min(item.employment.avg_salary, 18000) / 1000).toFixed(1)}k</span>
+            </div>
+            {item.employment.school_employment_rate != null && item.employment.school_employment_rate > 0 && (
+              <div className="data-cell">
+                <span className="data-cell-label">就业率</span>
+                <span className="data-cell-value">{(item.employment.school_employment_rate * 100).toFixed(1)}%</span>
+              </div>
+            )}
+            {item.employment.school_postgrad_rate != null && item.employment.school_postgrad_rate > 0 && (
+              <div className="data-cell">
+                <span className="data-cell-label">深造率</span>
+                <span className="data-cell-value">{(item.employment.school_postgrad_rate * 100).toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            className="employment-bar"
+            onClick={() => onUnlock && onUnlock()}
+            style={{
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 8, padding: "10px 0", marginTop: 8,
+              borderTop: "1px solid var(--color-separator)",
+              cursor: "pointer", position: "relative",
+            }}
+          >
+            {[["月薪", "¥X.Xk"], ["就业率", "XX%"], ["深造率", "XX%"]].map(([label, val]) => (
+              <div key={label} className="data-cell" style={{ filter: "blur(4px)", userSelect: "none" }}>
+                <span className="data-cell-label">{label}</span>
+                <span className="data-cell-value">{val}</span>
+              </div>
+            ))}
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, color: "var(--color-accent)", fontWeight: 600, letterSpacing: "0.02em",
+            }}>
+              🔒 解锁查看就业数据
+            </div>
+          </div>
+        )
+      )}
 
       {/* Expandable analysis */}
       {(item.reason || item.is_hidden_gem || item.big_small_year?.reason) && (
@@ -626,10 +638,16 @@ function ResultsContent() {
   const rank = searchParams.get("rank") || "";
   const province = searchParams.get("province") || "广东";
   const subject = searchParams.get("subject") || "";
+  const examMode = searchParams.get("exam_mode") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
   /** 与卡片「去年最低分」对比用：显式 ?score= 或模考链路的 mock_score */
   const score = searchParams.get("score") || (fromMock ? mockScore : "");
+  // 约束条件（从首页带过来）
+  const cMajor = searchParams.get("c_major") || "";
+  const cCity = searchParams.get("c_city") || "";
+  const cNature = searchParams.get("c_nature") || "";
+  const cTier = searchParams.get("c_tier") || "";
 
   const [data, setData] = useState<RecommendResult | null>(null);
   const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("surge");
@@ -648,10 +666,21 @@ function ResultsContent() {
   const queryOrderKey = `gaokao_order_${province}_${rank}_${subject}`;
   const [orderNo, setOrderNo] = useState<string>(() => {
     try {
-      // 1. Try per-query key (new model)
+      // 1. URL param (from dashboard "我的订单" click / H5 pay redirect / cross-device share)
+      const fromUrl = typeof window !== "undefined"
+        ? new URL(window.location.href).searchParams.get("order_no") || ""
+        : "";
+      if (fromUrl) {
+        try {
+          localStorage.setItem(`gaokao_order_${province}_${rank}_${subject}`, fromUrl);
+          localStorage.setItem(ORDER_KEY, fromUrl);
+        } catch {}
+        return fromUrl;
+      }
+      // 2. Try per-query key (new model)
       const perQuery = localStorage.getItem(`gaokao_order_${province}_${rank}_${subject}`);
       if (perQuery) return perQuery;
-      // 2. Fall back to legacy global key (backward compat for users who already paid)
+      // 3. Fall back to legacy global key (backward compat for users who already paid)
       return localStorage.getItem(ORDER_KEY) || "";
     } catch { return ""; }
   });
@@ -673,7 +702,8 @@ function ResultsContent() {
     setExporting(true);
     try {
       const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${orderParam}`;
+      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${orderParam}${examParam}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
@@ -702,7 +732,8 @@ function ResultsContent() {
     setEmailSending(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}`;
+      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}${examParam}`;
       const res = await fetch(url, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -813,9 +844,17 @@ function ResultsContent() {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
+    const constraintParam = (() => {
+      const parts: string[] = [];
+      if (cMajor) parts.push(`c_major=${encodeURIComponent(cMajor)}`);
+      if (cCity) parts.push(`c_city=${encodeURIComponent(cCity)}`);
+      if (cNature) parts.push(`c_nature=${encodeURIComponent(cNature)}`);
+      if (cTier) parts.push(`c_tier=${encodeURIComponent(cTier)}`);
+      return parts.length ? `&${parts.join("&")}` : "";
+    })();
     const authToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     fetch(
-      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${orderParam}`,
+      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${examMode}` : ""}${orderParam}${constraintParam}`,
       {
         signal: controller.signal,
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
@@ -833,9 +872,9 @@ function ResultsContent() {
         setLoading(false);
         // Save to query history (max 5 entries)
         try {
-          const entry = { province, rank, subject, time: Date.now(), total: d.total_matched };
+          const entry = { province, rank, subject, exam_mode: examMode, time: Date.now(), total: d.total_matched };
           const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-          const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject));
+          const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject && h.exam_mode === examMode));
           localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...filtered].slice(0, 5)));
         } catch {}
       })
@@ -855,7 +894,7 @@ function ResultsContent() {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [rank, province, subject, orderNo]);
+  }, [rank, province, subject, orderNo, cMajor, cCity, cNature, cTier]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -1043,6 +1082,25 @@ function ResultsContent() {
           </div>
         </div>
       </nav>
+
+      {/* 已应用约束提示 */}
+      {(cMajor || cCity || cNature || cTier) && (
+        <div style={{ background: "#EEF2FF", borderBottom: "1px solid #C7D2FE", padding: "10px 20px" }}>
+          <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: "#1E3A8A" }}>
+            <span style={{ fontWeight: 600 }}>已应用偏好约束：</span>
+            {cMajor && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>专业含「{cMajor}」</span>}
+            {cCity && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>城市：{cCity}</span>}
+            {cNature && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>性质：{cNature}</span>}
+            {cTier && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>档次：{cTier}</span>}
+            <button
+              onClick={() => router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`)}
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#1E40AF", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+            >
+              清除约束
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Email input panel */}
       {showEmailInput && (

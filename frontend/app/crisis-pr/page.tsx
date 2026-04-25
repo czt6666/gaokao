@@ -672,12 +672,12 @@ function CrisisPrContent() {
               })}
 
               <div style={{ marginTop: 32, display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <Link
-                  href="/"
-                  style={{ padding: "11px 18px", background: "#211A17", color: "#fff", borderRadius: 999, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: 1 }}
+                <button
+                  onClick={() => router.back()}
+                  style={{ padding: "11px 18px", background: "#211A17", color: "#fff", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 1, border: "none" }}
                 >
-                  ← 返回首页
-                </Link>
+                  ← 返回
+                </button>
                 <button
                   onClick={() => window.print()}
                   style={{ padding: "11px 18px", background: "#FFFDFC", color: "#211A17", border: "1px solid #DFCFC5", borderRadius: 999, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}

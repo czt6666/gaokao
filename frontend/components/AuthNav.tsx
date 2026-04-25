@@ -8,7 +8,7 @@ interface UserInfo {
   uid: number;
   phone?: string;
   wechat_nickname?: string;
-  is_paid: number;
+  is_paid: boolean;
 }
 
 interface AuthNavProps {
@@ -55,9 +55,11 @@ export default function AuthNav({ redirectOnLogin }: AuthNavProps) {
   if (loading) return <div style={{ width: 60 }} />;
 
   if (!user) {
-    const loginUrl = redirectOnLogin
-      ? `/login?redirect=${encodeURIComponent(redirectOnLogin)}`
-      : "/login";
+    const currentPath = typeof window !== "undefined"
+      ? window.location.pathname + window.location.search
+      : "/";
+    const redirect = redirectOnLogin || currentPath;
+    const loginUrl = `/login?redirect=${encodeURIComponent(redirect)}`;
     return (
       <button
         onClick={() => router.push(loginUrl)}

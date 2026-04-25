@@ -1,17 +1,13 @@
-import Link from "next/link";
-import type { Metadata } from "next";
-
-export const metadata: Metadata = {
-  title: "隐私政策 — 水卢冷门高报引擎",
-  description: "北京水卢教育科技有限公司隐私政策",
-};
+"use client";
+import { useRouter } from "next/navigation";
 
 export default function PrivacyPage() {
+  const router = useRouter();
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
       <nav className="apple-nav">
         <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" className="btn-ghost" style={{ fontSize: 14 }}>← 返回首页</Link>
+          <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ fontSize: 15, fontWeight: 600 }}>隐私政策</span>
           <div style={{ width: 80 }} />
         </div>

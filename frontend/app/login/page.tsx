@@ -11,6 +11,11 @@ function isMobileDevice() {
   return /iPhone|Android|Mobile|WeChat|MicroMessenger/i.test(navigator.userAgent);
 }
 
+function isInWeChatBrowser() {
+  if (typeof navigator === "undefined") return false;
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("input");
@@ -24,6 +29,8 @@ export default function LoginPage() {
   const [wechatMode, setWechatMode] = useState<"idle" | "qr" | "done" | "error">("idle");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrRefreshKey, setQrRefreshKey] = useState(0);
+  const [showWxHint, setShowWxHint] = useState(false);      // 手机非微信浏览器提示弹窗
+  const [copyHinted, setCopyHinted] = useState(false);      // 复制链接提示
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const sessionRef = useRef<string | null>(null);
 
@@ -59,9 +66,15 @@ export default function LoginPage() {
   }
 
   async function handleWechatLogin() {
-    if (isMobileDevice()) {
-      // Mobile: redirect directly into WeChat OAuth
+    // 手机微信内：直跳 OAuth 授权
+    if (isMobileDevice() && isInWeChatBrowser()) {
       window.location.href = `${API}/api/auth/wechat/mp/authorize?redirect_to=${encodeURIComponent(redirectTarget)}`;
+      return;
+    }
+    // 手机非微信浏览器：微信 OAuth 只能在微信内打开，否则会报 "Oops"。
+    // 引导用户要么在微信中打开本页，要么改用手机号登录。
+    if (isMobileDevice() && !isInWeChatBrowser()) {
+      setShowWxHint(true);
       return;
     }
     // Desktop: create QR session
@@ -308,6 +321,78 @@ export default function LoginPage() {
           <a href="/privacy" style={{ color: "var(--color-accent)", textDecoration: "none" }}>《隐私政策》</a>
         </p>
       </div>
+
+      {/* 手机非微信浏览器 · 微信登录引导弹窗 */}
+      {showWxHint && (
+        <div
+          onClick={() => setShowWxHint(false)}
+          style={{
+            position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20, zIndex: 9999,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "var(--color-bg-elevated)", borderRadius: 14,
+              padding: "28px 24px", maxWidth: 360, width: "100%",
+              boxShadow: "var(--shadow-lg)", textAlign: "center",
+            }}
+          >
+            <div style={{ fontSize: 40, marginBottom: 12 }}>🔔</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 8 }}>
+              微信登录需在微信中打开
+            </div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 20 }}>
+              由于微信限制，网页版微信登录只能在微信内完成。你可以：
+            </div>
+
+            <button
+              onClick={async () => {
+                const link = typeof window !== "undefined" ? window.location.href : "";
+                try {
+                  await navigator.clipboard.writeText(link);
+                  setCopyHinted(true);
+                  setTimeout(() => setCopyHinted(false), 2500);
+                } catch {
+                  // 降级：创建临时输入框
+                  const el = document.createElement("textarea");
+                  el.value = link;
+                  document.body.appendChild(el);
+                  el.select();
+                  try { document.execCommand("copy"); } catch {}
+                  document.body.removeChild(el);
+                  setCopyHinted(true);
+                  setTimeout(() => setCopyHinted(false), 2500);
+                }
+              }}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 8, fontSize: 14,
+                background: "#07C160", color: "#fff", border: "none", cursor: "pointer",
+                fontWeight: 700, marginBottom: 10,
+              }}
+            >
+              {copyHinted ? "✓ 已复制，去微信粘贴打开" : "复制链接，去微信中打开"}
+            </button>
+
+            <button
+              onClick={() => setShowWxHint(false)}
+              style={{
+                width: "100%", padding: "12px", borderRadius: 8, fontSize: 14,
+                background: "none", border: "1.5px solid var(--color-separator)",
+                color: "var(--color-text-primary)", cursor: "pointer", fontWeight: 500,
+              }}
+            >
+              改用手机号登录
+            </button>
+
+            <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 14, lineHeight: 1.6 }}>
+              微信限制：OAuth 授权页仅支持微信内置浏览器打开
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

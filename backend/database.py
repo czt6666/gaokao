@@ -205,6 +205,7 @@ class User(Base):
     phone           = Column(String(11), unique=True, index=True, nullable=True)
     wechat_openid   = Column(String(64), unique=True, index=True, nullable=True)
     wechat_mini_openid = Column(String(64), unique=True, index=True, nullable=True)
+    wechat_unionid  = Column(String(64), unique=True, index=True, nullable=True)  # 开放平台 unionid，跨应用识别同一微信用户
     nickname        = Column(String(50), default="")
     province        = Column(String(10), default="")
     created_at      = Column(DateTime, default=datetime.datetime.utcnow)
@@ -251,6 +252,16 @@ class UserEvent(Base):
     created_at      = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     ip              = Column(String(45), default="")
     user_agent      = Column(Text, default="")
+
+
+class Feedback(Base):
+    """用户意见反馈表"""
+    __tablename__ = "feedbacks"
+    id          = Column(Integer, primary_key=True, index=True)
+    content     = Column(Text, nullable=False)
+    contact     = Column(String(100), default="")
+    ip          = Column(String(45), default="")
+    created_at  = Column(DateTime, default=datetime.datetime.utcnow)
 
 
 class SchoolEmployment(Base):
@@ -357,8 +368,14 @@ def _ensure_schema():
         plans: dict[str, list[tuple[str, str]]] = {
             "users": [
                 ("wechat_mini_openid",  "VARCHAR(64)"),
+                ("wechat_unionid",      "VARCHAR(64)"),
                 ("subscription_type",   "VARCHAR(20) DEFAULT ''"),
                 ("subscription_end_at", "DATETIME"),
+            ],
+            "orders": [
+                ("rank_input", "INTEGER"),
+                ("province",   "VARCHAR(10) DEFAULT ''"),
+                ("subject",    "VARCHAR(50) DEFAULT ''"),
             ],
         }
         for table, cols in plans.items():

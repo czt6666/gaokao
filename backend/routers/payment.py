@@ -428,6 +428,15 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
     order = db.query(Order).filter(Order.order_no == order_no).first()
     if not order or order.status != "pending":
         return
+    # 幂等：同一微信 transaction_id 只处理一次，防止重复通知导致重复加会员天数
+    if transaction_id:
+        existing = db.query(Order).filter(
+            Order.transaction_id == transaction_id,
+            Order.status == "paid"
+        ).first()
+        if existing and existing.order_no != order_no:
+            logger.warning(f"_mark_paid 发现 transaction_id={transaction_id} 已被其他订单使用，跳过")
+            return
     try:
         order.status         = "paid"
         order.transaction_id = transaction_id

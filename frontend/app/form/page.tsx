@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 interface FormItem {
@@ -29,6 +30,7 @@ const CATEGORY_STYLE: Record<string, { bg: string; color: string; border: string
 };
 
 export default function FormPage() {
+  const router = useRouter();
   const [items, setItems] = useState<FormItem[]>([]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
@@ -38,7 +40,10 @@ export default function FormPage() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) setItems(JSON.parse(saved));
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) setItems(parsed);
+      }
     } catch {}
   }, []);
 
@@ -96,6 +101,13 @@ export default function FormPage() {
 
   const exportPDF = () => {
     const year = new Date().getFullYear();
+    // HTML 转义：防止学校名/专业名中的特殊字符破坏模板或造成 XSS
+    const esc = (s: string) => s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
     const printContent = `
       <html><head><meta charset="utf-8"><title>高考志愿表</title>
       <style>
@@ -128,11 +140,11 @@ export default function FormPage() {
           ${items.map((it) => `
             <tr>
               <td>${it.rank}</td>
-              <td><span class="tag ${it.category}">${it.category}</span></td>
-              <td><b>${it.school}</b></td>
-              <td>${it.major}</td>
+              <td><span class="tag ${esc(it.category)}">${esc(it.category)}</span></td>
+              <td><b>${esc(it.school)}</b></td>
+              <td>${esc(it.major)}</td>
               <td>${it.probability.toFixed(0)}%</td>
-              <td>${it.action}</td>
+              <td>${esc(it.action)}</td>
             </tr>`).join("")}
         </table>
         <div class="footer">由水卢高报引擎生成 · 数据基于2017–2025年录取记录，仅供参考，请以官方招生简章为准</div>
@@ -159,7 +171,7 @@ export default function FormPage() {
       <nav className="apple-nav">
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <Link href="/" style={{ fontSize: 14, color: "var(--color-text-secondary)", textDecoration: "none" }}>← 首页</Link>
+            <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
             <span style={{ color: "var(--color-separator)" }}>|</span>
             <h1 style={{ fontSize: 14, fontWeight: 600 }}>我的志愿表</h1>
           </div>

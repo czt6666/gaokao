@@ -29,6 +29,7 @@ from algorithms.hidden_gem import (
 from routers import auth as auth_router, payment as payment_router, track as track_router
 from routers import report as report_router, admin as admin_router
 from routers import tracking as tracking_router
+from routers import agent as agent_router
 from routers.auth import _verify_token as _auth_verify_token
 
 from services.recommend_core import _run_recommend_core
@@ -41,6 +42,7 @@ app.include_router(track_router.router)
 app.include_router(report_router.router)
 app.include_router(admin_router.router)
 app.include_router(tracking_router.router)
+app.include_router(agent_router.router)
 
 _SITE_URL = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
 _ALLOWED_ORIGINS = [

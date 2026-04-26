@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import "./globals.css";
-import FloatingService from "@/components/FloatingService";
 import VConsoleLoader from "@/components/VConsoleLoader";
+import AgentChat from "@/components/AgentChat";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -112,8 +112,8 @@ export default function RootLayout({
       </head>
       <body>
         {children}
-        <FloatingService />
         <VConsoleLoader />
+        <AgentChat />
       </body>
     </html>
   );

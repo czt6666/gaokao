@@ -78,6 +78,7 @@ export default function Home() {
   const [subject, setSubject] = useState("物理+化学");
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [contactOpen, setContactOpen] = useState(false);
 
   useEffect(() => {
     try { const p = localStorage.getItem("gaokao_province"); if (p) setProvince(p); } catch {}
@@ -151,7 +152,11 @@ export default function Home() {
             <span style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>水卢冷门高报引擎</span>
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <span className="nav-brand-sub" style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px" }}>袁希团队出品</span>
+            <button
+              onClick={() => setContactOpen(true)}
+              className="nav-brand-sub"
+              style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            >袁希团队出品</button>
             <Link href="/shuchu" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>输出工作台</Link>
             <Link href="/crisis-pr" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>MIROFISH危机预测</Link>
             <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
@@ -161,6 +166,52 @@ export default function Home() {
           </div>
         </div>
       </nav>
+
+      {/* ── 联系我们弹窗 ── */}
+      {contactOpen && (
+        <>
+          {/* 遮罩 */}
+          <div
+            onClick={() => setContactOpen(false)}
+            style={{ position: "fixed", inset: 0, zIndex: 2000, background: "rgba(0,0,0,0.25)" }}
+          />
+          {/* 弹窗 */}
+          <div style={{
+            position: "fixed", top: "50%", left: "50%", zIndex: 2001,
+            transform: "translate(-50%, -50%)",
+            background: "var(--color-bg-secondary, #f5f5f7)",
+            border: "1px solid var(--color-separator, #e5e5ea)",
+            borderRadius: 18, padding: "28px 28px 22px", width: 320,
+            boxShadow: "0 16px 48px rgba(0,0,0,0.18)",
+          }}>
+            <button
+              onClick={() => setContactOpen(false)}
+              style={{ position: "absolute", top: 12, right: 16, background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#aeaeb2", lineHeight: 1 }}
+            >×</button>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: "var(--color-text-primary)" }}>遇到问题？联系我们</div>
+            <div style={{
+              background: "var(--color-bg, #fafaf8)", borderRadius: 10,
+              padding: "12px 14px", marginBottom: 14,
+              fontSize: 13, color: "var(--color-text-secondary, #6e6e73)", lineHeight: 1.8,
+            }}>
+              发邮件至<br />
+              <strong style={{ color: "#0071E3", userSelect: "all" }}>superfy@gmail.com</strong>
+            </div>
+            <a
+              href="mailto:superfy@gmail.com"
+              style={{
+                display: "block", width: "100%", padding: "11px", borderRadius: 10, fontSize: 14,
+                background: "#0071E3", color: "#fff", border: "none", cursor: "pointer",
+                fontWeight: 600, textAlign: "center", textDecoration: "none",
+                boxSizing: "border-box",
+              }}
+            >发送邮件</a>
+            <div style={{ fontSize: 11, color: "var(--color-text-tertiary, #aeaeb2)", textAlign: "center", marginTop: 12, lineHeight: 1.6 }}>
+              支付问题 · 退款申请 · 数据咨询
+            </div>
+          </div>
+        </>
+      )}
 
       {/* ── Section 1: Hero (full viewport) ── */}
       <section className="hero-section">

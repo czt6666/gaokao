@@ -218,10 +218,9 @@ export default function Home() {
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span className="nav-brand-sub" style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px" }}>袁希团队出品</span>
-            <Link href="/shuchu" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>输出工作台</Link>
-            <Link href="/crisis-pr" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>MIROFISH危机预测</Link>
-            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
             <Link href="/search" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
+            <Link href="/compare" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
+            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
             <Link href="/form" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
             <AuthNav />
           </div>
@@ -233,7 +232,7 @@ export default function Home() {
         <div style={{ textAlign: "center", marginBottom: 48, maxWidth: 640 }}>
 
           {/* H1 */}
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 700, lineHeight: 1.08, letterSpacing: "-1.5px", color: "var(--color-text-primary)", marginBottom: 20 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 700, lineHeight: 1.3, letterSpacing: "-1.5px", color: "var(--color-text-primary)", marginBottom: 20, wordBreak: "keep-all", overflowWrap: "break-word" }}>
             有人用你的分数<br />进了比你好20名的大学
           </h1>
 
@@ -573,25 +572,25 @@ export default function Home() {
         </div>
 
         {/* ── 工具入口 ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, width: "100%", maxWidth: 480, marginTop: 16 }}>
-          <div style={{ padding: "14px 16px", borderRadius: 14, background: "#111", color: "#e2e2e2" }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>SHUCHU</div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>输出工作台</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#b8b8b8", marginBottom: 12 }}>
-              上传 PDF 或图片，编译知识库，快速创作输出
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, width: "100%", maxWidth: 480, marginTop: 16 }}>
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: "linear-gradient(135deg, rgba(201,146,42,0.12) 0%, rgba(26,39,68,0.08) 100%)", border: "1.5px solid rgba(201,146,42,0.35)", color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.6, marginBottom: 6, color: "var(--color-accent)" }}>SCHOOLS</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>学校库</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 14 }}>
+              全国院校信息、专业目录、学科评估、就业数据一站式查询
             </div>
-            <Link href="/shuchu" style={{ fontSize: 12, fontWeight: 600, color: "#a89cf7", textDecoration: "none" }}>
-              打开工作台 →
+            <Link href="/search" style={{ fontSize: 13, fontWeight: 600, color: "var(--color-accent)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              进入学校库 →
             </Link>
           </div>
-          <div style={{ padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #211A17 0%, #4C3229 100%)", color: "#F8F1E8" }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>MIROFISH</div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>危机公关预测</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#E6D7CC", marginBottom: 12 }}>
-              模拟媒体与舆情反应，提前预判危机走向
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: "linear-gradient(135deg, rgba(26,39,68,0.08) 0%, rgba(201,146,42,0.08) 100%)", border: "1.5px solid rgba(26,39,68,0.25)", color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.6, marginBottom: 6, color: "var(--color-navy)" }}>COMPARE</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>学校对比</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 14 }}>
+              最多同时对比 3 所学校，录取数据、学科评估、就业流向横向比较
             </div>
-            <Link href="/crisis-pr" style={{ fontSize: 12, fontWeight: 600, color: "#e8c99a", textDecoration: "none" }}>
-              打开预测台 →
+            <Link href="/compare" style={{ fontSize: 13, fontWeight: 600, color: "var(--color-navy)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              开始对比 →
             </Link>
           </div>
         </div>

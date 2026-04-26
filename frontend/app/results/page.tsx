@@ -320,21 +320,6 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             <button onClick={() => addToCompare(item.school_name, showToast)} className="card-action-secondary">
               对比分析
             </button>
-            <Link
-              href={`/career-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}&school=${encodeURIComponent(item.school_name)}&major=${encodeURIComponent(item.major_name || "")}`}
-              style={{
-                display: "block", textAlign: "center", textDecoration: "none",
-                padding: "6px 0", borderRadius: 980,
-                background: "transparent", border: "1px solid #FF4500",
-                color: "#FF4500", fontSize: 12, fontWeight: 600,
-                letterSpacing: "0.02em", whiteSpace: "nowrap",
-                transition: "background .15s, color .15s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#FF4500"; (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#FF4500"; }}
-            >
-              🔮 10年受益预测
-            </Link>
           </div>
         </div>
       </div>
@@ -693,7 +678,7 @@ function ResultsContent() {
       // 已付费但未登录（通过order_no识别），引导登录以绑定账户
       const go = confirm("导出报告需要登录账户，以确保报告可跨设备访问。立即前往登录？");
       if (go) {
-        const current = `/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`;
+        const current = typeof window !== "undefined" ? window.location.href : `/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`;
         window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
       }
       return;
@@ -937,7 +922,7 @@ function ResultsContent() {
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
       {/* Nav */}
       <nav className="apple-nav" style={{ position: "relative" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto", padding: "8px 20px", minHeight: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <button onClick={() => router.push("/")} className="btn-ghost" style={{ fontSize: 14, paddingLeft: 0, paddingRight: 0, flexShrink: 0 }}>
             ← 重新查询
           </button>
@@ -1001,8 +986,8 @@ function ResultsContent() {
             <AuthNav />
           </div>
 
-          {/* 移动端：我的 按钮 */}
-          <div className="nav-mobile-only nav-mobile-menu" style={{ position: "relative", flexShrink: 0 }}>
+          {/* 移动端：更多 按钮 */}
+          <div className="nav-mobile-only nav-mobile-menu" style={{ flexShrink: 0 }}>
             <button
               onClick={() => setShowMobileMenu((v) => !v)}
               style={{
@@ -1012,12 +997,12 @@ function ResultsContent() {
                 color: "var(--color-text-secondary)", cursor: "pointer",
               }}
             >
-              我的 {showMobileMenu ? "▴" : "▾"}
+              ⋮
             </button>
             {showMobileMenu && (
               <div
                 style={{
-                  position: "fixed", top: 52, right: 0, left: 0,
+                  position: "absolute", top: "100%", right: 0, left: 0,
                   background: "var(--color-bg-secondary)",
                   borderBottom: "1px solid var(--color-separator)",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
@@ -1075,7 +1060,18 @@ function ResultsContent() {
                   发送邮件报告
                 </button>
                 <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
-                  <AuthNav redirectOnLogin={typeof window !== "undefined" ? window.location.pathname + window.location.search : undefined} />
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    style={{
+                      width: "100%", fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                      background: "transparent", border: "none",
+                      color: "var(--color-text-secondary)", cursor: "pointer", textAlign: "left",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}
+                  >
+                    <span>我的</span>
+                    <span style={{ color: "var(--color-text-tertiary)" }}>→</span>
+                  </button>
                 </div>
               </div>
             )}
@@ -1176,72 +1172,26 @@ function ResultsContent() {
           </div>
         )}
 
-        {/* AI 预测入口 */}
+        {/* AI 预测入口 —— 已隐藏（2026-04-26）
+          原因：ai-predict 页面依赖外部 MiroFish 服务，当前未部署，用户反馈入口混乱。
+          Result 页已具备本地群体智能（swarm_predictor.py，<30ms），功能重叠。
+          如需恢复，取消注释下方代码并确保 NEXT_PUBLIC_MIROFISH_URL 已配置。
+        */}
+        {/*
         {(data?.total_matched ?? 0) > 0 && (
-          <Link
-            href={`/ai-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}&subject=${encodeURIComponent(subject)}`}
-            style={{ textDecoration: "none", display: "block", margin: "12px 0 0" }}
-          >
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-              padding: "14px 18px", borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(201,146,42,0.05) 100%)",
-              border: "1px solid rgba(201,146,42,0.25)",
-              borderLeft: "3px solid var(--color-accent)",
-              cursor: "pointer",
-              transition: "box-shadow 0.2s",
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-navy)", marginBottom: 3 }}>
-                  🤖 AI群体智能预测
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                  模拟全省考生填报博弈，预测今年大年/小年 + 冷门窗口期
-                </div>
-              </div>
-              <div style={{
-                flexShrink: 0, padding: "8px 16px", borderRadius: 980,
-                background: "var(--color-navy)", color: "#fff",
-                fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-              }}>
-                立即预测 →
-              </div>
-            </div>
-          </Link>
+          <Link ... > ... </Link>
         )}
+        */}
 
-        {/* 长期受益预测入口 */}
+        {/* 长期受益预测入口 —— 已隐藏（2026-04-26）
+          原因：career-predict 页面依赖外部 MiroFish 服务，当前未部署。
+          如需恢复，取消注释下方代码并确保 NEXT_PUBLIC_MIROFISH_URL 已配置。
+        */}
+        {/*
         {(data?.total_matched ?? 0) > 0 && (
-          <Link
-            href={`/career-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}`}
-            style={{ textDecoration: "none", display: "block", margin: "10px 0 0" }}
-          >
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-              padding: "14px 18px", borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(255,69,0,0.04) 0%, rgba(255,200,100,0.06) 100%)",
-              border: "1px solid rgba(255,69,0,0.2)",
-              borderLeft: "3px solid #FF4500",
-              cursor: "pointer",
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#CC2200", marginBottom: 3 }}>
-                  🔮 长期受益预测
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                  模拟毕业生、雇主、分析师博弈，预测某所学校10年后的真实职业价值
-                </div>
-              </div>
-              <div style={{
-                flexShrink: 0, padding: "8px 16px", borderRadius: 980,
-                background: "#FF4500", color: "#fff",
-                fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-              }}>
-                深度预测 →
-              </div>
-            </div>
-          </Link>
+          <Link ... > ... </Link>
         )}
+        */}
 
         {/* Contextual rank note */}
         {(data?.total_matched ?? 0) > 0 && (() => {
@@ -1277,7 +1227,7 @@ function ResultsContent() {
         })()}
 
         {/* Tab bar */}
-        <div className="tab-bar" style={{ margin: "12px 0 0" }}>
+        <div className="tab-bar" style={{ margin: "12px 0 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -1298,7 +1248,7 @@ function ResultsContent() {
         </div>
 
         {/* Tier filter */}
-        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "nowrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "wrap", alignItems: "center" }}>
           {["", "985", "211", "双一流", "普通"].map((t) => (
             <button
               key={t}

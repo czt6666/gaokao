@@ -34,7 +34,6 @@ export default function FormPage() {
   const [items, setItems] = useState<FormItem[]>([]);
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
-  const [exportMsg, setExportMsg] = useState("");
   const [confirmClear, setConfirmClear] = useState(false);
 
   useEffect(() => {
@@ -83,82 +82,7 @@ export default function FormPage() {
     setDragOver(null);
   };
 
-  const exportCSV = () => {
-    const header = "志愿序号,类型,学校,专业,录取概率,建议\n";
-    const rows = items.map((it) =>
-      `${it.rank},"${it.category}","${it.school}","${it.major}",${it.probability.toFixed(0)}%,"${it.action}"`
-    ).join("\n");
-    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `高考志愿表_${new Date().getFullYear()}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-    setExportMsg("✅ 已导出 CSV");
-    setTimeout(() => setExportMsg(""), 3000);
-  };
 
-  const exportPDF = () => {
-    const year = new Date().getFullYear();
-    // HTML 转义：防止学校名/专业名中的特殊字符破坏模板或造成 XSS
-    const esc = (s: string) => s
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
-    const printContent = `
-      <html><head><meta charset="utf-8"><title>高考志愿表</title>
-      <style>
-        body { font-family: "PingFang SC", "Microsoft YaHei", sans-serif; padding: 20px; color: #111; }
-        h1 { font-size: 20px; margin-bottom: 4px; }
-        .meta { font-size: 13px; color: #666; margin-bottom: 16px; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background: #1A2744; color: white; padding: 8px 10px; text-align: left; }
-        td { padding: 7px 10px; border-bottom: 1px solid #e5e7eb; }
-        tr:nth-child(even) td { background: #f9fafb; }
-        .tag { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-        .极冲 { background: #fee2e2; color: #DC2626; }
-        .冲 { background: #fef3c7; color: #C9922A; }
-        .稳 { background: #dbeafe; color: #1A2744; }
-        .保 { background: #d1fae5; color: #059669; }
-        .footer { margin-top: 20px; font-size: 11px; color: #9ca3af; text-align: center; }
-      </style></head>
-      <body>
-        <h1>${year} 高考志愿表</h1>
-        <div class="meta">
-          共 ${items.length} 条志愿 ·
-          极冲 ${items.filter(i => i.category === "极冲").length} ·
-          冲 ${items.filter(i => i.category === "冲").length} ·
-          稳 ${items.filter(i => i.category === "稳").length} ·
-          保 ${items.filter(i => i.category === "保").length} ·
-          生成时间：${new Date().toLocaleDateString("zh-CN")}
-        </div>
-        <table>
-          <tr><th>#</th><th>类型</th><th>学校</th><th>专业</th><th>录取概率</th><th>建议</th></tr>
-          ${items.map((it) => `
-            <tr>
-              <td>${it.rank}</td>
-              <td><span class="tag ${esc(it.category)}">${esc(it.category)}</span></td>
-              <td><b>${esc(it.school)}</b></td>
-              <td>${esc(it.major)}</td>
-              <td>${it.probability.toFixed(0)}%</td>
-              <td>${esc(it.action)}</td>
-            </tr>`).join("")}
-        </table>
-        <div class="footer">由水卢高报引擎生成 · 数据基于2017–2025年录取记录，仅供参考，请以官方招生简章为准</div>
-      </body></html>
-    `;
-    const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(printContent);
-    w.document.close();
-    w.focus();
-    setTimeout(() => { w.print(); }, 300);
-    setExportMsg("✅ 打印/另存为PDF");
-    setTimeout(() => setExportMsg(""), 4000);
-  };
 
   const extremeSurge = items.filter((i) => i.category === "极冲").length;
   const surge  = items.filter((i) => i.category === "冲").length;
@@ -176,21 +100,8 @@ export default function FormPage() {
             <h1 style={{ fontSize: 14, fontWeight: 600 }}>我的志愿表</h1>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            {exportMsg && <span style={{ fontSize: 12, color: "var(--color-success)" }}>{exportMsg}</span>}
             {items.length > 0 && (
               <>
-                <button
-                  onClick={exportPDF}
-                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid var(--color-navy)", color: "var(--color-navy)", background: "transparent", cursor: "pointer" }}
-                >
-                  导出 PDF
-                </button>
-                <button
-                  onClick={exportCSV}
-                  style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid var(--color-success)", color: "var(--color-success)", background: "transparent", cursor: "pointer" }}
-                >
-                  导出 CSV
-                </button>
                 <button
                   onClick={() => setConfirmClear(true)}
                   style={{ fontSize: 12, padding: "5px 12px", borderRadius: 8, border: "1px solid var(--color-danger)", color: "var(--color-danger)", background: "transparent", cursor: "pointer" }}

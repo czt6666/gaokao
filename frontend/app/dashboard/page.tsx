@@ -122,7 +122,7 @@ export default function DashboardPage() {
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ fontSize: 14, fontWeight: 600 }}>我的账户</span>
-          <button onClick={logout} style={{ fontSize: 13, color: "#ff3b30", background: "none", border: "none", cursor: "pointer" }}>退出</button>
+          <span style={{ width: 40 }} />
         </div>
       </nav>
 

@@ -218,7 +218,11 @@ export default function Home() {
             <span style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>水卢冷门高报引擎</span>
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <span className="nav-brand-sub" style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px" }}>袁希团队出品</span>
+            <span
+              className="nav-brand-sub"
+              onClick={() => setContactOpen(true)}
+              style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px", cursor: "pointer" }}
+            >袁希团队出品</span>
             <Link href="/search" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
             <Link href="/compare" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
             <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>

@@ -675,15 +675,29 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
 
 def _simulate_inner(mock_score: int, province: str, subject: str, db):
     """考前模拟内部实现"""
-    # 新高考省份按选科确定位次池类别（物理类/历史类分开排名）
-    _NEW_GAOKAO_PROVINCES = {"广东", "江苏", "浙江", "山东", "湖北", "湖南", "福建", "辽宁", "重庆"}
+    # 根据该省份在数据库中的实际科类分布，决定是否需要按选科过滤。
+    # 3+3省份（北京/天津/上海/浙江/山东/海南）只有"综合"，不过滤。
+    # 3+1+2省份（物理类/历史类）和旧高考省份（理科/文科）按选科过滤，防止科类数据混排。
+    _subject_to_category = {
+        "物理": ["物理类", "理科"],
+        "物理类": ["物理类", "理科"],
+        "历史": ["历史类", "文科"],
+        "历史类": ["历史类", "文科"],
+    }
+
     rank_category_filter = None
-    if province in _NEW_GAOKAO_PROVINCES and subject:
+    if subject:
         s = subject.split("+")[0].strip()
-        if s in {"物理", "物理类"}:
-            rank_category_filter = "物理类"
-        elif s in {"历史", "历史类"}:
-            rank_category_filter = "历史类"
+        # 查询该省份有哪些 category
+        cats = {c[0] for c in db.query(RankTable.category).filter(
+            RankTable.province == province, RankTable.year >= 2024
+        ).distinct().all()}
+        # 如果省份有多个科类（非纯综合），按传入的选科映射
+        if len(cats) > 1 or (cats and "综合" not in cats):
+            for candidate in _subject_to_category.get(s, []):
+                if candidate in cats:
+                    rank_category_filter = candidate
+                    break
 
     # 用最近年份一分一段数据（仅当该省份有数据时才能估算）
     q = db.query(RankTable.year).filter(RankTable.province == province)

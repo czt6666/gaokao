@@ -68,3 +68,6 @@ Thumbs.db
 deploy/deploy.env
 certs/
 .claude/
+
+db-backup/
+backend/data/

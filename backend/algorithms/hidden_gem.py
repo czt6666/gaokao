@@ -10,6 +10,17 @@ E. 满意度高，位次未涨（口碑折价型）— 新增
 from typing import List, Dict, Optional
 
 
+# ── 冷门黑名单：这些学校全国知名度极高，不可能是「冷门」 ──────────
+SOFTSCIENCE_TOP30 = {
+    "清华大学", "北京大学", "复旦大学", "上海交通大学", "浙江大学",
+    "中国科学技术大学", "南京大学", "中国人民大学", "北京师范大学",
+    "武汉大学", "中山大学", "华中科技大学", "天津大学", "西安交通大学",
+    "南开大学", "哈尔滨工业大学", "北京航空航天大学", "北京理工大学",
+    "东南大学", "同济大学", "华南理工大学", "东北大学", "大连理工大学",
+    "山东大学", "厦门大学", "湖南大学", "中南大学", "电子科技大学",
+    "重庆大学", "中国农业大学",
+}
+
 # ── 认知折价专业词库 ─────────────────────────────────────────
 # {专业名: {就业方向, 行业前景, 认知误区, 折价程度}}
 COGNITIVE_DISCOUNT_MAJORS = {
@@ -398,7 +409,12 @@ def hidden_gem_type_a(school: Dict, majors: List[Dict], student_province: str = 
     """
     类型A：城市冷、专业强
     条件：城市折价>0.4 + 有A类学科评估的专业
+    黑名单：软科Top30学校不可能是"城市冷"（全国知名度已经极高）
     """
+    school_name = school.get("name", "") or school.get("school_name", "")
+    if school_name in SOFTSCIENCE_TOP30:
+        return None
+
     city = school.get("city", "")
     city_discount = calc_city_discount_relative(city, student_province)
 
@@ -527,10 +543,11 @@ def hidden_gem_type_d(school: Dict, subject_evals: List[Dict]) -> Optional[Dict]
     """
     类型D：学科A+但软科排名在200名以外（学科强校折价）
     同等学科实力下，综合排名低的学校录取位次往往被低估
+    白名单：必须有明确排名数据，且排名 > 100（rank_2025=0 时保守不触发）
     """
     rank_2025 = school.get("rank_2025", 0)
-    # 只对排名200+或无排名的学校检测（排名太高的学校本来就热门）
-    if rank_2025 > 0 and rank_2025 <= 100:
+    # 排名数据缺失（0）或排名在100以内 → 不触发
+    if rank_2025 <= 100 or rank_2025 == 0:
         return None
 
     aplus_evals = [e for e in subject_evals if e.get("subject_strength") in ["A++", "A+", "A"]]
@@ -851,13 +868,16 @@ def score_overall_gem(
         gems.append(gem_a)
 
     # 类型B：认知折价（基于实际推荐专业名称，而非学校学科评估）
+    # 黑名单：软科Top30学校全国知名度极高，不可能是"名字冷"
+    _school_name = school.get("name", "") or school.get("school_name", "")
+    _is_top30 = _school_name in SOFTSCIENCE_TOP30
     _major_b = (actual_major_name or "").strip()
     _is_placeholder = (
         "院校最低分" in _major_b
         or (_major_b.startswith("[") and "院校" in _major_b)
         or _major_b == ""
     )
-    if _major_b and not _is_placeholder:
+    if _major_b and not _is_placeholder and not _is_top30:
         gem_b = hidden_gem_type_b(_major_b)
         if gem_b:
             gem_b["major_name"] = _major_b

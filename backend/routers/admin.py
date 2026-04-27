@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, text
+from sqlalchemy.exc import OperationalError
 from typing import List, Optional
 import datetime, os, json, csv, io
 from pydantic import BaseModel
@@ -40,6 +41,15 @@ def stats_today(db: Session = Depends(get_db)):
     # 付费转化率（今日点击解锁 vs 今日付费）
     conv_rate = round(paid_orders / export_clicks * 100, 1) if export_clicks > 0 else 0
 
+    # 兼容历史库：部分环境 users 表尚未迁移 wechat_mini_openid 字段
+    # 优先按小程序 openid 统计，缺列时回退到 wechat_openid，避免后台接口 500
+    try:
+        users_mini = db.query(func.count(User.id)).filter(User.wechat_mini_openid.isnot(None)).scalar() or 0
+        users_web = db.query(func.count(User.id)).filter(User.wechat_mini_openid.is_(None)).scalar() or 0
+    except OperationalError:
+        users_mini = db.query(func.count(User.id)).filter(User.wechat_openid.isnot(None)).scalar() or 0
+        users_web = db.query(func.count(User.id)).filter(User.wechat_openid.is_(None)).scalar() or 0
+
     return {
         "today_queries":    queries,
         "today_paid":       paid_orders,
@@ -52,46 +62,67 @@ def stats_today(db: Session = Depends(get_db)):
         "total_revenue":    round((total_revenue_fen or 0) / 100, 2),
         "total_queries":    total_queries,
         # 来源分布（小程序 vs 网页）
-        "users_mini":       db.query(func.count(User.id)).filter(User.wechat_mini_openid.isnot(None)).scalar() or 0,
-        "users_web":        (db.query(func.count(User.id)).filter(User.wechat_mini_openid.is_(None)).scalar() or 0),
+        "users_mini":       users_mini,
+        "users_web":        users_web,
     }
 
 
 # ── 近30天趋势折线 ─────────────────────────────────────────────
 @router.get("/stats/chart", dependencies=[Depends(_verify_admin)])
 def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(get_db)):
-    """近N天每日：查询量、付费量、新用户、收入"""
+    """近N天每日：查询量、付费量、新用户、收入（优化为4次批量查询）"""
+    since = datetime.datetime.utcnow() - datetime.timedelta(days=days_back)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    # 查询量按天聚合
+    q_rows = db.query(
+        func.strftime("%Y-%m-%d", UserEvent.created_at).label("day"),
+        func.count(UserEvent.id).label("cnt")
+    ).filter(
+        UserEvent.event_type == "query_submit",
+        UserEvent.created_at >= since,
+    ).group_by("day").all()
+    q_map = {r.day: r.cnt for r in q_rows}
+
+    # 付费量按天聚合
+    p_rows = db.query(
+        func.strftime("%Y-%m-%d", Order.pay_time).label("day"),
+        func.count(Order.id).label("cnt")
+    ).filter(
+        Order.status == "paid",
+        Order.pay_time >= since,
+    ).group_by("day").all()
+    p_map = {r.day: r.cnt for r in p_rows}
+
+    # 新用户按天聚合
+    u_rows = db.query(
+        func.strftime("%Y-%m-%d", User.created_at).label("day"),
+        func.count(User.id).label("cnt")
+    ).filter(
+        User.created_at >= since,
+    ).group_by("day").all()
+    u_map = {r.day: r.cnt for r in u_rows}
+
+    # 收入按天聚合
+    r_rows = db.query(
+        func.strftime("%Y-%m-%d", Order.pay_time).label("day"),
+        func.sum(Order.amount).label("amt")
+    ).filter(
+        Order.status == "paid",
+        Order.pay_time >= since,
+    ).group_by("day").all()
+    r_map = {r.day: (r.amt or 0) for r in r_rows}
+
     result = []
     for i in range(days_back - 1, -1, -1):
         d = datetime.datetime.utcnow() - datetime.timedelta(days=i)
-        d_start = d.replace(hour=0, minute=0, second=0, microsecond=0)
-        d_end   = d_start + datetime.timedelta(days=1)
-
-        queries = db.query(func.count(UserEvent.id)).filter(
-            UserEvent.event_type == "query_submit",
-            UserEvent.created_at >= d_start, UserEvent.created_at < d_end,
-        ).scalar() or 0
-
-        paid = db.query(func.count(Order.id)).filter(
-            Order.status == "paid",
-            Order.pay_time >= d_start, Order.pay_time < d_end,
-        ).scalar() or 0
-
-        new_users = db.query(func.count(User.id)).filter(
-            User.created_at >= d_start, User.created_at < d_end,
-        ).scalar() or 0
-
-        revenue_fen = db.query(func.sum(Order.amount)).filter(
-            Order.status == "paid",
-            Order.pay_time >= d_start, Order.pay_time < d_end,
-        ).scalar() or 0
-
+        day_str = d.strftime("%Y-%m-%d")
         result.append({
             "date":      d.strftime("%m/%d"),
-            "queries":   queries,
-            "paid":      paid,
-            "new_users": new_users,
-            "revenue":   round((revenue_fen or 0) / 100, 2),
+            "queries":   q_map.get(day_str, 0),
+            "paid":      p_map.get(day_str, 0),
+            "new_users": u_map.get(day_str, 0),
+            "revenue":   round(r_map.get(day_str, 0) / 100, 2),
         })
     return result
 
@@ -572,6 +603,31 @@ def school_conversion(days: int = Query(30), db: Session = Depends(get_db)):
         UserEvent.created_at >= since,
     ).group_by(UserEvent.event_data).order_by(func.count(UserEvent.id).desc()).limit(20).all()
 
+    # 优化：避免 N+1 查询，一次性查出所有点击用户，再一次性查付费用户
+    event_data_list = [r.event_data for r in click_rows]
+    clicker_rows = db.query(
+        UserEvent.event_data,
+        UserEvent.user_id,
+    ).filter(
+        UserEvent.event_type == "school_click",
+        UserEvent.event_data.in_(event_data_list),
+        UserEvent.created_at >= since,
+        UserEvent.user_id.isnot(None),
+    ).distinct().all()
+
+    all_user_ids = {r.user_id for r in clicker_rows}
+    paid_user_ids = {
+        r.user_id for r in db.query(Order.user_id).filter(
+            Order.user_id.in_(all_user_ids),
+            Order.status == "paid",
+        ).distinct().all()
+    }
+
+    paid_map: dict = {}
+    for r in clicker_rows:
+        if r.user_id in paid_user_ids:
+            paid_map[r.event_data] = paid_map.get(r.event_data, 0) + 1
+
     result = []
     for row in click_rows:
         try:
@@ -579,25 +635,12 @@ def school_conversion(days: int = Query(30), db: Session = Depends(get_db)):
             school = data.get("school_name", "未知")
         except Exception:
             school = row.event_data or "未知"
-
-        # 点击该学校的用户中，有多少后来付费了
-        clicker_ids = db.query(UserEvent.user_id).filter(
-            UserEvent.event_type == "school_click",
-            UserEvent.event_data == row.event_data,
-            UserEvent.user_id.isnot(None),
-            UserEvent.created_at >= since,
-        ).distinct().subquery()
-
-        paid_count = db.query(func.count(Order.id)).filter(
-            Order.user_id.in_(clicker_ids),
-            Order.status == "paid",
-        ).scalar() or 0
-
+        pc = paid_map.get(row.event_data, 0)
         result.append({
             "school":     school,
             "clicks":     row.clicks,
-            "paid_users": paid_count,
-            "conv_rate":  round(paid_count / row.clicks * 100, 1) if row.clicks > 0 else 0,
+            "paid_users": pc,
+            "conv_rate":  round(pc / row.clicks * 100, 1) if row.clicks > 0 else 0,
         })
 
     return sorted(result, key=lambda x: -x["paid_users"])
@@ -639,29 +682,36 @@ def revenue_breakdown(days: int = Query(30), db: Session = Depends(get_db)):
 # ── 推荐分销统计 ─────────────────────────────────────────────
 @router.get("/stats/referral", dependencies=[Depends(_verify_admin)])
 def referral_stats(db: Session = Depends(get_db)):
-    """推荐关系统计：Top推荐人、推荐转化数、奖励天数"""
-    # 找到有被推荐用户的推荐人
-    referrers = (
-        db.query(User.id, User.phone, User.referral_code, func.count(User.id.label("c")))
-        .filter(User.referred_by.isnot(None))
-        .all()
-    )
-    # 统计每个推荐人带来的注册数和付费数
-    referrer_rows = {}
-    referred_users = db.query(User).filter(User.referred_by.isnot(None)).all()
-    for u in referred_users:
-        rid = u.referred_by
+    """推荐关系统计：Top推荐人、推荐转化数、奖励天数（优化版）"""
+    # 一次性查出所有被推荐用户及其推荐人
+    referred_users = db.query(User.id, User.referred_by).filter(
+        User.referred_by.isnot(None)
+    ).all()
+
+    # 一次性查出所有付费用户ID
+    paid_user_ids = {
+        r.user_id for r in db.query(Order.user_id).filter(
+            Order.status == "paid"
+        ).distinct().all()
+    }
+
+    referrer_rows: dict = {}
+    for uid, rid in referred_users:
         if rid not in referrer_rows:
             referrer_rows[rid] = {"referrals": 0, "paid": 0}
         referrer_rows[rid]["referrals"] += 1
-        # 检查被推荐人是否已付费
-        paid = db.query(Order).filter(Order.user_id == u.id, Order.status == "paid").count()
-        if paid > 0:
+        if uid in paid_user_ids:
             referrer_rows[rid]["paid"] += 1
+
+    # 批量查询推荐人信息
+    referrer_ids = list(referrer_rows.keys())
+    referrer_map = {
+        u.id: u for u in db.query(User).filter(User.id.in_(referrer_ids)).all()
+    }
 
     result = []
     for rid, stats in referrer_rows.items():
-        referrer = db.query(User).filter(User.id == rid).first()
+        referrer = referrer_map.get(rid)
         if referrer:
             result.append({
                 "referrer_id":    rid,

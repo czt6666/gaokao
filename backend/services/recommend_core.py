@@ -1384,35 +1384,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             return tuple(_truncate_log_strings(v, maxlen) for v in obj)
         return obj
 
-    # print("=" * 72, flush=True)
-    # _cands = data.get("candidates") or []
-    # _n_cand = len(_cands)
-    # _sample = random.sample(_cands, min(5, _n_cand)) if _cands else []
-    # print(
-    #     f"[_run_recommend_core] 省={province} rank={rank} 选科={subject or '(空)'} "
-    #     f"candidates={_n_cand} 条 — 随机抽样 {len(_sample)} 条（字符串字段≤20字）",
-    #     flush=True,
-    # )
-    # for _ci, _crow in enumerate(_sample, 1):
-    #     _row = _truncate_log_strings(_crow, 20)
-    #     _rest = {k: v for k, v in _row.items() if k not in ("median_rank", "median_score")}
-    #     print(
-    #         json.dumps(
-    #             {
-    #                 "_i": _ci,
-    #                 "_n_sample": len(_sample),
-    #                 "_n_total": _n_cand,
-    #                 "◆ median_rank": _crow.get("median_rank"),
-    #                 "◆ median_score": _crow.get("median_score"),
-    #                 **_rest,
-    #             },
-    #             ensure_ascii=False,
-    #             default=str,
-    #         ),
-    #         flush=True,
-    #     )
-    # print("=" * 72, flush=True)
-
     _rc("③ 位次池/选科解析", student_pool=_student_pool or "(未指定)")
     _rc(
         "④-⑮ 数据层加载完成（_build_recommend_data）",
@@ -1506,7 +1477,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             key=lambda r: r["year"], reverse=True
         )[:5]
         _latest_ms = (_base_recs[0].get("min_score") or 0) if _base_recs else 0
-        _avg_score = round(float(_latest_ms)) if _latest_ms > 0 else 0
+        _last_year_min_score = round(float(_latest_ms)) if _latest_ms > 0 else 0
 
         # 从真实学科评估表获取该校A类学科（用于Type A冷门检测）
         strong_subjects = subject_eval_cache.get(school_name, [])
@@ -1676,7 +1647,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             "prob_high": prediction.get("prob_high"),
             "suggested_action": prediction["suggested_action"],
             "avg_min_rank_3yr": prediction.get("avg_min_rank_3yr", 0),
-            "avg_min_score_3yr": _avg_score,
+            "last_year_min_score": _last_year_min_score,
             "rank_diff": prediction.get("rank_diff", 0),
             "confidence": prediction["confidence"],
             "big_small_year": prediction.get("big_small_year", {}),
@@ -1786,7 +1757,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 冲：[-0.20, -0.10)  学校比学生难10~20%，有希望但需要努力
     # 稳：[-0.10, +0.10]  学校与学生位次相近±10%，录取把握大
     # 保：(+0.10, +0.40]  学校明显容易，学生位次高于录取线10%以上
-    surge  = [r for r in results if -0.20 <= r["gap_rate"] < -0.10]
+    # 【高位次特殊处理】rank≤2000 时过滤阶段允许 gap_rate 低至 -0.80，
+    # 分桶阶段同步把 [-0.80, -0.20) 也归入 surge，避免保留但不入桶。
+    _SURGE_LO = -0.80 if rank <= 2000 else -0.20
+    surge  = [r for r in results if _SURGE_LO <= r["gap_rate"] < -0.10]
     stable = [r for r in results if -0.10 <= r["gap_rate"] <= 0.10]
     safe   = [r for r in results if  0.10 <  r["gap_rate"] <= 0.40]
 
@@ -1911,7 +1885,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
 
     # 7d. 惩罚后重新分桶（gap_rate 不因惩罚变化，按各桶 sort_key 重排）
     surge_list  = _capped_pick(
-        sorted([r for r in display_list if -0.20 <= r["gap_rate"] < -0.10], key=_surge_sort),
+        sorted([r for r in display_list if _SURGE_LO <= r["gap_rate"] < -0.10], key=_surge_sort),
         25, defaultdict(int))
     stable_list = _capped_pick(
         sorted([r for r in display_list if -0.10 <= r["gap_rate"] <= 0.10],  key=_stable_sort),

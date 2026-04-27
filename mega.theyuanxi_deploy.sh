@@ -1,7 +1,7 @@
 #!/bin/bash
-# 部署 mega.theyuanxi.cn（后端 8100 / 前端 3100）
+# 部署 www.mega.theyuanxi.cn（后端 8100 / 前端 3100）
 # 用法: bash mega.theyuanxi_deploy.sh
-# 注意：服务器上的 backend/.env 与 frontend/.env.production 由运维手动维护，本脚本不覆盖。
+# 环境变量：本地维护 backend/.env.production 和 frontend/.env.production
 set -e
 
 SERVER="root@43.143.206.19"
@@ -11,91 +11,56 @@ LOCAL_FRONTEND="$SCRIPT_DIR/frontend"
 REMOTE_BACKEND="/app/mega/backend"
 REMOTE_FRONTEND="/app/mega/frontend"
 PYPI_MIRROR="${UV_PYPI_MIRROR:-https://pypi.tuna.tsinghua.edu.cn/simple}"
+DOMAIN="www.mega.theyuanxi.cn"
 
 echo "========================================"
 echo "  袁希高报 · mega.theyuanxi.cn 部署"
 echo "========================================"
 
-# ── 1. 同步后端代码（保留服务器上的 .env / .venv / 数据库）──
+# ── 0. 同步环境变量（先传 .env，确保重启后新配置已生效）──
+echo ""
+echo "→ [0/4] 同步环境变量..."
+if [ -f "$LOCAL_BACKEND/.env.production" ]; then
+  echo "  同步 backend/.env.production → server:$REMOTE_BACKEND/.env"
+  rsync -av --no-owner --no-group "$LOCAL_BACKEND/.env.production" "$SERVER:$REMOTE_BACKEND/.env"
+fi
+if [ -f "$LOCAL_FRONTEND/.env.production" ]; then
+  echo "  同步 frontend/.env.production → server:$REMOTE_FRONTEND/.env.production"
+  rsync -av --no-owner --no-group "$LOCAL_FRONTEND/.env.production" "$SERVER:$REMOTE_FRONTEND/.env.production"
+fi
+
+# ── 1. 同步后端代码（不删除目标端文件；保留 .venv / 数据库）──
 echo ""
 echo "→ [1/4] 同步后端代码..."
-rsync -av --delete --no-owner --no-group \
+rsync -av --no-owner --no-group \
   --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
-  --exclude='.venv' \
-  --exclude='.env' \
+  --exclude='.venv' --exclude='venv/' \
   --exclude='data/' \
+  --exclude='.env' \
   "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"
 
-# ── 2. 注册 systemd 服务（仅首次；不使用 EnvironmentFile，由 python-dotenv 读 .env）──
+# ── 2. 同步前端源码（不删除目标端文件；保留 node_modules / .next）──
 echo ""
-echo "→ [2/4] 注册 systemd 服务（若不存在）..."
-ssh "$SERVER" "
-  if [ ! -f /etc/systemd/system/gaokao-mega-backend.service ]; then
-    echo '  创建 gaokao-mega-backend.service...'
-    sudo tee /etc/systemd/system/gaokao-mega-backend.service > /dev/null <<'UNIT'
-[Unit]
-Description=Gaokao Backend API (mega.theyuanxi.cn)
-After=network.target
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/app/mega/backend
-Environment=PYTHONUNBUFFERED=1
-ExecStart=/app/mega/backend/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8100 --workers 1
-Restart=on-failure
-RestartSec=3
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-    sudo systemctl daemon-reload
-    sudo systemctl enable gaokao-mega-backend
-  fi
-
-  if [ ! -f /etc/systemd/system/gaokao-mega-frontend.service ]; then
-    echo '  创建 gaokao-mega-frontend.service...'
-    sudo tee /etc/systemd/system/gaokao-mega-frontend.service > /dev/null <<'UNIT'
-[Unit]
-Description=Gaokao Frontend Next.js (mega.theyuanxi.cn)
-After=network.target gaokao-mega-backend.service
-
-[Service]
-Type=simple
-User=ubuntu
-WorkingDirectory=/app/mega/frontend
-Environment=NODE_ENV=production
-Environment=PORT=3100
-ExecStart=pnpm run start
-Restart=on-failure
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-UNIT
-    sudo systemctl daemon-reload
-    sudo systemctl enable gaokao-mega-frontend
-  fi
-"
-
-# ── 3. 同步前端源码并构建（保留服务器上的 .env.production / node_modules）──
-echo ""
-echo "→ [3/4] 同步前端源码并构建..."
-rsync -av --delete --no-owner --no-group \
+echo "→ [2/4] 同步前端源码..."
+rsync -av --no-owner --no-group \
   --exclude='node_modules' --exclude='.next' \
-  --exclude='.venv' \
   --exclude='.env.local' --exclude='.env.production' \
   "$LOCAL_FRONTEND/" "$SERVER:$REMOTE_FRONTEND/"
 
+# ── 3. 前端构建 ──
+echo ""
+echo "→ [3/4] 前端构建..."
 ssh "$SERVER" "
   set -e
   cd $REMOTE_FRONTEND
   if [ ! -d node_modules ]; then pnpm install; fi
+  # 强制注入 mega 域名对应的 API 地址
+  echo 'NEXT_PUBLIC_API_URL=https://$DOMAIN' > .env.production
   pnpm run build 2>&1 | tail -20
 "
 
-# ── 4. 重启服务（如需更新依赖，手动 ssh 后执行：cd /app/mega/backend && uv sync --index-url $PYPI_MIRROR）──
+# ── 4. 重启服务 ──
 echo ""
 echo "→ [4/4] 重启服务..."
 ssh "$SERVER" "
@@ -110,5 +75,5 @@ ssh "$SERVER" "
 echo ""
 echo "========================================"
 echo "  ✅ mega.theyuanxi.cn 部署完成！"
-echo "  访问: https://mega.theyuanxi.cn"
+echo "  访问: https://$DOMAIN"
 echo "========================================"

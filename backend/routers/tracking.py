@@ -9,7 +9,7 @@ from database import get_db, ReportLog, ReportScan
 router = APIRouter(tags=["tracking"])
 
 SITE_URL = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "yuanxi-admin-2026")
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "")
 
 
 def _verify_admin(x_admin_token: str = Header(...)):

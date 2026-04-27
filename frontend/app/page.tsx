@@ -100,18 +100,24 @@ export default function Home() {
 
   // ── 选科 state（三模式）──────────────────────────────────────
   const examMode = getExamMode(province);
-  // 3+1+2
-  const [first312, setFirst312] = useState("物理");
-  const [second312, setSecond312] = useState<string[]>(["化学", "生物"]);
-  // 3+3
-  const [subjects333, setSubjects333] = useState<string[]>(["物理", "化学", "生物"]);
-  // 旧高考
-  const [oldSubject, setOldSubject] = useState("理科");
+  // 3+1+2（首次不预设，由用户选择后缓存）
+  const [first312, setFirst312] = useState("");
+  const [second312, setSecond312] = useState<string[]>([]);
+  // 3+3（首次不预设）
+  const [subjects333, setSubjects333] = useState<string[]>([]);
+  // 旧高考（首次不预设）
+  const [oldSubject, setOldSubject] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+
+  // 跳过首次挂载时把空默认值写入 localStorage 的 ref
+  const subjectInitRef = useRef(false);
+  const constraintInitRef = useRef(false);
+  const provinceInitRef = useRef(false);
 
   // ── 偏好约束 ──
   const [showConstraints, setShowConstraints] = useState(false);
@@ -125,6 +131,29 @@ export default function Home() {
 
   useEffect(() => {
     try { const p = localStorage.getItem("gaokao_province"); if (p) setProvince(p); } catch {}
+    // 恢复选科
+    try {
+      const savedSubject = localStorage.getItem("gaokao_subject_settings");
+      if (savedSubject) {
+        const s = JSON.parse(savedSubject);
+        if (s.first312) setFirst312(s.first312);
+        if (s.second312) setSecond312(s.second312);
+        if (s.subjects333) setSubjects333(s.subjects333);
+        if (s.oldSubject) setOldSubject(s.oldSubject);
+      }
+    } catch {}
+    // 恢复偏好约束
+    try {
+      const savedCons = localStorage.getItem("gaokao_constraints");
+      if (savedCons) {
+        const c = JSON.parse(savedCons);
+        if (c.cMajor !== undefined) setCMajor(c.cMajor);
+        if (c.cCityLevels !== undefined) setCCityLevels(c.cCityLevels);
+        if (c.cNature !== undefined) setCNature(c.cNature);
+        if (c.cTiers !== undefined) setCTiers(c.cTiers);
+        if (c.showConstraints !== undefined) setShowConstraints(c.showConstraints);
+      }
+    } catch {}
     track("page_view", { page: "/" });
     // Capture referral code from URL and persist to localStorage
     try {
@@ -135,6 +164,43 @@ export default function Home() {
       }
     } catch {}
   }, []);
+
+  // 选科变化自动缓存（跳过首次挂载，避免空默认值覆盖已有缓存）
+  useEffect(() => {
+    if (!subjectInitRef.current) { subjectInitRef.current = true; return; }
+    try {
+      localStorage.setItem("gaokao_subject_settings", JSON.stringify({
+        first312, second312, subjects333, oldSubject
+      }));
+    } catch {}
+  }, [first312, second312, subjects333, oldSubject]);
+
+  // 偏好约束变化自动缓存（跳过首次挂载）
+  useEffect(() => {
+    if (!constraintInitRef.current) { constraintInitRef.current = true; return; }
+    try {
+      localStorage.setItem("gaokao_constraints", JSON.stringify({
+        cMajor, cCityLevels, cNature, cTiers, showConstraints
+      }));
+    } catch {}
+  }, [cMajor, cCityLevels, cNature, cTiers, showConstraints]);
+
+  // 省份变化自动缓存（跳过首次挂载）
+  useEffect(() => {
+    if (!provinceInitRef.current) { provinceInitRef.current = true; return; }
+    try { localStorage.setItem("gaokao_province", province); } catch {}
+  }, [province]);
+
+  // 点击外部关闭移动端菜单
+  useEffect(() => {
+    if (!showMobileMenu) return;
+    function handleOutside(e: MouseEvent) {
+      const target = e.target as HTMLElement;
+      if (!target.closest(".nav-mobile-menu")) setShowMobileMenu(false);
+    }
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showMobileMenu]);
 
   // 拼接选科字符串
   const subjectStr = (() => {
@@ -150,9 +216,21 @@ export default function Home() {
   const handleSubmit = async () => {
     if (mode === "rank" && !rank) return;
     if (mode === "score" && !mockScore) return;
+    // 选科必填校验
+    if (examMode === "3+1+2" && (!first312 || second312.length !== 2)) {
+      setSubmitError("请选择首选科目（物理/历史）和 2 门再选科目");
+      return;
+    }
+    if (examMode === "3+3" && subjects333.length !== 3) {
+      setSubmitError("3+3 模式请选择 3 门科目");
+      return;
+    }
+    if (examMode === "old" && !oldSubject) {
+      setSubmitError("请选择文科或理科");
+      return;
+    }
     setLoading(true);
     setSubmitError(null);
-    try { localStorage.setItem("gaokao_province", province); } catch {}
     track("query_submit", {
       province,
       rankInput: mode === "rank" ? Number(rank) : 0,
@@ -220,14 +298,42 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
             <span
               className="nav-brand-sub"
-              onClick={() => setContactOpen(true)}
+              onClick={() => setShowFeedback(true)}
               style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px", cursor: "pointer" }}
             >袁希团队出品</span>
-            <Link href="/search" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
-            <Link href="/compare" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
-            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
-            <Link href="/form" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
+            {/* 桌面端链接 */}
+            <div className="nav-link-mobile-hide" style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <Link href="/search" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
+              <Link href="/compare" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
+              <Link href="/major-trend" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
+              <Link href="/form" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
+            </div>
             <AuthNav />
+            {/* 移动端更多按钮 */}
+            <div className="nav-mobile-only nav-mobile-menu" style={{ position: "relative", flexShrink: 0 }}>
+              <button
+                onClick={() => setShowMobileMenu((v) => !v)}
+                className="btn-ghost"
+                style={{ padding: "6px 10px", fontSize: 18, lineHeight: 1 }}
+                aria-label="更多"
+              >
+                ☰
+              </button>
+              {showMobileMenu && (
+                <div
+                  style={{
+                    position: "absolute", top: "calc(100% + 6px)", right: 0,
+                    background: "#fff", borderRadius: 12, boxShadow: "0 8px 30px rgba(0,0,0,0.15)",
+                    border: "1px solid var(--color-separator)", padding: "8px 4px", minWidth: 140, zIndex: 200,
+                  }}
+                >
+                  <Link href="/search" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>学校库</Link>
+                  <Link href="/compare" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>学校对比</Link>
+                  <Link href="/major-trend" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>专业风向标</Link>
+                  <Link href="/form" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>志愿表</Link>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </nav>
@@ -436,7 +542,7 @@ export default function Home() {
               {/* 3+3 选科组件 */}
               {examMode === "3+3" && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 6 }}>
                     {ALL_SUBJECTS.map(s => {
                       const checked = subjects333.includes(s);
                       return (
@@ -450,7 +556,7 @@ export default function Home() {
                             }
                           }}
                           style={{
-                            flex: 1, minWidth: 60, padding: "7px 0", borderRadius: 8, border: "1.5px solid",
+                            padding: "7px 0", borderRadius: 8, border: "1.5px solid",
                             borderColor: checked ? "var(--color-accent)" : "var(--color-separator)",
                             background: checked ? "rgba(201,146,42,0.08)" : "var(--color-bg)",
                             color: checked ? "var(--color-accent)" : "var(--color-text-secondary)",

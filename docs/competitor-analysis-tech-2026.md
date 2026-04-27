@@ -10,9 +10,9 @@
 
 | 产品 | 网址 | 所属公司 | 上线时间 | 技术栈推测 |
 |---|---|---|---|---|
-| **优志愿** | https://www.youzy.cn | 成都优途科技 | 2014 | Web + App，Java后端 |
-| **完美志愿** | https://www.wmzy.com | 深圳华羽信 | 2015 | Web + App，Python/Java |
-| **掌上高考** | https://gkcx.eol.cn | 中国教育在线 | 2015 | Web为主，教育部合作 |
+| **优志愿** | https://www.youzy.cn | 成都优途科技 360/y | 2014 | Web + App，Java后端 |
+| **完美志愿** | https://www.wmzy.com | 深圳华羽信 498/y | 2015 | Web + App，Python/Java |
+| **掌上高考** | https://gkcx.eol.cn | 中国教育在线 98/y | 2015 | Web为主，教育部合作 |
 | **夸克高考** | 夸克App内搜索"高考" | 阿里智能信息 | 2019 | 阿里系，Flutter/Native |
 | **百度AI志愿助手** | 百度App搜索"高考志愿" | 百度 | 2020 | 百度系，文心大模型 |
 | **升学e网通** | https://www.ewt360.com | 杭州铭师堂 | 2012 | Web + App + 学校SaaS |
@@ -20,7 +20,7 @@
 | **志愿通** | https://www.zhiyuantong.com | 北京紫光教育 | 2016 | Web + App |
 | **蝶变志愿** | https://www.diebian.com | 吉林省蝶变 | 2019 | Web + App |
 | **报准高考** | https://www.baozhun.cn | 山东报准 | 2018 | Web + 小程序 |
-
+ 
 ---
 
 ## 二、逐个竞品深度分析

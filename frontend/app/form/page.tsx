@@ -35,6 +35,7 @@ export default function FormPage() {
   const [dragging, setDragging] = useState<number | null>(null);
   const [dragOver, setDragOver] = useState<number | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -147,6 +148,42 @@ export default function FormPage() {
         </div>
       )}
 
+      {/* 删除单条确认弹层 */}
+      {confirmRemoveId && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 999,
+          display: "flex", alignItems: "center", justifyContent: "center",
+        }}>
+          <div style={{
+            background: "var(--color-bg)", borderRadius: 16, padding: "28px 24px",
+            maxWidth: 320, width: "90%", textAlign: "center", boxShadow: "var(--shadow-lg)",
+          }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>🗑️</div>
+            <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>确认删除这条志愿？</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 24 }}>
+              {(() => {
+                const it = items.find((i) => i.id === confirmRemoveId);
+                return it ? `${it.school} · ${it.major}` : "";
+              })()}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setConfirmRemoveId(null)}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid var(--color-separator)", background: "transparent", fontSize: 14, cursor: "pointer" }}
+              >
+                取消
+              </button>
+              <button
+                onClick={() => { if (confirmRemoveId) remove(confirmRemoveId); setConfirmRemoveId(null); }}
+                style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "var(--color-danger)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}
+              >
+                确认删除
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div style={{ maxWidth: 720, margin: "0 auto", padding: "32px 20px" }}>
         {/* 统计 */}
         {items.length > 0 && (
@@ -245,18 +282,21 @@ export default function FormPage() {
                     <div style={{ display: "flex", flexDirection: "column", gap: 2, flexShrink: 0 }}>
                       <button
                         onClick={() => moveUp(idx)} disabled={idx === 0}
-                        style={{ fontSize: 11, color: idx === 0 ? "var(--color-text-tertiary)" : "var(--color-text-secondary)", background: "none", border: "none", cursor: idx === 0 ? "default" : "pointer", padding: 2, opacity: idx === 0 ? 0.3 : 1 }}
+                        style={{ fontSize: 16, color: idx === 0 ? "var(--color-text-tertiary)" : "var(--color-text-secondary)", background: "none", border: "none", cursor: idx === 0 ? "default" : "pointer", padding: "6px 8px", opacity: idx === 0 ? 0.3 : 1, borderRadius: 6 }}
+                        title="上移"
                       >▲</button>
                       <button
                         onClick={() => moveDown(idx)} disabled={idx === items.length - 1}
-                        style={{ fontSize: 11, color: idx === items.length - 1 ? "var(--color-text-tertiary)" : "var(--color-text-secondary)", background: "none", border: "none", cursor: idx === items.length - 1 ? "default" : "pointer", padding: 2, opacity: idx === items.length - 1 ? 0.3 : 1 }}
+                        style={{ fontSize: 16, color: idx === items.length - 1 ? "var(--color-text-tertiary)" : "var(--color-text-secondary)", background: "none", border: "none", cursor: idx === items.length - 1 ? "default" : "pointer", padding: "6px 8px", opacity: idx === items.length - 1 ? 0.3 : 1, borderRadius: 6 }}
+                        title="下移"
                       >▼</button>
                     </div>
 
                     {/* 删除 */}
                     <button
-                      onClick={() => remove(item.id)}
-                      style={{ fontSize: 18, color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", flexShrink: 0, lineHeight: 1, padding: "0 4px" }}
+                      onClick={() => setConfirmRemoveId(item.id)}
+                      style={{ fontSize: 20, color: "var(--color-text-tertiary)", background: "none", border: "none", cursor: "pointer", flexShrink: 0, lineHeight: 1, padding: "4px 8px", borderRadius: 6 }}
+                      title="删除"
                     >×</button>
                   </div>
                 );

@@ -40,7 +40,7 @@ type SchoolResult = {
   probability_tier?: string;
   suggested_action: string | null;
   avg_min_rank_3yr: number;
-  avg_min_score_3yr?: number;
+  last_year_min_score?: number;
   rank_diff: number;
   confidence: string;
   quality_score?: number;
@@ -132,16 +132,16 @@ function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
 
 function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; score?: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
   const [expanded, setExpanded] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const [toast, setToast] = useState<React.ReactNode | null>(null);
   const toastRef = useRef<NodeJS.Timeout | null>(null);
-  const showToast = (msg: string) => {
+  const showToast = (msg: React.ReactNode) => {
     if (toastRef.current) clearTimeout(toastRef.current);
     setToast(msg);
-    toastRef.current = setTimeout(() => setToast(null), 2500);
+    toastRef.current = setTimeout(() => setToast(null), 3500);
   };
   useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);
   const prob = item.probability ?? 0;
-  const scoreDiff = (score && item.avg_min_score_3yr) ? (Number(score) - item.avg_min_score_3yr) : null;
+  const scoreDiff = (score && item.last_year_min_score) ? (Number(score) - item.last_year_min_score) : null;
   const isGem = item.is_hidden_gem && item.top_gem;
   const isSwarm = item.swarm_discovery && !isGem;
 
@@ -280,11 +280,11 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
         <div className="result-card-right" style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "flex-end", marginBottom: 8 }}>
             {/* 去年最低分 */}
-            {item.avg_min_score_3yr ? (
+            {item.last_year_min_score ? (
               <div style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>去年最低分</div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: "var(--color-accent)", fontVariantNumeric: "tabular-nums" }}>
-                  {item.avg_min_score_3yr}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-text-tertiary)", marginLeft: 2 }}>分</span>
+                  {item.last_year_min_score}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-text-tertiary)", marginLeft: 2 }}>分</span>
                 </div>
                 {scoreDiff !== null && (
                   <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: scoreDiff > 0 ? "#059669" : "#DC2626" }}>
@@ -294,7 +294,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
               </div>
             ) : null}
             {/* 分隔线 */}
-            {item.avg_min_score_3yr ? (
+            {item.last_year_min_score ? (
               <div style={{ width: 1, background: "var(--color-border)", alignSelf: "stretch", margin: "2px 0" }} />
             ) : null}
             {/* 均位次 */}
@@ -317,7 +317,21 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             <button onClick={() => addToForm(item, (msg) => { setToast(msg); setTimeout(() => setToast(null), 2500); })} className="card-action-primary">
               加入志愿
             </button>
-            <button onClick={() => addToCompare(item.school_name, showToast)} className="card-action-secondary">
+            <button onClick={() => addToCompare(item.school_name, (msg) => {
+              if (typeof msg === "string" && msg.includes("已加入对比")) {
+                const count = (msg.match(/\d+/) || ["?"])[0];
+                showToast(
+                  <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    已选 {count}/3 所学校对比
+                    <Link href="/compare" onClick={(e) => { e.stopPropagation(); }} style={{ color: "#C9922A", textDecoration: "none", fontWeight: 600 }}>
+                      立即查看对比 →
+                    </Link>
+                  </span>
+                );
+              } else {
+                showToast(msg);
+              }
+            })} className="card-action-secondary">
               对比分析
             </button>
           </div>
@@ -506,9 +520,9 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
       {toast && (
         <div style={{
           position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(29,29,31,0.9)", color: "#fff", padding: "6px 14px",
+          background: "rgba(29,29,31,0.9)", color: "#fff", padding: "8px 16px",
           borderRadius: 99, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
-          zIndex: 10, pointerEvents: "none",
+          zIndex: 10, pointerEvents: "auto",
         }}>{toast}</div>
       )}
     </div>
@@ -1236,7 +1250,7 @@ function ResultsContent() {
         })()}
 
         {/* Tab bar */}
-        <div className="tab-bar" style={{ margin: "12px 0 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
+        <div className="tab-bar" style={{ margin: "12px 0 0", display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-around" }}>
           {tabs.map((t) => (
             <button
               key={t.key}

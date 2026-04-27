@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import AuthNav from "@/components/AuthNav";
 
@@ -256,32 +256,10 @@ function MajorSearch() {
   const [q, setQ] = useState("");
   const [res, setRes] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [sugs, setSugs] = useState<string[]>([]);
-  const [showSugs, setShowSugs] = useState(false);
-  const boxRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (q.length < 2) { setSugs([]); return; }
-    const t = setTimeout(async () => {
-      try {
-        const r = await fetch(`${API}/api/major/search?q=${encodeURIComponent(q)}`);
-        setSugs((await r.json()).suggestions || []);
-      } catch {}
-    }, 280);
-    return () => clearTimeout(t);
-  }, [q]);
-
-  useEffect(() => {
-    const fn = (e: MouseEvent) => {
-      if (boxRef.current && !boxRef.current.contains(e.target as Node)) setShowSugs(false);
-    };
-    document.addEventListener("mousedown", fn);
-    return () => document.removeEventListener("mousedown", fn);
-  }, []);
 
   async function go(name: string) {
     if (!name.trim()) return;
-    setLoading(true); setRes(null); setShowSugs(false);
+    setLoading(true); setRes(null);
     try { setRes(await (await fetch(`${API}/api/major/trend?name=${encodeURIComponent(name)}`)).json()); }
     catch { setRes({ error: true }); }
     finally { setLoading(false); }
@@ -295,31 +273,18 @@ function MajorSearch() {
   };
 
   return (
-    <div ref={boxRef} style={{ position: "relative" }}>
+    <div style={{ position: "relative" }}>
       <div style={{ display: "flex", gap: 10 }}>
         <input className="apple-input" style={{ flex: 1 }}
           placeholder="输入专业名，如：土木工程、人工智能、法学..."
           value={q}
-          onChange={e => { setQ(e.target.value); setShowSugs(true); }}
+          onChange={e => setQ(e.target.value)}
           onKeyDown={e => e.key === "Enter" && go(q)}
-          onFocus={() => setShowSugs(true)}
         />
         <button className="btn-primary" onClick={() => go(q)} disabled={loading} style={{ minWidth: 88 }}>
           {loading ? <span className="spinner" style={{ width: 16, height: 16, display: "inline-block" }} /> : "查趋势 →"}
         </button>
       </div>
-      {showSugs && sugs.length > 0 && (
-        <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, right: 96, background: "#fff", border: "1px solid rgba(26,39,68,0.1)", borderRadius: 12, boxShadow: "0 8px 32px rgba(0,0,0,0.08)", zIndex: 50, overflow: "hidden" }}>
-          {sugs.map((s, i) => (
-            <div key={i}
-              style={{ padding: "11px 16px", fontSize: 14, cursor: "pointer", color: "var(--color-text-primary)", borderBottom: i < sugs.length - 1 ? "1px solid rgba(26,39,68,0.05)" : "none" }}
-              onMouseDown={() => { setQ(s); go(s); }}
-              onMouseEnter={e => (e.currentTarget.style.background = "rgba(26,39,68,0.03)")}
-              onMouseLeave={e => (e.currentTarget.style.background = "transparent")}
-            >{s}</div>
-          ))}
-        </div>
-      )}
       {res && !res.error && (
         <div style={{ marginTop: 16, padding: "24px", background: "#F9F9F7", borderRadius: 12, border: "1px solid rgba(26,39,68,0.07)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
@@ -332,7 +297,7 @@ function MajorSearch() {
               return <span style={{ fontSize: 12, fontWeight: 700, color: b.c, background: b.bg, padding: "4px 12px", borderRadius: 6, border: `1px solid ${b.c}30` }}>{b.text}</span>;
             })()}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
+          <div className="mt-search-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
             {res.employment_rate > 0 && (
               <div style={{ padding: "16px", background: "#fff", borderRadius: 10, border: "1px solid rgba(26,39,68,0.06)" }}>
                 <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.08em", textTransform: "uppercase", color: "var(--color-text-tertiary)", marginBottom: 6 }}>就业率</div>
@@ -394,7 +359,7 @@ export default function MajorTrendPage() {
     <div style={{ minHeight: "100vh", background: "#FAFAF8", fontFamily: "var(--font)" }}>
 
       {/* ── HEADER ── */}
-      <header style={{
+      <header className="mt-header" style={{
         background: "rgba(250,250,248,0.88)", backdropFilter: "blur(16px) saturate(180%)",
         WebkitBackdropFilter: "blur(16px) saturate(180%)",
         borderBottom: "1px solid rgba(26,39,68,0.08)",
@@ -403,7 +368,9 @@ export default function MajorTrendPage() {
         position: "sticky", top: 0, zIndex: 100,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <Link href="/" style={{ fontWeight: 800, fontSize: 15, color: "var(--color-navy)", textDecoration: "none", letterSpacing: "-0.02em" }}>水卢高报</Link>
+          <Link href="/" style={{ fontSize: 14, color: "var(--color-navy)", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, fontWeight: 600 }}>
+            ← 返回
+          </Link>
           <div style={{ width: 1, height: 16, background: "rgba(26,39,68,0.15)" }} />
           <span style={{ fontSize: 13, color: "var(--color-text-secondary)", fontWeight: 500 }}>专业风向标</span>
           <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", color: "rgba(26,39,68,0.35)", background: "rgba(26,39,68,0.06)", padding: "3px 8px", borderRadius: 4, textTransform: "uppercase" }}>数据至 2026.04</span>
@@ -423,7 +390,7 @@ export default function MajorTrendPage() {
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 65% 55% at 88% 8%, rgba(201,146,42,0.2) 0%, transparent 60%)" }} />
           <div style={{ position: "absolute", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 40% 40% at 12% 85%, rgba(124,58,237,0.12) 0%, transparent 60%)" }} />
 
-          <div style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, alignItems: "flex-start" }}>
+          <div className="mt-hero-grid" style={{ position: "relative", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 44, alignItems: "flex-start" }}>
 
             {/* left: headline + sub */}
             <div>
@@ -439,7 +406,7 @@ export default function MajorTrendPage() {
             </div>
 
             {/* right: bento stats */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div className="mt-bento" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
               {/* top wide: cancellations */}
               <div style={{ gridColumn: "span 2", background: "rgba(220,38,38,0.1)", border: "1px solid rgba(220,38,38,0.18)", borderRadius: 12, padding: "18px 20px", display: "flex", gap: 24, alignItems: "center" }}>
                 <div>
@@ -522,7 +489,7 @@ export default function MajorTrendPage() {
           </div>
 
           {/* dual: cancellations + graduates */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+          <div className="mt-charts" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div style={{ background: "#fff", border: "1px solid rgba(26,39,68,0.07)", borderRadius: 16, padding: "22px 24px" }}>
               <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgba(26,39,68,0.35)", marginBottom: 3 }}>年度撤销专业点数</div>
               <div style={{ fontSize: 11, color: "rgba(26,39,68,0.35)", marginBottom: 18 }}>2019—2025</div>
@@ -617,7 +584,7 @@ export default function MajorTrendPage() {
         {/* ══ §02 NATURE ══ */}
         <SecHead num="02" title="真死亡？假死亡？还是变种？" sub="这是最关键的判断——直接决定你的应对策略" />
         <div style={{ background: "#fff", border: "1px solid rgba(26,39,68,0.07)", borderRadius: 16, overflow: "hidden" }}>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderBottom: "1px solid rgba(26,39,68,0.07)" }}>
+          <div className="mt-nature-tabs" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", borderBottom: "1px solid rgba(26,39,68,0.07)" }}>
             {NATURE_TABS.map((n, i) => (
               <button key={i} onClick={() => setActiveNature(i)} style={{
                 padding: "15px 8px 13px", cursor: "pointer", border: "none",
@@ -636,7 +603,7 @@ export default function MajorTrendPage() {
             return (
               <div style={{ padding: "26px 28px" }}>
                 <div style={{ padding: "11px 15px", background: n.bg, borderLeft: `3px solid ${n.color}`, borderRadius: "0 8px 8px 0", fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 18, lineHeight: 1.65 }}>{n.desc}</div>
-                <div style={{ display: "grid", gap: 8 }}>
+                <div className="mt-macro-list" style={{ display: "grid", gap: 8 }}>
                   {n.cases.map((c, j) => (
                     <div key={j} style={{ display: "grid", gridTemplateColumns: "10px 1fr", gap: 14, padding: "13px 15px", background: "#FAFAF8", borderRadius: 10 }}>
                       <div style={{ width: 6, height: 6, borderRadius: "50%", background: n.color, marginTop: 6, flexShrink: 0 }} />
@@ -657,7 +624,7 @@ export default function MajorTrendPage() {
 
         {/* ══ §03a WHAT IT MEANS ══ */}
         <SecHead num="03a" title="它预示着什么？" sub="这一轮洗牌完成后，高等教育的底层逻辑将永久改变" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+        <div className="mt-grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
           {[
             { tag: "A", t: "专业壁垒正在瓦解", b: "AI使\"学了4年才能做\"的技能变成\"用工具3个月上手\"。传统学科的职业保护正失效，个人能力的透明度在上升，学历的信号价值在相对下降。" },
             { tag: "B", t: "T型人才溢价扩大", b: "一个深度方向+跨领域整合能力的组合正在稀缺定价。纯单专业迅速贬值，技术+人文、工程+商业的复合背景愈发受欢迎。" },
@@ -674,7 +641,7 @@ export default function MajorTrendPage() {
 
         {/* ══ §03b MACRO ══ */}
         <SecHead num="03b" title="宏观影响：对社会意味着什么？" sub="短期是结构优化，长期存在隐忧；两者都不能只看一面" />
-        <div style={{ display: "grid", gap: 8 }}>
+        <div className="mt-macro-list" style={{ display: "grid", gap: 8 }}>
           {MACRO.map((m, i) => (
             <div key={i} style={{ background: "#fff", border: "1px solid rgba(26,39,68,0.07)", borderRadius: 14, padding: "20px 24px", display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "flex-start" }}>
               <div>
@@ -688,7 +655,7 @@ export default function MajorTrendPage() {
             </div>
           ))}
         </div>
-        <div style={{ marginTop: 10, background: "var(--color-navy)", borderRadius: 14, padding: "26px 30px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
+        <div className="mt-compare" style={{ marginTop: 10, background: "var(--color-navy)", borderRadius: 14, padding: "26px 30px", display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28 }}>
           <div>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: "rgba(255,255,255,0.25)", marginBottom: 10 }}>对照组</div>
             <div style={{ fontSize: 14, fontWeight: 700, color: "#fff", marginBottom: 8 }}>德国：坚守基础学科</div>
@@ -724,7 +691,7 @@ export default function MajorTrendPage() {
 
         {/* ══ §04 RANKINGS ══ */}
         <SecHead num="04" title="哪些专业在衰退，哪些在崛起？" sub="基于招生数据、就业红绿牌、政策信号的综合判断（截至2026年4月）" />
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+        <div className="mt-rankings" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
           {/* decline */}
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>

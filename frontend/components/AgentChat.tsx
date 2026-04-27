@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import FeedbackModal from "./FeedbackModal";
 
 const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
@@ -168,15 +169,17 @@ function renderMarkdown(text: string): React.ReactNode {
 const WELCOME_MESSAGE: Message = {
   role: "assistant",
   content:
-    "你好！我是 AI 志愿助手，支持**联网搜索**实时获取最新数据。\n\n你可以问我：\n- 「北京大学计算机专业2024录取分数线」\n- 「冲稳保志愿怎么搭配比较合理？」\n- 「物理选科适合报哪些专业？」\n- 「双非学校有哪些值得报考？」",
+    "你好！我是 AI 志愿助手，支持**联网搜索**实时获取最新数据。\n\n你可以问我：\n- 「北京大学计算机专业2025录取分数线」\n- 「冲稳保志愿怎么搭配比较合理？」\n- 「物理选科适合报哪些专业？」\n- 「双非学校有哪些值得报考？」",
 };
 
 export default function AgentChat() {
+  // AI 助手已隐藏，保留全部代码以便恢复
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([WELCOME_MESSAGE]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusText, setStatusText] = useState("");
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortRef = useRef<AbortController | null>(null);
@@ -327,60 +330,147 @@ export default function AgentChat() {
 
   return (
     <>
-      {/* 悬浮按钮 */}
+      <style>{`
+        @keyframes agentHaloPulse {
+          0%   { box-shadow: 0 0 0 0 rgba(201,146,42,0.55); }
+          70%  { box-shadow: 0 0 0 14px rgba(201,146,42,0); }
+          100% { box-shadow: 0 0 0 0 rgba(201,146,42,0); }
+        }
+        @keyframes agentSparkle {
+          0%, 100% { transform: scale(1) rotate(0deg); opacity: .95; }
+          50%      { transform: scale(1.18) rotate(45deg); opacity: 1; }
+        }
+      `}</style>
+
+      {/* ===== AI 助手已隐藏（详见 docs/hidden-features.md） ===== */}
+      {/* 如需恢复，把下面 block 的 false 改为 !open 并显示按钮即可 */}
+      {false && !open && (
+        <span
+          aria-hidden
+          style={{
+            position: "fixed",
+            bottom: 90,
+            right: 16,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            pointerEvents: "none",
+            zIndex: 1001,
+            animation: "agentHaloPulse 2.4s ease-out infinite",
+          }}
+        />
+      )}
+      {false && (
+        <button
+          onClick={() => setOpen((v) => !v)}
+          aria-label="AI 助手 · 家长任何问题都能问"
+          title="AI 助手 · 家长任何问题都能问"
+          style={{
+            position: "fixed",
+            bottom: 90,
+            right: 16,
+            zIndex: 1002,
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            border: "none",
+            cursor: "pointer",
+            background: "linear-gradient(135deg, #1a2744 0%, #c9922a 100%)",
+            boxShadow: "0 4px 16px rgba(26,39,68,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "transform 0.2s, box-shadow 0.2s",
+            color: "#fff",
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 6px 20px rgba(26,39,68,0.55)";
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
+            (e.currentTarget as HTMLButtonElement).style.boxShadow =
+              "0 4px 16px rgba(26,39,68,0.4)";
+          }}
+        >
+          {open ? (
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <path
+                d="M5 5l10 10M15 5L5 15"
+                stroke="#fff"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              {/* 对话气泡 */}
+              <path
+                d="M4 7.4a3.2 3.2 0 0 1 3.2-3.2h9.6a3.2 3.2 0 0 1 3.2 3.2v5.4a3.2 3.2 0 0 1-3.2 3.2h-3l-3.4 3.2v-3.2H7.2A3.2 3.2 0 0 1 4 12.8V7.4z"
+                fill="#fff"
+              />
+              {/* 内部 AI 灵感星 */}
+              <path
+                d="M12 6.6c.25 1.65.7 2.1 2.35 2.35-1.65.25-2.1.7-2.35 2.35-.25-1.65-.7-2.1-2.35-2.35 1.65-.25 2.1-.7 2.35-2.35z"
+                fill="#1a2744"
+                style={{ transformOrigin: "12px 9.3px", animation: "agentSparkle 2.6s ease-in-out infinite" }}
+              />
+              {/* 副小星点 */}
+              <circle cx="16.4" cy="12.3" r="0.9" fill="#c9922a" />
+            </svg>
+          )}
+        </button>
+      )}
+
+      {/* ===== 问题反馈按钮（占据原 AI 助手位置） ===== */}
       <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="AI 志愿助手"
+        onClick={() => setFeedbackOpen(true)}
+        aria-label="意见反馈"
         style={{
           position: "fixed",
-          bottom: 24,
+          bottom: 80,
           right: 16,
-          zIndex: 1002,
-          width: 56,
-          height: 56,
+          zIndex: 1000,
+          width: 48,
+          height: 48,
           borderRadius: "50%",
+          background: "rgb(7, 193, 96)",
+          color: "rgb(255, 255, 255)",
           border: "none",
           cursor: "pointer",
-          background: "linear-gradient(135deg, #1a2744 0%, #c9922a 100%)",
-          boxShadow: "0 4px 16px rgba(26,39,68,0.4)",
+          boxShadow: "rgba(7, 193, 96, 0.4) 0px 4px 16px",
           display: "flex",
-          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
-          gap: 0,
-          transition: "transform 0.2s, box-shadow 0.2s",
-          color: "#fff",
+          fontSize: 22,
+          transition: "transform 0.15s",
+          transform: "scale(1)",
         }}
         onMouseEnter={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1.08)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
-            "0 6px 20px rgba(26,39,68,0.55)";
         }}
         onMouseLeave={(e) => {
           (e.currentTarget as HTMLButtonElement).style.transform = "scale(1)";
-          (e.currentTarget as HTMLButtonElement).style.boxShadow =
-            "0 4px 16px rgba(26,39,68,0.4)";
         }}
       >
-        <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 700 }}>
-          {open ? "✕" : "✦"}
-        </span>
-        <span style={{ fontSize: 10, lineHeight: 1, marginTop: 1, letterSpacing: 0.5 }}>
-          AI
-        </span>
+        💬
       </button>
+
+      {/* 反馈弹窗 */}
+      {feedbackOpen && <FeedbackModal onClose={() => setFeedbackOpen(false)} />}
 
       {/* 对话面板 */}
       {open && (
         <div
           style={{
             position: "fixed",
-            bottom: 88,
+            bottom: 154,
             right: 16,
             zIndex: 1001,
             width: 380,
             maxWidth: "calc(100vw - 32px)",
-            height: "min(600px, calc(100vh - 120px))",
+            height: "min(600px, calc(100vh - 186px))",
             display: "flex",
             flexDirection: "column",
             background: "rgba(255,255,255,0.92)",

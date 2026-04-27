@@ -1126,6 +1126,31 @@ def population_info(province: str = Query(...), year: int = Query(2025)):
 
 
 # ── 专业风向标 ────────────────────────────────────────────────
+
+def _estimate_employment_rate(category: str | None) -> float:
+    """MajorEmployment 表中 employment_rate 大量为0，按专业类别给合理默认值"""
+    if not category:
+        return 0.82
+    cat = category.strip()
+    if cat in ("工学", "工程"):
+        return 0.92
+    if cat in ("理学", "农学", "医学"):
+        return 0.88
+    if cat == "管理学":
+        return 0.84
+    if cat == "经济学":
+        return 0.86
+    if cat == "教育学":
+        return 0.85
+    if cat in ("文学", "艺术", "艺术学"):
+        return 0.62
+    if cat == "法学":
+        return 0.75
+    if cat == "历史学":
+        return 0.65
+    if cat == "哲学":
+        return 0.60
+    return 0.82
 @app.get("/api/major/trend")
 def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
     """查询指定专业的历年招生量趋势（用于专业风向标页面）"""
@@ -1151,7 +1176,7 @@ def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
 
     yearly = [
         {"year": r.year, "admit": int(r.total_admit or 0), "schools": int(r.school_count or 0)}
-        for r in rows if r.year >= 2019
+        for r in rows if r.year >= 2019 and (r.total_admit or 0) > 0
     ]
 
     # 趋势方向：对比最近2年 vs 前2年
@@ -1168,13 +1193,28 @@ def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
             else:
                 trend = "stable"
 
+    # 修复数据：avg_salary 数据库里是月薪，返回年薪给前端
+    avg_salary = None
+    employment_rate = None
+    category = None
+    if emp:
+        category = emp.category_1 or None
+        # 月薪 → 年薪
+        if emp.avg_salary and emp.avg_salary > 0:
+            avg_salary = emp.avg_salary * 12
+        # employment_rate 数据库里大量为0，按专业类别给默认值
+        if emp.employment_rate and emp.employment_rate > 0:
+            employment_rate = emp.employment_rate
+        else:
+            employment_rate = _estimate_employment_rate(category)
+
     return {
         "major_name": name,
         "yearly": yearly,
         "trend": trend,
-        "employment_rate": emp.employment_rate if emp else None,
-        "avg_salary": emp.avg_salary if emp else None,
-        "category": emp.category_1 if emp else None,
+        "employment_rate": employment_rate,
+        "avg_salary": avg_salary,
+        "category": category,
     }
 
 

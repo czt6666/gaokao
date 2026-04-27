@@ -210,21 +210,32 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, chartDays]);
 
-  // Analysis tab
+  // Analysis tab — 串行请求，避免并发打满后端连接
   useEffect(() => {
     if (!authed || activeTab !== "analysis") return;
-    Promise.all([
-      apiFetch("/api/admin/stats/funnel"),
-      apiFetch("/api/admin/stats/provinces"),
-      apiFetch("/api/admin/stats/rank_distribution"),
-      apiFetch("/api/admin/stats/hot_schools"),
-      apiFetch("/api/admin/stats/hourly"),
-      apiFetch("/api/admin/stats/demand"),
-      apiFetch("/api/admin/stats/school_conversion"),
-    ]).then(([f, p, r, h, hr, d, sc]) => {
-      setFunnel(f); setProvinces(p); setRankDist(r);
-      setHotSchools(h); setHourly(hr); setDemand(d); setSchoolConv(sc);
-    }).catch(e => setError(e.message));
+    let cancelled = false;
+    async function load() {
+      try {
+        const f = await apiFetch("/api/admin/stats/funnel");
+        if (cancelled) return; setFunnel(f);
+        const p = await apiFetch("/api/admin/stats/provinces");
+        if (cancelled) return; setProvinces(p);
+        const r = await apiFetch("/api/admin/stats/rank_distribution");
+        if (cancelled) return; setRankDist(r);
+        const h = await apiFetch("/api/admin/stats/hot_schools");
+        if (cancelled) return; setHotSchools(h);
+        const hr = await apiFetch("/api/admin/stats/hourly");
+        if (cancelled) return; setHourly(hr);
+        const d = await apiFetch("/api/admin/stats/demand");
+        if (cancelled) return; setDemand(d);
+        const sc = await apiFetch("/api/admin/stats/school_conversion");
+        if (cancelled) return; setSchoolConv(sc);
+      } catch (e: any) {
+        if (!cancelled) setError(e.message);
+      }
+    }
+    load();
+    return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, activeTab]);
 

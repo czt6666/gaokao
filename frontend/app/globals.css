@@ -801,3 +801,57 @@ body {
         display: none !important;
     }
 }
+
+/* ── major-trend 移动端适配 ── */
+@media (max-width: 600px) {
+    .mt-header {
+        padding: 0 14px !important;
+        height: 52px !important;
+    }
+    .mt-header > div {
+        gap: 8px !important;
+    }
+    .mt-header span:last-child {
+        display: none !important;
+    }
+    .mt-hero-grid {
+        grid-template-columns: 1fr !important;
+        gap: 24px !important;
+    }
+    .mt-bento {
+        grid-template-columns: 1fr !important;
+    }
+    .mt-bento > div:first-child {
+        grid-column: span 1 !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .mt-bento > div:last-child {
+        grid-column: span 1 !important;
+        flex-direction: column !important;
+        gap: 12px !important;
+    }
+    .mt-charts {
+        grid-template-columns: 1fr !important;
+    }
+    .mt-nature-tabs {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .mt-grid-2 {
+        grid-template-columns: 1fr !important;
+    }
+    .mt-macro-list > div {
+        grid-template-columns: 1fr !important;
+    }
+    .mt-compare {
+        grid-template-columns: 1fr !important;
+        padding: 20px 18px !important;
+        gap: 18px !important;
+    }
+    .mt-rankings {
+        grid-template-columns: 1fr !important;
+    }
+    .mt-search-grid {
+        grid-template-columns: 1fr !important;
+    }
+}

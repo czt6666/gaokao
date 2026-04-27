@@ -67,6 +67,114 @@ function Row({ label, cells }: { label: string; cells: (React.ReactNode)[] }) {
   );
 }
 
+function MobileSchoolCard({ item, onRemove, candidateProvince }: {
+  item: CompareItem;
+  onRemove: () => void;
+  candidateProvince: string;
+}) {
+  const s = item.data?.school;
+  const majors = item.data?.majors;
+
+  const field = (label: string, value: React.ReactNode) => (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "10px 0", borderBottom: "1px solid rgba(26,39,68,0.06)" }}>
+      <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", flexShrink: 0, marginRight: 12 }}>{label}</span>
+      <span style={{ fontSize: 13, color: "var(--color-text-primary)", textAlign: "right", lineHeight: 1.5 }}>{value || "—"}</span>
+    </div>
+  );
+
+  const allRecords = majors?.flatMap((m) => m.records).filter((r) => r.min_rank > 0) || [];
+  const recentRecords = [...allRecords].sort((a, b) => b.year - a.year).slice(0, 5);
+
+  const aclass = s?.subject_evaluations.filter((e) => ["A+", "A", "A-"].includes(e.grade)) || [];
+
+  return (
+    <div style={{
+      background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
+      borderRadius: 16, overflow: "hidden",
+    }}>
+      {/* 头部 */}
+      <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid var(--color-separator)", background: "var(--color-bg)" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div>
+            {item.loading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-tertiary)" }}>
+                <div style={{ width: 16, height: 16, border: "2px solid var(--color-accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                加载中…
+              </div>
+            ) : s ? (
+              <>
+                <div style={{ fontSize: 11, fontWeight: 700, color: TIER_COLOR[s.tier] || "var(--color-text-tertiary)", marginBottom: 4, letterSpacing: "0.05em" }}>
+                  {s.tier}
+                </div>
+                <Link href={`/school/${encodeURIComponent(item.name)}?province=${encodeURIComponent(candidateProvince)}`} style={{ fontSize: 17, fontWeight: 800, color: "var(--color-navy)", textDecoration: "none" }}>
+                  {item.name}
+                </Link>
+                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>
+                  {s.city} · {s.nature}
+                </div>
+              </>
+            ) : (
+              <div style={{ fontSize: 13, color: "var(--color-danger)" }}>加载失败</div>
+            )}
+          </div>
+          <button onClick={onRemove} style={{ background: "none", border: "none", fontSize: 20, color: "var(--color-text-tertiary)", cursor: "pointer", padding: 0, lineHeight: 1 }}>×</button>
+        </div>
+      </div>
+
+      {/* 详情 */}
+      {s && (
+        <div style={{ padding: "0 16px" }}>
+          {field("软科排名", s.rank_2025 && s.rank_2025 > 0 ? `第 ${s.rank_2025} 名` : "未上榜")}
+          {field("所在城市", `${s.city || "—"} ${s.city_level ? `（${s.city_level}）` : ""}`)}
+          {field("主管部门", s.admin_dept)}
+          {field("保研率", s.postgrad_rate)}
+          {field("男女比例", `${s.male_ratio || "—"} / ${s.female_ratio || "—"}`)}
+          {field("建校年份", s.founded_year ? `${s.founded_year}年` : null)}
+
+          {/* A类学科 */}
+          <div style={{ padding: "10px 0", borderBottom: "1px solid rgba(26,39,68,0.06)" }}>
+            <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginBottom: 8 }}>A类学科</div>
+            {aclass.length > 0 ? (
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {aclass.slice(0, 8).map((e) => (
+                  <span key={e.subject} style={{
+                    fontSize: 11, padding: "4px 8px", borderRadius: 6,
+                    background: "var(--color-bg)", border: "1px solid var(--color-separator)",
+                    color: GRADE_COLOR[e.grade] || "var(--color-text-secondary)", fontWeight: 600,
+                  }}>
+                    {e.grade} {e.subject}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>暂无A类学科</span>
+            )}
+          </div>
+
+          {field("王牌专业", s.flagship_majors ? s.flagship_majors.replace(/（本）|（专）/g, "").slice(0, 80) : null)}
+          {field("就业流向", s.employment_quality ? s.employment_quality.slice(0, 80) : null)}
+
+          {/* 录取位次 */}
+          <div style={{ padding: "10px 0" }}>
+            <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginBottom: 8 }}>录取位次</div>
+            {recentRecords.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                {recentRecords.map((r, i) => (
+                  <div key={`${r.year}-${r.min_rank}-${i}`} style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
+                    {r.year}年: <strong style={{ color: "var(--color-navy)" }}>{r.min_rank.toLocaleString()}</strong> 位
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>暂无数据</span>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ComparePage() {
   const router = useRouter();
   const [items, setItems] = useState<CompareItem[]>([]);
@@ -211,134 +319,158 @@ export default function ComparePage() {
             <div style={{ fontSize: 14 }}>在上方搜索框输入学校名称，或在推荐结果页点击「对比」</div>
           </div>
         ) : (
-          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
-            {/* 学校头部卡片 */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 24, minWidth: 640 }}>
-              <div style={{ width: 92, flexShrink: 0 }} />
-              {items.map((item) => (
-                <div key={item.name} style={{
-                  flex: 1, background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
-                  borderRadius: 14, padding: 16, position: "relative", minWidth: 180,
+          <>
+            {/* ── 桌面端：横向表格 ── */}
+            <div className="hide-on-mobile" style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+              {/* 学校头部卡片 */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 24, minWidth: 640 }}>
+                <div style={{ width: 92, flexShrink: 0 }} />
+                {items.map((item) => (
+                  <div key={item.name} style={{
+                    flex: 1, background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
+                    borderRadius: 14, padding: 16, position: "relative", minWidth: 180,
+                  }}>
+                    <button
+                      onClick={() => removeSchool(item.name)}
+                      style={{
+                        position: "absolute", top: 10, right: 10,
+                        fontSize: 18, color: "var(--color-text-tertiary)", background: "none", border: "none",
+                        cursor: "pointer", lineHeight: 1,
+                      }}
+                    >×</button>
+                    {item.loading ? (
+                      <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-tertiary)" }}>
+                        <div style={{ width: 16, height: 16, border: "2px solid var(--color-accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                        加载中…
+                      </div>
+                    ) : item.data ? (
+                      <>
+                        <div style={{ fontSize: 11, fontWeight: 600, color: TIER_COLOR[item.data.school.tier] || "var(--color-text-tertiary)", marginBottom: 4 }}>
+                          {item.data.school.tier}
+                        </div>
+                        <Link
+                          href={`/school/${encodeURIComponent(item.name)}?province=${encodeURIComponent(candidateProvince)}`}
+                          style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)", textDecoration: "none" }}
+                        >
+                          {item.name}
+                        </Link>
+                        <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>
+                          {item.data.school.city} · {item.data.school.nature}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{ fontSize: 13, color: "var(--color-danger)" }}>加载失败</div>
+                    )}
+                  </div>
+                ))}
+                {/* 空槽 */}
+                {Array(MAX_COMPARE - items.length).fill(null).map((_, i) => (
+                  <div key={`slot-${i}`} style={{
+                    flex: 1, border: "2px dashed var(--color-separator)", borderRadius: 14, padding: 16,
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: 13, color: "var(--color-text-tertiary)", minWidth: 180,
+                  }}>
+                    + 添加学校
+                  </div>
+                ))}
+              </div>
+
+              {/* 对比表格 */}
+              {loaded.length > 0 && (
+                <div style={{
+                  background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
+                  borderRadius: 14, padding: "0 16px", overflow: "hidden", minWidth: 640,
                 }}>
-                  <button
-                    onClick={() => removeSchool(item.name)}
-                    style={{
-                      position: "absolute", top: 10, right: 10,
-                      fontSize: 18, color: "var(--color-text-tertiary)", background: "none", border: "none",
-                      cursor: "pointer", lineHeight: 1,
-                    }}
-                  >×</button>
-                  {item.loading ? (
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "var(--color-text-tertiary)" }}>
-                      <div style={{ width: 16, height: 16, border: "2px solid var(--color-accent)", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                      加载中…
-                    </div>
-                  ) : item.data ? (
-                    <>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: TIER_COLOR[item.data.school.tier] || "var(--color-text-tertiary)", marginBottom: 4 }}>
-                        {item.data.school.tier}
-                      </div>
-                      <Link
-                        href={`/school/${encodeURIComponent(item.name)}?province=${encodeURIComponent(candidateProvince)}`}
-                        style={{ fontSize: 15, fontWeight: 700, color: "var(--color-text-primary)", textDecoration: "none" }}
-                      >
-                        {item.name}
-                      </Link>
-                      <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 4 }}>
-                        {item.data.school.city} · {item.data.school.nature}
-                      </div>
-                    </>
-                  ) : (
-                    <div style={{ fontSize: 13, color: "var(--color-danger)" }}>加载失败</div>
-                  )}
+                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <tbody>
+                      <Row label="软科排名" cells={schools.map((s) => s?.rank_2025 && s.rank_2025 > 0 ? `第 ${s.rank_2025} 名` : "未上榜")} />
+                      <Row label="所在城市" cells={schools.map((s) => s ? `${s.city || "—"}（${s.city_level || ""}）` : "")} />
+                      <Row label="主管部门" cells={schools.map((s) => s?.admin_dept || "")} />
+                      <Row label="保研率"   cells={schools.map((s) => s?.postgrad_rate || "")} />
+                      <Row label="男女比例" cells={schools.map((s) => s ? `${s.male_ratio || "—"} / ${s.female_ratio || "—"}` : "")} />
+                      <Row label="建校年份" cells={schools.map((s) => s?.founded_year ? `${s.founded_year}年` : "")} />
+                      <Row
+                        label="A类学科"
+                        cells={items.map((it) => {
+                          if (!it.data) return null;
+                          const aclass = it.data.school.subject_evaluations.filter((e) => ["A+", "A", "A-"].includes(e.grade));
+                          return aclass.length > 0 ? (
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                              {aclass.slice(0, 6).map((e) => (
+                                <span key={e.subject} style={{
+                                  fontSize: 11, padding: "2px 7px", borderRadius: 6,
+                                  background: "var(--color-bg)", border: "1px solid var(--color-separator)",
+                                  color: GRADE_COLOR[e.grade] || "var(--color-text-secondary)",
+                                  fontWeight: 600,
+                                }}>
+                                  {e.grade} {e.subject}
+                                </span>
+                              ))}
+                            </div>
+                          ) : <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>暂无A类学科</span>;
+                        })}
+                      />
+                      <Row
+                        label="王牌专业"
+                        cells={schools.map((s) => s?.flagship_majors ? (
+                          <span style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
+                            {s.flagship_majors.replace(/（本）|（专）/g, "").slice(0, 100)}
+                          </span>
+                        ) : null)}
+                      />
+                      <Row
+                        label="就业流向"
+                        cells={schools.map((s) => s?.employment_quality ? (
+                          <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", lineHeight: 1.6 }}>{s.employment_quality.slice(0, 100)}</span>
+                        ) : null)}
+                      />
+                      <Row
+                        label="录取位次"
+                        cells={items.map((it) => {
+                          if (!it.data) return null;
+                          const allRecords = it.data.majors
+                            .flatMap((m) => m.records)
+                            .filter((r) => r.min_rank > 0);
+                          if (!allRecords.length) return <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>暂无数据</span>;
+                          const recent = allRecords.sort((a, b) => b.year - a.year).slice(0, 5);
+                          return (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                              {recent.map((r, i) => (
+                                <div key={`${r.year}-${r.min_rank}-${i}`} style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                                  {r.year}年: <strong>{r.min_rank.toLocaleString()}</strong> 位
+                                </div>
+                              ))}
+                            </div>
+                          );
+                        })}
+                      />
+                    </tbody>
+                  </table>
                 </div>
+              )}
+            </div>
+
+            {/* ── 移动端：垂直卡片 ── */}
+            <div className="show-on-mobile" style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {items.map((item) => (
+                <MobileSchoolCard
+                  key={item.name}
+                  item={item}
+                  onRemove={() => removeSchool(item.name)}
+                  candidateProvince={candidateProvince}
+                />
               ))}
-              {/* 空槽 */}
-              {Array(MAX_COMPARE - items.length).fill(null).map((_, i) => (
-                <div key={`slot-${i}`} style={{
-                  flex: 1, border: "2px dashed var(--color-separator)", borderRadius: 14, padding: 16,
+              {items.length < MAX_COMPARE && (
+                <div style={{
+                  border: "2px dashed var(--color-separator)", borderRadius: 14, padding: 24,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, color: "var(--color-text-tertiary)", minWidth: 180,
+                  fontSize: 14, color: "var(--color-text-tertiary)", background: "var(--color-bg-secondary)",
                 }}>
                   + 添加学校
                 </div>
-              ))}
+              )}
             </div>
-
-            {/* 对比表格 */}
-            {loaded.length > 0 && (
-              <div style={{
-                background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
-                borderRadius: 14, padding: "0 16px", overflow: "hidden", minWidth: 640,
-              }}>
-                <table style={{ width: "100%", borderCollapse: "collapse" }}>
-                  <tbody>
-                    <Row label="软科排名" cells={schools.map((s) => s?.rank_2025 && s.rank_2025 > 0 ? `第 ${s.rank_2025} 名` : "未上榜")} />
-                    <Row label="所在城市" cells={schools.map((s) => s ? `${s.city || "—"}（${s.city_level || ""}）` : "")} />
-                    <Row label="主管部门" cells={schools.map((s) => s?.admin_dept || "")} />
-                    <Row label="保研率"   cells={schools.map((s) => s?.postgrad_rate || "")} />
-                    <Row label="男女比例" cells={schools.map((s) => s ? `${s.male_ratio || "—"} / ${s.female_ratio || "—"}` : "")} />
-                    <Row label="建校年份" cells={schools.map((s) => s?.founded_year ? `${s.founded_year}年` : "")} />
-                    <Row
-                      label="A类学科"
-                      cells={items.map((it) => {
-                        if (!it.data) return null;
-                        const aclass = it.data.school.subject_evaluations.filter((e) => ["A+", "A", "A-"].includes(e.grade));
-                        return aclass.length > 0 ? (
-                          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                            {aclass.slice(0, 6).map((e) => (
-                              <span key={e.subject} style={{
-                                fontSize: 11, padding: "2px 7px", borderRadius: 6,
-                                background: "var(--color-bg)", border: "1px solid var(--color-separator)",
-                                color: GRADE_COLOR[e.grade] || "var(--color-text-secondary)",
-                                fontWeight: 600,
-                              }}>
-                                {e.grade} {e.subject}
-                              </span>
-                            ))}
-                          </div>
-                        ) : <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>暂无A类学科</span>;
-                      })}
-                    />
-                    <Row
-                      label="王牌专业"
-                      cells={schools.map((s) => s?.flagship_majors ? (
-                        <span style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6 }}>
-                          {s.flagship_majors.replace(/（本）|（专）/g, "").slice(0, 100)}
-                        </span>
-                      ) : null)}
-                    />
-                    <Row
-                      label="就业流向"
-                      cells={schools.map((s) => s?.employment_quality ? (
-                        <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", lineHeight: 1.6 }}>{s.employment_quality.slice(0, 100)}</span>
-                      ) : null)}
-                    />
-                    <Row
-                      label="录取位次"
-                      cells={items.map((it) => {
-                        if (!it.data) return null;
-                        const allRecords = it.data.majors
-                          .flatMap((m) => m.records)
-                          .filter((r) => r.min_rank > 0);
-                        if (!allRecords.length) return <span style={{ color: "var(--color-text-tertiary)", fontSize: 12 }}>暂无数据</span>;
-                        const recent = allRecords.sort((a, b) => b.year - a.year).slice(0, 5);
-                        return (
-                          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                            {recent.map((r, i) => (
-                              <div key={`${r.year}-${r.min_rank}-${i}`} style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                                {r.year}年: <strong>{r.min_rank.toLocaleString()}</strong> 位
-                              </div>
-                            ))}
-                          </div>
-                        );
-                      })}
-                    />
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
+          </>
         )}
 
         {/* 数据声明 */}

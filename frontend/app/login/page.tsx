@@ -11,6 +11,11 @@ function isMobileDevice() {
   return /iPhone|Android|Mobile|WeChat|MicroMessenger/i.test(navigator.userAgent);
 }
 
+function isInWeChatBrowser() {
+  if (typeof navigator === "undefined") return false;
+  return /MicroMessenger/i.test(navigator.userAgent);
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const [step, setStep] = useState<Step>("input");
@@ -24,6 +29,8 @@ export default function LoginPage() {
   const [wechatMode, setWechatMode] = useState<"idle" | "qr" | "done" | "error">("idle");
   const [qrUrl, setQrUrl] = useState<string | null>(null);
   const [qrRefreshKey, setQrRefreshKey] = useState(0);
+  const [copyHinted, setCopyHinted] = useState(false);      // 复制链接提示
+  const [showWxHint, setShowWxHint] = useState(false);      // 手机非微信浏览器提示
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const sessionRef = useRef<string | null>(null);
 
@@ -59,12 +66,18 @@ export default function LoginPage() {
   }
 
   async function handleWechatLogin() {
-    if (isMobileDevice()) {
-      // Mobile: redirect directly into WeChat OAuth
+    // 手机微信内：直跳 OAuth 授权
+    if (isMobileDevice() && isInWeChatBrowser()) {
       window.location.href = `${API}/api/auth/wechat/mp/authorize?redirect_to=${encodeURIComponent(redirectTarget)}`;
       return;
     }
-    // Desktop: create QR session
+    // 手机非微信浏览器：提示复制链接去微信打开（必须带完整路径+参数）
+    if (isMobileDevice() && !isInWeChatBrowser()) {
+      setShowWxHint(true);
+      return;
+    }
+    // 桌面端：显示二维码
+
     try {
       const res = await fetch(`${API}/api/auth/qr/create`, { method: "POST" });
       if (!res.ok) {
@@ -161,7 +174,7 @@ export default function LoginPage() {
       : null;
     return (
       <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ width: "100%", maxWidth: 360, background: "var(--color-bg-elevated)", borderRadius: 20, padding: "36px 28px", boxShadow: "var(--shadow-lg)", border: "1px solid var(--color-separator)", textAlign: "center" }}>
+        <div style={{ width: "100%", maxWidth: 360, background: "var(--color-surface)", borderRadius: 20, padding: "36px 28px", boxShadow: "var(--shadow-lg)", border: "1px solid var(--color-separator)", textAlign: "center" }}>
           <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 6 }}>微信扫码登录</div>
           <div style={{ fontSize: 13, color: "var(--color-text-tertiary)", marginBottom: 24 }}>用微信扫描下方二维码</div>
 
@@ -204,7 +217,50 @@ export default function LoginPage() {
   // ── Main login form ──────────────────────────────────────────────────────
   return (
     <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div style={{ width: "100%", maxWidth: 400, background: "var(--color-bg-elevated)", borderRadius: 20, padding: "40px 32px", boxShadow: "var(--shadow-lg)", border: "1px solid var(--color-separator)" }}>
+      {/* 手机非微信浏览器：提示去微信打开（复制完整链接，含路径+参数） */}
+      {showWxHint && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
+          <div style={{ width: "100%", maxWidth: 340, background: "var(--color-surface)", borderRadius: 16, padding: "28px 24px", textAlign: "center", boxShadow: "var(--shadow-lg)" }}>
+            <div style={{ fontSize: 40, marginBottom: 12 }}>📋</div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>微信登录需在微信中打开</div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 20 }}>
+              点击按钮复制当前页面链接，发送到微信（文件传输助手或好友），在微信内打开即可一键登录。
+            </div>
+            <button
+              className="btn-primary"
+              style={{ width: "100%", fontSize: 15, padding: "12px 0", marginBottom: 10 }}
+              onClick={() => {
+                const url = typeof window !== "undefined" ? window.location.href : "";
+                try {
+                  navigator.clipboard.writeText(url);
+                  setCopyHinted(true);
+                  setTimeout(() => setCopyHinted(false), 2500);
+                } catch {
+                  // fallback
+                  const ta = document.createElement("textarea");
+                  ta.value = url;
+                  document.body.appendChild(ta);
+                  ta.select();
+                  document.execCommand("copy");
+                  document.body.removeChild(ta);
+                  setCopyHinted(true);
+                  setTimeout(() => setCopyHinted(false), 2500);
+                }
+              }}
+            >
+              {copyHinted ? "✓ 已复制，去微信粘贴打开" : "复制链接，去微信中打开"}
+            </button>
+            <button
+              style={{ width: "100%", fontSize: 14, padding: "10px 0", background: "none", border: "none", color: "var(--color-text-tertiary)", cursor: "pointer" }}
+              onClick={() => setShowWxHint(false)}
+            >
+              改用手机号登录
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ width: "100%", maxWidth: 400, background: "var(--color-surface)", borderRadius: 20, padding: "40px 32px", boxShadow: "var(--shadow-lg)", border: "1px solid var(--color-separator)" }}>
 
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <div style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 6 }}>
@@ -308,6 +364,7 @@ export default function LoginPage() {
           <a href="/privacy" style={{ color: "var(--color-accent)", textDecoration: "none" }}>《隐私政策》</a>
         </p>
       </div>
+
     </div>
   );
 }

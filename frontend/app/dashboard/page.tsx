@@ -47,13 +47,13 @@ export default function DashboardPage() {
     fetch(`${API}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => {
+      .then(async (r) => {
         if (r.status === 401) {
           localStorage.removeItem("auth_token");
           router.replace("/login?redirect=/dashboard");
           return null;
         }
-        return r.json();
+        try { return await r.json(); } catch { return null; }
       })
       .then((d) => { if (d) setUser(d); setLoading(false); })
       .catch(() => setLoading(false));
@@ -61,7 +61,10 @@ export default function DashboardPage() {
     fetch(`${API}/api/auth/paid-orders`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then((r) => r.ok ? r.json() : null)
+      .then(async (r) => {
+        if (!r.ok) return null;
+        try { return await r.json(); } catch { return null; }
+      })
       .then((d) => { if (d?.orders) setPaidOrders(d.orders); })
       .catch(() => {});
   }, [router]);
@@ -117,9 +120,9 @@ export default function DashboardPage() {
       {/* Nav */}
       <nav className="apple-nav">
         <div style={{ maxWidth: 520, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-          <Link href="/" style={{ fontSize: 14, color: "var(--color-text-secondary)", textDecoration: "none" }}>← 首页</Link>
+          <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ fontSize: 14, fontWeight: 600 }}>我的账户</span>
-          <button onClick={logout} style={{ fontSize: 13, color: "#ff3b30", background: "none", border: "none", cursor: "pointer" }}>退出</button>
+          <span style={{ width: 40 }} />
         </div>
       </nav>
 
@@ -243,7 +246,7 @@ export default function DashboardPage() {
               const next = nextIdx >= 0 ? MILESTONES[nextIdx] : MILESTONES[2];
               const nextLabel = nextIdx >= 0 ? LABELS[nextIdx] : LABELS[2];
               const prev = nextIdx > 0 ? MILESTONES[nextIdx - 1] : 0;
-              const pct = nextIdx >= 0 ? Math.min(((referralCount - prev) / (next - prev)) * 100, 100) : 100;
+              const pct = nextIdx >= 0 ? (next === prev ? 100 : Math.min(((referralCount - prev) / (next - prev)) * 100, 100)) : 100;
               return (
                 <div style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 5 }}>

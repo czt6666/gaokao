@@ -38,13 +38,13 @@ function renderSimpleMarkdown(text: string): string {
 // ─── Action badge ─────────────────────────────────────────────────────
 
 const ACTION_STYLES: Record<string, { bg: string; color: string; label: string }> = {
-  CREATE_POST:    { bg: "#0057FF", color: "#fff", label: "POST" },
-  CREATE_COMMENT: { bg: "#FF4500", color: "#fff", label: "COMMENT" },
-  LIKE_POST:      { bg: "#E00", color: "#fff", label: "LIKE" },
-  REPOST:         { bg: "#008844", color: "#fff", label: "REPOST" },
-  UPVOTE_POST:    { bg: "#FF6600", color: "#fff", label: "UPVOTE" },
-  DOWNVOTE_POST:  { bg: "#333", color: "#fff", label: "DOWNVOTE" },
-  DO_NOTHING:     { bg: "#CCC", color: "#666", label: "IDLE" },
+  CREATE_POST:    { bg: "#0057FF", color: "#fff", label: "发帖" },
+  CREATE_COMMENT: { bg: "#FF4500", color: "#fff", label: "评论" },
+  LIKE_POST:      { bg: "#E00", color: "#fff", label: "点赞" },
+  REPOST:         { bg: "#008844", color: "#fff", label: "转发" },
+  UPVOTE_POST:    { bg: "#FF6600", color: "#fff", label: "赞同" },
+  DOWNVOTE_POST:  { bg: "#333", color: "#fff", label: "反对" },
+  DO_NOTHING:     { bg: "#CCC", color: "#666", label: "观望" },
 };
 function getActionStyle(type: string) {
   return ACTION_STYLES[type] || { bg: "#999", color: "#fff", label: type.replace(/_/g, " ") };
@@ -63,11 +63,11 @@ const IconCheck = () => (
 type Stage = "landing" | "step1" | "step2" | "step3" | "step4" | "step5" | "done" | "error";
 
 const STEP_LABELS = [
-  "Scene Build",
-  "Graph Build",
-  "Agent Personas",
-  "Simulation Run",
-  "Report Generate",
+  "场景构建",
+  "知识图谱",
+  "角色生成",
+  "模拟推演",
+  "报告生成",
 ];
 
 function CareerPredictContent() {
@@ -86,6 +86,9 @@ function CareerPredictContent() {
   const [statusMsg, setStatusMsg] = useState("");
   const [progress, setProgress]  = useState(0);
   const [errorMsg, setErrorMsg]  = useState("");
+
+  // ── Service availability ──
+  const [serviceAvailable, setServiceAvailable] = useState<boolean | null>(null);
 
   // ── IDs ──
   const [projectId, setProjectId]       = useState("");
@@ -121,6 +124,23 @@ function CareerPredictContent() {
   useEffect(() => { actionsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [actions.length]);
   useEffect(() => { logsEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [agentLogs.length]);
 
+  // Service health check
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        await fetch(`${MIROFISH_BASE}/`, { signal: ctrl.signal, mode: "no-cors" });
+        clearTimeout(t);
+        if (!cancelled) setServiceAvailable(true);
+      } catch {
+        if (!cancelled) setServiceAvailable(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   // ── Report polling ──
   useEffect(() => {
     if (stage !== "step5" && stage !== "done") return;
@@ -145,19 +165,19 @@ function CareerPredictContent() {
     const maxRounds = 20;
     try {
       // Step 1: build career scene (auto-generates scenario + ontology)
-      setStage("step1"); setProgress(0); setStatusMsg("Generating career prediction scenario...");
+      setStage("step1"); setProgress(0); setStatusMsg("正在构建职业预测场景…");
       const pid = await buildCareerScene(school, major, rank, province, (msg) => {
         setStatusMsg(msg); setProgress(60);
       });
       setProjectId(pid); setProgress(100);
 
-      // Step 2: 跳过 Zep 图谱构建（career predict 走 ontology synthesis 路径，无需 Zep）
-      setStage("step2"); setProgress(100); setStatusMsg("Graph skipped — ontology synthesis mode");
+      // Step 2: skip Zep graph build (career predict uses ontology synthesis path)
+      setStage("step2"); setProgress(100); setStatusMsg("跳过图谱 — 本体合成模式");
       const gid = "";
       setGraphId(gid);
 
       // Step 3: create + prepare simulation
-      setStage("step3"); setProgress(0); setStatusMsg("Creating simulation instance...");
+      setStage("step3"); setProgress(0); setStatusMsg("正在创建模拟实例…");
       const sid = await createAndPrepareSimulation(pid, gid, (msg, pct, profs) => {
         setStatusMsg(msg); setProgress(pct);
         if (profs && profs.length > 0) setProfiles(profs);
@@ -180,7 +200,12 @@ function CareerPredictContent() {
       setReportId(rid);
 
     } catch (err: any) {
-      setErrorMsg(err.message || "Unknown error");
+      const msg = err?.message || "";
+      if (msg.includes("Failed to fetch") || msg.includes("NetworkError") || msg.includes("abort")) {
+        setErrorMsg("无法连接到 AI 预测服务，请确认服务已启动或联系管理员配置 MIROFISH_URL。");
+      } else {
+        setErrorMsg(msg || "未知错误，请稍后重试");
+      }
       setStage("error");
     }
   }
@@ -200,14 +225,14 @@ function CareerPredictContent() {
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
           <span
             onClick={() => router.back()}
-            style={{ color: "#fff", fontSize: 11, fontWeight: 700, letterSpacing: 2, cursor: "pointer", opacity: 0.5, transition: "opacity .2s" }}
+            style={{ color: "#fff", fontSize: 12, fontWeight: 700, letterSpacing: 1, cursor: "pointer", opacity: 0.5, transition: "opacity .2s" }}
             onMouseEnter={e => (e.currentTarget.style.opacity = "1")}
             onMouseLeave={e => (e.currentTarget.style.opacity = "0.5")}
           >
-            ← BACK
+            ← 返回
           </span>
           <div style={{ width: 1, height: 16, background: "#333" }} />
-          <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, letterSpacing: 2 }}>高报 AI · 长期受益预测</span>
+          <span style={{ color: "#fff", fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>职业前景预测</span>
         </div>
 
         {/* Step dots */}
@@ -244,15 +269,15 @@ function CareerPredictContent() {
             {province} · {school.slice(0, 8)} · #{rank.toLocaleString()}
           </span>
           <div style={{ width: 1, height: 16, background: "#333" }} />
-          {stage === "landing" && <span style={{ fontSize: 9, color: "#555", letterSpacing: 1 }}>IDLE</span>}
+          {stage === "landing" && <span style={{ fontSize: 9, color: "#555", letterSpacing: 1 }}>待机</span>}
           {(stage !== "landing" && stage !== "done" && stage !== "error") && (
             <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
               <div style={{ width: 6, height: 6, borderRadius: "50%", background: "#FF4500", animation: "pulse 1.5s infinite" }} />
-              <span style={{ fontSize: 9, color: "#FF4500", letterSpacing: 1 }}>RUNNING · {formatTime(elapsedSec)}</span>
+              <span style={{ fontSize: 9, color: "#FF4500", letterSpacing: 1 }}>运行中 · {formatTime(elapsedSec)}</span>
             </div>
           )}
-          {stage === "done" && <span style={{ fontSize: 9, color: "#00C853", letterSpacing: 1 }}>✓ COMPLETED</span>}
-          {stage === "error" && <span style={{ fontSize: 9, color: "#FF0000", letterSpacing: 1 }}>ERROR</span>}
+          {stage === "done" && <span style={{ fontSize: 9, color: "#00C853", letterSpacing: 1 }}>✓ 已完成</span>}
+          {stage === "error" && <span style={{ fontSize: 9, color: "#FF0000", letterSpacing: 1 }}>出错</span>}
         </div>
       </header>
 
@@ -261,38 +286,53 @@ function CareerPredictContent() {
 
         {/* ══ LANDING ══════════════════════════════════════════ */}
         {stage === "landing" && (
-          <div style={{ width: "100%", overflowY: "auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
-            <div style={{ maxWidth: 560, width: "100%", padding: "60px 24px" }}>
+          <div style={{ width: "100%", overflowY: "auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff", paddingTop: 40 }}>
+            <div style={{ maxWidth: 600, width: "100%", padding: "40px 24px 80px" }}>
 
               {/* Hero */}
-              <div style={{ marginBottom: 48 }}>
-                <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 3, color: "#999", marginBottom: 16 }}>
-                  高报 · AI 长期受益预测引擎
+              <div style={{ marginBottom: 40 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "#FF4500", marginBottom: 12, letterSpacing: 1 }}>
+                  职业前景预测
                 </div>
-                <h1 style={{ fontSize: 32, fontWeight: 700, lineHeight: 1.2, color: "#000", marginBottom: 16, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
-                  这所学校，<br />
-                  <span style={{ color: "#FF4500" }}>10年后值多少？</span>
+                <h1 style={{ fontSize: 28, fontWeight: 700, lineHeight: 1.3, color: "#000", marginBottom: 16 }}>
+                  读了这所学校，<br />
+                  以后能走多远？
                 </h1>
-                <p style={{ fontSize: 14, color: "#666", lineHeight: 1.8 }}>
-                  群体智能引擎模拟26届毕业生、雇主、行业分析师的真实博弈，
-                  预测这个选择在2031年、2036年的实际职业价值。
+                <p style={{ fontSize: 15, color: "#555", lineHeight: 1.8 }}>
+                  不是查录取概率，而是预测<strong>毕业后的真实职业回报</strong>。<br />
+                  AI 模拟行业变化、雇主偏好和薪资趋势，告诉你 5 年后、10 年后这个选择值不值。
                 </p>
               </div>
 
+              {/* What we predict — clearer cards */}
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 32 }}>
+                {[
+                  { title: "📈 就业趋势", desc: "这个专业 5 年后还热门吗？行业是上升还是饱和？" },
+                  { title: "💰 薪资回报", desc: "毕业起薪、5 年薪资、10 年薪资的合理预期区间" },
+                  { title: "🏙️ 城市机会", desc: "学校所在城市 vs 目标就业城市的岗位与薪资差异" },
+                  { title: "⚠️ 风险提示", desc: "行业衰退信号、技术替代风险、地域发展瓶颈" },
+                ].map(({ title, desc }) => (
+                  <div key={title} style={{ background: "#F8F8F8", borderRadius: 10, padding: "16px 18px", border: "1px solid #EFEFEF" }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#000", marginBottom: 6 }}>{title}</div>
+                    <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+
               {/* Target card */}
-              <div style={{ background: "#F5F5F5", borderRadius: 6, padding: 24, marginBottom: 24 }}>
-                <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 2, color: "#999", marginBottom: 16 }}>预测对象</div>
+              <div style={{ background: "#F5F5F5", borderRadius: 10, padding: 24, marginBottom: 24 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "#999", marginBottom: 16, letterSpacing: 1 }}>预测对象</div>
 
                 {/* School input with datalist */}
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: "#999", letterSpacing: 1, marginBottom: 6 }}>目标学校</div>
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>目标学校</div>
                   <input
                     type="text"
                     list="school-datalist"
                     value={school}
                     onChange={e => setSchool(e.target.value)}
                     placeholder="输入或选择学校（如：哈尔滨工业大学（深圳））"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: `1px solid ${school ? "#000" : "#DDD"}`, fontSize: 13, color: "#000", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, transition: "border .2s" }}
+                    style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: `1px solid ${school ? "#000" : "#DDD"}`, fontSize: 14, color: "#000", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, transition: "border .2s", background: "#fff" }}
                   />
                   <datalist id="school-datalist">
                     {["哈尔滨工业大学（深圳）","兰州大学","西北工业大学","电子科技大学","深圳大学","中国矿业大学","海南大学","华南理工大学"].map(s => <option key={s} value={s} />)}
@@ -301,14 +341,14 @@ function CareerPredictContent() {
 
                 {/* Major input with datalist */}
                 <div style={{ marginBottom: 14 }}>
-                  <div style={{ fontSize: 11, color: "#999", letterSpacing: 1, marginBottom: 6 }}>目标专业</div>
+                  <div style={{ fontSize: 12, color: "#666", marginBottom: 6 }}>目标专业</div>
                   <input
                     type="text"
                     list="major-datalist"
                     value={major}
                     onChange={e => setMajor(e.target.value)}
                     placeholder="输入或选择专业（如：计算机科学）"
-                    style={{ width: "100%", padding: "9px 12px", borderRadius: 6, border: `1px solid ${major ? "#000" : "#DDD"}`, fontSize: 13, color: "#000", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, transition: "border .2s" }}
+                    style={{ width: "100%", padding: "11px 14px", borderRadius: 8, border: `1px solid ${major ? "#000" : "#DDD"}`, fontSize: 14, color: "#000", fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const, transition: "border .2s", background: "#fff" }}
                   />
                   <datalist id="major-datalist">
                     {["计算机科学","软件工程","电子信息","机械工程","材料科学","金融学","土木工程","生物工程"].map(m => <option key={m} value={m} />)}
@@ -318,69 +358,74 @@ function CareerPredictContent() {
                 {/* Province / rank */}
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 14 }}>
                   <div>
-                    <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 4 }}>省份</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>{province}</div>
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>省份</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#000" }}>{province}</div>
                   </div>
                   <div>
-                    <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 4 }}>位次</div>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: "#000" }}>#{rank.toLocaleString()}</div>
+                    <div style={{ fontSize: 11, color: "#999", marginBottom: 4 }}>位次</div>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: "#000" }}>#{rank.toLocaleString()}</div>
                   </div>
                 </div>
 
-                <div style={{ borderTop: "1px solid #E5E5E5", paddingTop: 16, display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                <div style={{ borderTop: "1px solid #E5E5E5", paddingTop: 16, display: "flex", gap: 24 }}>
                   {[
-                    { label: "智能体", value: "~30人" },
-                    { label: "模拟轮次", value: "20轮" },
-                    { label: "预计时长", value: "10-20分钟" },
+                    { label: "预计时长", value: "10~20 分钟" },
+                    { label: "推演轮次", value: "20 轮" },
                   ].map(({ label: l, value }) => (
                     <div key={l}>
-                      <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 2 }}>{l}</div>
+                      <div style={{ fontSize: 11, color: "#999", marginBottom: 2 }}>{l}</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: "#000" }}>{value}</div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* What we predict */}
-              <div style={{ border: "1px solid #E5E5E5", borderRadius: 6, marginBottom: 32 }}>
-                {[
-                  { tag: "品牌折扣分析", desc: "深圳本地科技企业 vs 全国传统企业，学校品牌对薪资和机会的量化影响" },
-                  { tag: "5年对比预测", desc: "同等位次分别选该校 vs 对比院校，2031年薪资/机会/生活质量，谁赢了？" },
-                  { tag: "价值洼地判断", desc: "是真正被低估的好选择，还是有结构性弱点的折扣？给出有条件的明确结论" },
-                ].map(({ tag, desc }, i) => (
-                  <div key={tag} style={{ display: "flex", alignItems: "flex-start", gap: 16, padding: "14px 20px", borderBottom: i < 2 ? "1px solid #E5E5E5" : "none" }}>
-                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: 1, color: "#FF4500", whiteSpace: "nowrap", marginTop: 2 }}>{tag}</span>
-                    <span style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>{desc}</span>
+              {/* Service unavailable warning */}
+              {serviceAvailable === false && (
+                <div style={{ background: "#FFF5F0", border: "1px solid #FF4500", borderRadius: 8, padding: "14px 16px", marginBottom: 20, display: "flex", alignItems: "flex-start", gap: 10 }}>
+                  <span style={{ fontSize: 14, color: "#FF4500", flexShrink: 0 }}>⚠️</span>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: "#CC2200", marginBottom: 4 }}>AI 预测服务当前不可用</div>
+                    <div style={{ fontSize: 12, color: "#666", lineHeight: 1.6 }}>
+                      无法连接到预测引擎（{MIROFISH_BASE}）。请确认服务已启动，或联系管理员检查 MIROFISH_URL 配置。
+                    </div>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
 
-              {/* Note about time */}
-              <div style={{ fontSize: 11, color: "#AAA", marginBottom: 24, padding: "0 4px", lineHeight: 1.7 }}>
-                ⚠️ 本功能使用 LLM 群体推演，约需 10~20 分钟。结果基于模拟世界的涌现性结论，
-                非统计预测，不构成择校建议。
-              </div>
+              {/* Service checking */}
+              {serviceAvailable === null && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 20, fontSize: 12, color: "#999" }}>
+                  <div style={{ width: 14, height: 14, border: "2px solid #E5E5E5", borderTopColor: "#000", borderRadius: "50%", animation: "spin 0.8s linear infinite", flexShrink: 0 }} />
+                  <span>正在检测服务状态…</span>
+                </div>
+              )}
 
               {(!school.trim() || !major.trim()) && (
-                <div style={{ fontSize: 12, color: "#FF4500", marginBottom: 12, padding: "0 4px" }}>
+                <div style={{ fontSize: 13, color: "#FF4500", marginBottom: 12 }}>
                   ⚠️ 请先填写学校和专业名称
                 </div>
               )}
               <button
                 onClick={startPrediction}
-                disabled={!school.trim() || !major.trim()}
+                disabled={!school.trim() || !major.trim() || serviceAvailable !== true}
                 style={{
-                  width: "100%", padding: "14px 0",
-                  background: (!school.trim() || !major.trim()) ? "#CCC" : "#000",
-                  color: "#fff", border: "none", borderRadius: 6, fontSize: 14, fontWeight: 600,
-                  letterSpacing: 1, cursor: (!school.trim() || !major.trim()) ? "not-allowed" : "pointer",
+                  width: "100%", padding: "15px 0",
+                  background: (school.trim() && major.trim() && serviceAvailable === true) ? "#000" : "#CCC",
+                  color: "#fff", border: "none", borderRadius: 8, fontSize: 15, fontWeight: 700,
+                  letterSpacing: 1, cursor: (school.trim() && major.trim() && serviceAvailable === true) ? "pointer" : "not-allowed",
                   fontFamily: "inherit", transition: "background .2s",
                 }}
-                onMouseEnter={e => { if (school.trim() && major.trim()) e.currentTarget.style.background = "#FF4500"; }}
-                onMouseLeave={e => { if (school.trim() && major.trim()) e.currentTarget.style.background = "#000"; }}
+                onMouseEnter={e => { if (school.trim() && major.trim() && serviceAvailable === true) e.currentTarget.style.background = "#FF4500"; }}
+                onMouseLeave={e => { if (school.trim() && major.trim() && serviceAvailable === true) e.currentTarget.style.background = "#000"; }}
               >
-                开始长期受益预测 →
+                开始预测
               </button>
+
+              {/* Note about time */}
+              <div style={{ fontSize: 12, color: "#AAA", marginTop: 16, lineHeight: 1.7, textAlign: "center" }}>
+                本功能使用 AI 群体推演，约需 10~20 分钟。结果基于模拟分析，非统计预测，不构成择校建议。
+              </div>
             </div>
           </div>
         )}
@@ -393,27 +438,27 @@ function CareerPredictContent() {
             <div style={{ width: 300, borderRight: "1px solid #E5E5E5", display: "flex", flexDirection: "column", flexShrink: 0, background: "#fff" }}>
               {/* Progress */}
               <div style={{ padding: "24px 20px 20px", borderBottom: "1px solid #F0F0F0" }}>
-                <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 8 }}>
-                  STEP {currentStepIdx + 1}/5 · {STEP_LABELS[currentStepIdx]}
+                <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 8 }}>
+                  步骤 {currentStepIdx + 1}/5 · {STEP_LABELS[currentStepIdx]}
                 </div>
-                <div style={{ fontSize: 12, color: "#000", marginBottom: 12, lineHeight: 1.5 }}>{statusMsg}</div>
+                <div style={{ fontSize: 13, color: "#000", marginBottom: 12, lineHeight: 1.5 }}>{statusMsg}</div>
                 <div style={{ background: "#F0F0F0", borderRadius: 2, height: 3, overflow: "hidden" }}>
                   <div style={{ height: "100%", background: "#FF4500", width: `${progress}%`, transition: "width .5s ease", borderRadius: 2 }} />
                 </div>
-                <div style={{ fontSize: 9, color: "#999", marginTop: 4, textAlign: "right" }}>{progress}%</div>
+                <div style={{ fontSize: 10, color: "#999", marginTop: 4, textAlign: "right" }}>{progress}%</div>
               </div>
 
               {/* Step 4: run status */}
               {stage === "step4" && runStatus && (
                 <div style={{ padding: "16px 20px", borderBottom: "1px solid #F0F0F0" }}>
-                  <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 8 }}>SIM STATUS</div>
+                  <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 8 }}>模拟状态</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                     {[
-                      { label: "ROUND", value: `${runStatus.current_round}/${runStatus.total_rounds}` },
-                      { label: "STATUS", value: runStatus.status?.toUpperCase() || "—" },
+                      { label: "轮次", value: `${runStatus.current_round}/${runStatus.total_rounds}` },
+                      { label: "状态", value: runStatus.status === "running" ? "运行中" : runStatus.status === "completed" ? "已完成" : "—" },
                     ].map(({ label: l, value }) => (
                       <div key={l}>
-                        <div style={{ fontSize: 8, color: "#999", letterSpacing: 2 }}>{l}</div>
+                        <div style={{ fontSize: 9, color: "#999", letterSpacing: 1 }}>{l}</div>
                         <div style={{ fontSize: 13, fontWeight: 700, color: "#000" }}>{value}</div>
                       </div>
                     ))}
@@ -424,16 +469,16 @@ function CareerPredictContent() {
               {/* Agent personas */}
               {profiles.length > 0 && (
                 <div style={{ flex: 1, overflowY: "auto", padding: "16px 0" }}>
-                  <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, padding: "0 20px", marginBottom: 8 }}>
-                    AGENTS ({profiles.length})
+                  <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, padding: "0 20px", marginBottom: 8 }}>
+                    智能体 ({profiles.length})
                   </div>
                   {profiles.map((p, i) => (
                     <div key={i} style={{ padding: "8px 20px", borderBottom: "1px solid #F5F5F5" }}>
-                      <div style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>
-                        {p.name || p.username || `Agent ${i + 1}`}
+                      <div style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>
+                        {p.name || p.username || `智能体 ${i + 1}`}
                       </div>
                       {p.persona && (
-                        <div style={{ fontSize: 10, color: "#666", marginTop: 2, lineHeight: 1.5 }}>
+                        <div style={{ fontSize: 11, color: "#666", marginTop: 2, lineHeight: 1.5 }}>
                           {p.persona.slice(0, 60)}{p.persona.length > 60 ? "…" : ""}
                         </div>
                       )}
@@ -445,8 +490,7 @@ function CareerPredictContent() {
               {profiles.length === 0 && (
                 <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center" }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 10, color: "#CCC", letterSpacing: 2 }}>GENERATING</div>
-                    <div style={{ fontSize: 10, color: "#CCC", letterSpacing: 2 }}>AGENTS…</div>
+                    <div style={{ fontSize: 11, color: "#CCC", letterSpacing: 1 }}>正在生成角色…</div>
                   </div>
                 </div>
               )}
@@ -458,12 +502,12 @@ function CareerPredictContent() {
               {/* Step 4: actions */}
               {stage === "step4" && (
                 <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-                  <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 12 }}>
-                    AGENT ACTIVITY FEED
+                  <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 12 }}>
+                    智能体推演记录
                   </div>
                   {actions.length === 0 && (
-                    <div style={{ fontSize: 11, color: "#CCC", padding: "40px 0", textAlign: "center" }}>
-                      Waiting for agents to act…
+                    <div style={{ fontSize: 12, color: "#CCC", padding: "40px 0", textAlign: "center" }}>
+                      等待推演开始…
                     </div>
                   )}
                   {actions.map((a) => {
@@ -474,19 +518,19 @@ function CareerPredictContent() {
                           {style.label}
                         </span>
                         <div>
-                          <span style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>{a.agent_name}</span>
+                          <span style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>{a.agent_name}</span>
                           {a.action_args?.title && (
-                            <span style={{ fontSize: 10, color: "#666", marginLeft: 8 }}>
+                            <span style={{ fontSize: 11, color: "#666", marginLeft: 8 }}>
                               {String(a.action_args.title).slice(0, 60)}
                             </span>
                           )}
                           {a.action_args?.content && !a.action_args?.title && (
-                            <span style={{ fontSize: 10, color: "#666", marginLeft: 8 }}>
+                            <span style={{ fontSize: 11, color: "#666", marginLeft: 8 }}>
                               {String(a.action_args.content).slice(0, 80)}
                             </span>
                           )}
                           <div style={{ fontSize: 9, color: "#CCC", marginTop: 2 }}>
-                            R{a.round_num} · {a.timestamp?.slice(11, 16)}
+                            第{a.round_num}轮 · {a.timestamp?.slice(11, 16)}
                           </div>
                         </div>
                       </div>
@@ -503,7 +547,7 @@ function CareerPredictContent() {
                   {/* Report sections streaming in */}
                   {stage === "step5" && reportSections.length > 0 && (
                     <div style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-                      <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 16 }}>REPORT — GENERATING…</div>
+                      <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 16 }}>报告生成中…</div>
                       {reportSections.map((sec) => (
                         <div key={sec.section_index} style={{ marginBottom: 24, background: "#fff", border: "1px solid #E5E5E5", borderRadius: 6, padding: "20px" }}>
                           <div dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(sec.content) }} />
@@ -515,16 +559,16 @@ function CareerPredictContent() {
                   {(stage === "step5" && reportSections.length === 0) || stage !== "step5" ? (
                     <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", gap: 16 }}>
                       <div style={{ width: 40, height: 40, border: "2px solid #F0F0F0", borderTop: "2px solid #FF4500", borderRadius: "50%", animation: "spin 1s linear infinite" }} />
-                      <div style={{ fontSize: 11, color: "#999" }}>{statusMsg || "Processing…"}</div>
+                      <div style={{ fontSize: 12, color: "#999" }}>{statusMsg || "处理中…"}</div>
                     </div>
                   ) : null}
 
                   {/* Agent log */}
                   {agentLogs.length > 0 && (
                     <div style={{ height: 160, borderTop: "1px solid #E5E5E5", overflowY: "auto", padding: "12px 20px" }}>
-                      <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 8 }}>REPORT AGENT LOG</div>
+                      <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 8 }}>报告生成日志</div>
                       {agentLogs.map((log, i) => (
-                        <div key={i} style={{ fontSize: 10, color: "#666", marginBottom: 4, lineHeight: 1.5 }}>
+                        <div key={i} style={{ fontSize: 11, color: "#666", marginBottom: 4, lineHeight: 1.5 }}>
                           <span style={{ color: "#999" }}>[{log.elapsed_seconds?.toFixed(1)}s]</span>{" "}
                           <span style={{ color: "#FF4500" }}>{log.action}</span>{" "}
                           {log.section_title && <span>— {log.section_title}</span>}
@@ -546,15 +590,15 @@ function CareerPredictContent() {
             {/* Left: agent list */}
             <div style={{ width: 280, borderRight: "1px solid #E5E5E5", overflowY: "auto", background: "#fff", flexShrink: 0 }}>
               <div style={{ padding: "20px", borderBottom: "1px solid #F0F0F0" }}>
-                <div style={{ fontSize: 9, color: "#999", letterSpacing: 2, marginBottom: 4 }}>AGENTS ({profiles.length})</div>
-                <div style={{ fontSize: 9, color: "#00C853", letterSpacing: 1 }}>SIMULATION COMPLETE</div>
+                <div style={{ fontSize: 10, color: "#999", letterSpacing: 1, marginBottom: 4 }}>智能体 ({profiles.length})</div>
+                <div style={{ fontSize: 10, color: "#00C853", letterSpacing: 1 }}>推演完成</div>
               </div>
               {profiles.map((p, i) => (
                 <div key={i} style={{ padding: "10px 20px", borderBottom: "1px solid #F5F5F5" }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>
-                    {p.name || p.username || `Agent ${i + 1}`}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: "#000" }}>
+                    {p.name || p.username || `智能体 ${i + 1}`}
                   </div>
-                  {p.profession && <div style={{ fontSize: 9, color: "#999", marginTop: 1 }}>{p.profession}</div>}
+                  {p.profession && <div style={{ fontSize: 10, color: "#999", marginTop: 1 }}>{p.profession}</div>}
                 </div>
               ))}
             </div>
@@ -563,14 +607,14 @@ function CareerPredictContent() {
             <div style={{ flex: 1, overflowY: "auto", padding: "32px 40px", background: "#FAFAFA" }}>
               {/* Report header */}
               <div style={{ marginBottom: 32 }}>
-                <div style={{ fontSize: 9, color: "#999", letterSpacing: 3, marginBottom: 8 }}>
-                  AI 群体智能 · 长期受益预测报告
+                <div style={{ fontSize: 10, color: "#999", letterSpacing: 2, marginBottom: 8 }}>
+                  职业前景预测报告
                 </div>
-                <h1 style={{ fontSize: 24, fontWeight: 700, color: "#000", marginBottom: 8, fontFamily: "'Inter',system-ui,-apple-system,sans-serif" }}>
+                <h1 style={{ fontSize: 24, fontWeight: 700, color: "#000", marginBottom: 8 }}>
                   {school} · {major}
                 </h1>
                 <div style={{ fontSize: 13, color: "#666" }}>
-                  {province} 物理类 位次 #{rank.toLocaleString()} · 模拟时间点：2031年
+                  {province} 位次 #{rank.toLocaleString()} · 模拟时间点：2031年、2036年
                 </div>
               </div>
 
@@ -583,7 +627,7 @@ function CareerPredictContent() {
                       <button
                         key={sec.section_index}
                         onClick={() => document.getElementById(`sec-${sec.section_index}`)?.scrollIntoView({ behavior: "smooth" })}
-                        style={{ fontSize: 10, padding: "4px 10px", borderRadius: 3, border: "1px solid #E5E5E5", background: "#fff", cursor: "pointer", color: "#666" }}
+                        style={{ fontSize: 11, padding: "5px 12px", borderRadius: 6, border: "1px solid #E5E5E5", background: "#fff", cursor: "pointer", color: "#666" }}
                       >
                         §{sec.section_index + 1} {firstLine}
                       </button>
@@ -600,7 +644,7 @@ function CareerPredictContent() {
                   <div
                     key={sec.section_index}
                     id={`sec-${sec.section_index}`}
-                    style={{ marginBottom: 24, background: "#fff", border: "1px solid #E5E5E5", borderRadius: 6, overflow: "hidden" }}
+                    style={{ marginBottom: 24, background: "#fff", border: "1px solid #E5E5E5", borderRadius: 8, overflow: "hidden" }}
                   >
                     <div
                       onClick={() => setCollapsedSections(prev => {
@@ -609,15 +653,15 @@ function CareerPredictContent() {
                         else next.add(sec.section_index);
                         return next;
                       })}
-                      style={{ padding: "12px 20px", borderBottom: isCollapsed ? "none" : "1px solid #F0F0F0", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FAFAFA" }}
+                      style={{ padding: "14px 20px", borderBottom: isCollapsed ? "none" : "1px solid #F0F0F0", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", background: "#FAFAFA" }}
                     >
-                      <span style={{ fontSize: 11, fontWeight: 700, color: "#000" }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: "#000" }}>
                         §{sec.section_index + 1} {firstLine.slice(0, 50)}
                       </span>
-                      <span style={{ fontSize: 10, color: "#999" }}>{isCollapsed ? "▸" : "▾"}</span>
+                      <span style={{ fontSize: 12, color: "#999" }}>{isCollapsed ? "▸" : "▾"}</span>
                     </div>
                     {!isCollapsed && (
-                      <div style={{ padding: "20px 24px", lineHeight: 1.8, fontSize: 13, color: "#333" }}>
+                      <div style={{ padding: "20px 24px", lineHeight: 1.8, fontSize: 14, color: "#333" }}>
                         <div dangerouslySetInnerHTML={{ __html: renderSimpleMarkdown(sec.content) }} />
                       </div>
                     )}
@@ -629,13 +673,13 @@ function CareerPredictContent() {
               <div style={{ marginTop: 32, display: "flex", gap: 12 }}>
                 <Link
                   href={`/results?province=${encodeURIComponent(province)}&rank=${rank}`}
-                  style={{ padding: "10px 20px", background: "#000", color: "#fff", borderRadius: 4, fontSize: 12, fontWeight: 700, textDecoration: "none", letterSpacing: 1 }}
+                  style={{ padding: "11px 22px", background: "#000", color: "#fff", borderRadius: 6, fontSize: 13, fontWeight: 700, textDecoration: "none", letterSpacing: 1 }}
                 >
                   ← 返回志愿报告
                 </Link>
                 <button
                   onClick={() => window.print()}
-                  style={{ padding: "10px 20px", background: "#F5F5F5", color: "#000", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}
+                  style={{ padding: "11px 22px", background: "#F5F5F5", color: "#000", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}
                 >
                   打印报告
                 </button>
@@ -648,11 +692,11 @@ function CareerPredictContent() {
         {stage === "error" && (
           <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#fff" }}>
             <div style={{ maxWidth: 480, padding: "60px 24px", textAlign: "center" }}>
-              <div style={{ fontSize: 9, color: "#FF0000", letterSpacing: 3, marginBottom: 16 }}>SIMULATION ERROR</div>
-              <div style={{ fontSize: 14, color: "#333", marginBottom: 32, lineHeight: 1.7 }}>{errorMsg}</div>
+              <div style={{ fontSize: 12, color: "#FF0000", letterSpacing: 2, marginBottom: 16 }}>推演出错</div>
+              <div style={{ fontSize: 15, color: "#333", marginBottom: 32, lineHeight: 1.7 }}>{errorMsg}</div>
               <button
                 onClick={() => { setStage("landing"); setErrorMsg(""); setProgress(0); setStatusMsg(""); }}
-                style={{ padding: "10px 24px", background: "#000", color: "#fff", border: "none", borderRadius: 4, fontSize: 12, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                style={{ padding: "11px 24px", background: "#000", color: "#fff", border: "none", borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
               >
                 重试
               </button>
@@ -674,7 +718,7 @@ export default function CareerPredictPage() {
   return (
     <Suspense fallback={
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", fontFamily: "monospace" }}>
-        <div>Loading…</div>
+        <div>加载中…</div>
       </div>
     }>
       <CareerPredictContent />

@@ -1,18 +1,15 @@
 "use client";
 import { useState } from "react";
-// Customer service floating button — renders client-side only
-
-const SUPPORT_EMAIL = "superfy@gmail.com";
+import FeedbackModal from "./FeedbackModal";
 
 export default function FloatingService() {
-  const [open, setOpen] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   return (
     <>
-      {/* Floating button */}
       <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label="联系客服"
+        onClick={() => setShowModal(true)}
+        aria-label="意见反馈"
         style={{
           position: "fixed", bottom: 80, right: 16, zIndex: 1000,
           width: 48, height: 48, borderRadius: "50%",
@@ -28,50 +25,7 @@ export default function FloatingService() {
         💬
       </button>
 
-      {/* Popup card */}
-      {open && (
-        <div style={{
-          position: "fixed", bottom: 136, right: 16, zIndex: 1001,
-          background: "var(--color-bg-secondary, #f5f5f7)",
-          border: "1px solid var(--color-separator, #e5e5ea)",
-          borderRadius: 14, padding: "16px 18px", width: 220,
-          boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
-        }}>
-          {/* Close */}
-          <button
-            onClick={() => setOpen(false)}
-            style={{ position: "absolute", top: 8, right: 10, background: "none", border: "none", fontSize: 18, cursor: "pointer", color: "#aeaeb2" }}
-          >×</button>
-
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>遇到问题？联系我们</div>
-
-          {/* Email */}
-          <div style={{
-            background: "var(--color-bg, #fafaf8)", borderRadius: 8,
-            padding: "10px 12px", marginBottom: 10,
-            fontSize: 12, color: "var(--color-text-secondary, #6e6e73)", lineHeight: 1.7,
-          }}>
-            发邮件至<br/>
-            <strong style={{ color: "#0071E3", userSelect: "all" }}>{SUPPORT_EMAIL}</strong>
-          </div>
-
-          <a
-            href={`mailto:${SUPPORT_EMAIL}`}
-            style={{
-              display: "block", width: "100%", padding: "8px", borderRadius: 8, fontSize: 12,
-              background: "#0071E3", color: "#fff", border: "none", cursor: "pointer",
-              fontWeight: 600, marginBottom: 8, textAlign: "center", textDecoration: "none",
-              boxSizing: "border-box",
-            }}
-          >
-            发送邮件
-          </a>
-
-          <div style={{ fontSize: 10, color: "var(--color-text-tertiary, #aeaeb2)", textAlign: "center", lineHeight: 1.5 }}>
-            支付问题 · 退款申请 · 数据咨询
-          </div>
-        </div>
-      )}
+      {showModal && <FeedbackModal onClose={() => setShowModal(false)} />}
     </>
   );
 }

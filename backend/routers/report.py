@@ -99,6 +99,7 @@ def _flatten_results(recommend_data: dict) -> list:
 async def export_report(
     order_no: str = Query(..., description="已支付的订单号"),
     subject: str = Query("物理", description="选科（与查询时一致）"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     db: Session = Depends(get_db),
 ):
     """
@@ -121,7 +122,7 @@ async def export_report(
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",
-            db=db, is_paid=True
+            db=db, is_paid=True, exam_mode=exam_mode
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")
@@ -161,6 +162,7 @@ async def export_report(
 async def preview_report_html(
     order_no: str = Query(...),
     subject: str = Query("物理"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     db: Session = Depends(get_db),
 ):
     """返回 HTML 预览（需已支付订单）"""
@@ -177,7 +179,7 @@ async def preview_report_html(
         from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank, subject=subject,
-            mode="all", db=db, is_paid=True
+            mode="all", db=db, is_paid=True, exam_mode=exam_mode
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -198,6 +200,7 @@ async def generate_report_free(
     subject: str = Query("物理", description="选科"),
     order_no: str = Query("", description="付费订单号，有效则允许下载"),
     part: int = Query(0, description="分册：0=全部（旧兼容），1=上册(冲+稳)，2=下册(保+冷门)"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
 ):
@@ -250,7 +253,7 @@ async def generate_report_free(
             recommend_data = _run_recommend_core(
                 province=province, rank=rank,
                 subject=subject, mode="all",
-                db=db, is_paid=True
+                db=db, is_paid=True, exam_mode=exam_mode
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")
@@ -303,6 +306,7 @@ async def warmup_outlook(
     province: str = Query(...),
     rank: int = Query(...),
     subject: str = Query("物理"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     db: Session = Depends(get_db),
 ):
     """支付完成后异步预热冷门学校「未来展望」缓存。
@@ -311,7 +315,7 @@ async def warmup_outlook(
     def _do_warmup():
         try:
             from services.recommend_core import _run_recommend_core
-            data = _run_recommend_core(province=province, rank=rank, subject=subject, mode="all", db=db, is_paid=True)
+            data = _run_recommend_core(province=province, rank=rank, subject=subject, mode="all", db=db, is_paid=True, exam_mode=exam_mode)
             from routers.report import _flatten_results
             results = _flatten_results(data)
             from services.future_outlook import generate_outlooks_batch
@@ -328,6 +332,7 @@ async def email_report(
     province: str = Query(..., description="省份"),
     rank: int = Query(..., description="位次"),
     subject: str = Query("", description="选科"),
+    exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     to_email: str = Query(..., description="收件人邮箱"),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -354,7 +359,7 @@ async def email_report(
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",
-            db=db, is_paid=True
+            db=db, is_paid=True, exam_mode=exam_mode
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")

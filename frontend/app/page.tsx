@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { track } from "@/lib/track";
 import AuthNav from "@/components/AuthNav";
+import FeedbackModal from "@/components/FeedbackModal";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -13,6 +14,36 @@ const PROVINCES = [
   "河南","广东","上海","福建","江苏","山东","浙江","湖北","甘肃","宁夏",
   "海南","西藏",
 ];
+
+// ── 省份 → 高考模式映射 ───────────────────────────────────────
+type ExamMode = "3+1+2" | "3+3" | "old";
+const PROVINCE_MODE: Record<string, ExamMode> = {
+  // 3+1+2（主流）
+  "河北": "3+1+2", "辽宁": "3+1+2", "江苏": "3+1+2", "福建": "3+1+2",
+  "湖北": "3+1+2", "湖南": "3+1+2", "广东": "3+1+2", "重庆": "3+1+2",
+  "吉林": "3+1+2", "黑龙江": "3+1+2", "安徽": "3+1+2", "江西": "3+1+2",
+  "广西": "3+1+2", "贵州": "3+1+2", "甘肃": "3+1+2", "河南": "3+1+2",
+  "山西": "3+1+2", "陕西": "3+1+2", "内蒙古": "3+1+2", "四川": "3+1+2",
+  "云南": "3+1+2", "宁夏": "3+1+2", "青海": "3+1+2",
+  // 3+3
+  "北京": "3+3", "天津": "3+3", "山东": "3+3", "上海": "3+3",
+  "浙江": "3+3", "海南": "3+3",
+  // 旧高考
+  "新疆": "old", "西藏": "old",
+};
+
+function getExamMode(province: string): ExamMode {
+  return PROVINCE_MODE[province] || "3+1+2";
+}
+
+const FIRST_OPTIONS = ["物理", "历史"];
+const SECOND_OPTIONS = ["政治", "地理", "化学", "生物"];
+const ALL_SUBJECTS = ["物理", "化学", "生物", "历史", "政治", "地理"];
+const OLD_OPTIONS = [
+  { label: "文科", value: "文科" },
+  { label: "理科", value: "理科" },
+];
+
 const PROVINCE_STATUS: Record<string, "full"|"partial"|"soon"> = {
   "北京": "full",
   "河北": "full", "四川": "full", "贵州": "full", "安徽": "full",
@@ -25,15 +56,6 @@ const PROVINCE_STATUS: Record<string, "full"|"partial"|"soon"> = {
   "浙江": "full", "湖北": "full", "甘肃": "full", "宁夏": "full",
   "海南": "partial", "西藏": "partial",
 };
-const SUBJECTS = [
-  { label: "物理 + 化学", value: "物理+化学" },
-  { label: "物理 + 生物", value: "物理+生物" },
-  { label: "物理（不限再选）", value: "物理" },
-  { label: "历史 + 政治", value: "历史+政治" },
-  { label: "历史 + 地理", value: "历史+地理" },
-  { label: "不限 / 旧高考", value: "" },
-];
-
 const HISTORY_KEY = "gaokao_query_history";
 
 function HistoryQuickAccess() {
@@ -53,7 +75,7 @@ function HistoryQuickAccess() {
         {history.map((h: any, i: number) => (
           <button
             key={i}
-            onClick={() => router.push(`/results?province=${encodeURIComponent(h.province)}&rank=${h.rank}&subject=${encodeURIComponent(h.subject)}`)}
+            onClick={() => router.push(`/results?province=${encodeURIComponent(h.province)}&rank=${h.rank}&subject=${encodeURIComponent(h.subject)}${h.exam_mode ? `&exam_mode=${h.exam_mode}` : ""}`)}
             style={{
               padding: "6px 14px", borderRadius: 99, fontSize: 12,
               background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
@@ -75,10 +97,31 @@ export default function Home() {
   const [rank, setRank] = useState("");
   const [mockScore, setMockScore] = useState("");
   const [province, setProvince] = useState("北京");
-  const [subject, setSubject] = useState("物理+化学");
+
+  // ── 选科 state（三模式）──────────────────────────────────────
+  const examMode = getExamMode(province);
+  // 3+1+2
+  const [first312, setFirst312] = useState("物理");
+  const [second312, setSecond312] = useState<string[]>(["化学", "生物"]);
+  // 3+3
+  const [subjects333, setSubjects333] = useState<string[]>(["物理", "化学", "生物"]);
+  // 旧高考
+  const [oldSubject, setOldSubject] = useState("理科");
+
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+
+  // ── 偏好约束 ──
+  const [showConstraints, setShowConstraints] = useState(false);
+  const [cMajor, setCMajor] = useState("");
+  const [cCityLevels, setCCityLevels] = useState<string[]>([]);
+  const [cNature, setCNature] = useState<string[]>([]);
+  const [cTiers, setCTiers] = useState<string[]>([]);
+  const CITY_LEVEL_OPTIONS = ["一线城市", "新一线", "二线", "三线"];
+  const NATURE_OPTIONS = ["公办", "民办"];
+  const TIER_OPTIONS = ["985", "211", "双一流", "普通"];
 
   useEffect(() => {
     try { const p = localStorage.getItem("gaokao_province"); if (p) setProvince(p); } catch {}
@@ -93,6 +136,17 @@ export default function Home() {
     } catch {}
   }, []);
 
+  // 拼接选科字符串
+  const subjectStr = (() => {
+    if (examMode === "3+1+2") {
+      return [first312, ...second312].join("+");
+    }
+    if (examMode === "3+3") {
+      return subjects333.join("+");
+    }
+    return oldSubject;
+  })();
+
   const handleSubmit = async () => {
     if (mode === "rank" && !rank) return;
     if (mode === "score" && !mockScore) return;
@@ -102,16 +156,27 @@ export default function Home() {
     track("query_submit", {
       province,
       rankInput: mode === "rank" ? Number(rank) : 0,
-      eventData: { mode, subject, mock_score: mode === "score" ? mockScore : undefined },
+      eventData: { mode, subject: subjectStr, exam_mode: examMode, mock_score: mode === "score" ? mockScore : undefined },
     });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
+      // 约束参数长度限制（防止 URL 过长导致 414）
+      const cMajorTrimmed = cMajor.trim().slice(0, 50);
+      const constraintQs = (() => {
+        const parts: string[] = [];
+        if (cMajorTrimmed) parts.push(`c_major=${encodeURIComponent(cMajorTrimmed)}`);
+        if (cCityLevels.length) parts.push(`c_city=${encodeURIComponent(cCityLevels.join(","))}`);
+        if (cNature.length) parts.push(`c_nature=${encodeURIComponent(cNature.join(","))}`);
+        if (cTiers.length) parts.push(`c_tier=${encodeURIComponent(cTiers.join(","))}`);
+        return parts.length ? `&${parts.join("&")}` : "";
+      })();
+
       if (mode === "score") {
         const res = await fetch(
-          `${API}/api/simulate?mock_score=${mockScore}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`,
+          `${API}/api/simulate?mock_score=${mockScore}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}`,
           { signal: controller.signal }
         );
         if (!res.ok) throw new Error(`服务器错误 ${res.status}，请稍后重试`);
@@ -122,9 +187,9 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}&from_mock=1&mock_score=${mockScore}`);
+        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${examMode}&from_mock=1&mock_score=${mockScore}${constraintQs}`);
       } else {
-        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`);
+        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${examMode}${constraintQs}`);
       }
     } catch (e: any) {
       const msg = e?.name === "AbortError"
@@ -134,6 +199,7 @@ export default function Home() {
       setLoading(false);
     } finally {
       clearTimeout(timeout);
+      controller.abort();
     }
   };
 
@@ -152,15 +218,10 @@ export default function Home() {
             <span style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>水卢冷门高报引擎</span>
           </span>
           <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-            <button
-              onClick={() => setContactOpen(true)}
-              className="nav-brand-sub"
-              style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px", background: "none", border: "none", cursor: "pointer", padding: 0 }}
-            >袁希团队出品</button>
-            <Link href="/shuchu" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>输出工作台</Link>
-            <Link href="/crisis-pr" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>MIROFISH危机预测</Link>
-            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
+            <span className="nav-brand-sub" style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px" }}>袁希团队出品</span>
             <Link href="/search" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
+            <Link href="/compare" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
+            <Link href="/major-trend" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
             <Link href="/form" className="btn-ghost nav-link-mobile-hide" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
             <AuthNav />
           </div>
@@ -218,7 +279,7 @@ export default function Home() {
         <div style={{ textAlign: "center", marginBottom: 48, maxWidth: 640 }}>
 
           {/* H1 */}
-          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 700, lineHeight: 1.08, letterSpacing: "-1.5px", color: "var(--color-text-primary)", marginBottom: 20 }}>
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 700, lineHeight: 1.3, letterSpacing: "-1.5px", color: "var(--color-text-primary)", marginBottom: 20, wordBreak: "keep-all", overflowWrap: "break-word" }}>
             有人用你的分数<br />进了比你好20名的大学
           </h1>
 
@@ -278,8 +339,19 @@ export default function Home() {
             </label>
             <input
               type="number"
+              min={mode === "rank" ? 1 : 0}
+              max={mode === "rank" ? 2000000 : 750}
               value={mode === "rank" ? rank : mockScore}
-              onChange={e => mode === "rank" ? setRank(e.target.value) : setMockScore(e.target.value)}
+              onChange={e => {
+                const v = e.target.value;
+                if (v === "") { mode === "rank" ? setRank("") : setMockScore(""); return; }
+                const n = Number(v);
+                if (mode === "rank") {
+                  if (n >= 1 && n <= 2000000) setRank(v);
+                } else {
+                  if (n >= 0 && n <= 750) setMockScore(v);
+                }
+              }}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
               placeholder={mode === "rank" ? "例如：28000" : "例如：630"}
               className="apple-input"
@@ -287,7 +359,7 @@ export default function Home() {
             />
           </div>
 
-          <div className="query-grid-2col" style={{ display: "grid", gap: 12, marginBottom: 24 }}>
+          <div className="query-grid-2col" style={{ display: "grid", gap: 12, marginBottom: 16 }}>
             <div>
               <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>省份</label>
               <select className="apple-select" value={province} onChange={e => setProvince(e.target.value)}>
@@ -300,11 +372,216 @@ export default function Home() {
               {!status && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 5 }}>数据建设中</p>}
             </div>
             <div>
-              <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>选科</label>
-              <select className="apple-select" value={subject} onChange={e => setSubject(e.target.value)}>
-                {SUBJECTS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-              </select>
+              {/* 高考模式标签 */}
+              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 6 }}>
+                {examMode === "3+1+2" && "3+1+2 模式 · 首选+再选"}
+                {examMode === "3+3" && "3+3 模式 · 任选3科"}
+                {examMode === "old" && "旧高考 · 文理分科"}
+              </div>
+
+              {/* 3+1+2 选科组件 */}
+              {examMode === "3+1+2" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {/* 首选 */}
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {FIRST_OPTIONS.map(f => (
+                      <button
+                        key={f}
+                        onClick={() => setFirst312(f)}
+                        style={{
+                          flex: 1, padding: "8px 0", borderRadius: 8, border: "1.5px solid",
+                          borderColor: first312 === f ? "var(--color-navy)" : "var(--color-separator)",
+                          background: first312 === f ? "var(--color-navy)" : "var(--color-bg)",
+                          color: first312 === f ? "#fff" : "var(--color-text-primary)",
+                          fontSize: 13, fontWeight: 600, cursor: "pointer",
+                        }}
+                      >{f}</button>
+                    ))}
+                  </div>
+                  {/* 再选（多选2项） */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    {SECOND_OPTIONS.map(s => {
+                      const checked = second312.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            if (checked) {
+                              if (second312.length > 1) setSecond312(second312.filter(x => x !== s));
+                            } else {
+                              if (second312.length < 2) setSecond312([...second312, s]);
+                            }
+                          }}
+                          style={{
+                            padding: "7px 0", borderRadius: 8, border: "1.5px solid",
+                            borderColor: checked ? "var(--color-accent)" : "var(--color-separator)",
+                            background: checked ? "rgba(201,146,42,0.08)" : "var(--color-bg)",
+                            color: checked ? "var(--color-accent)" : "var(--color-text-secondary)",
+                            fontSize: 12, fontWeight: 500, cursor: "pointer",
+                          }}
+                        >{checked ? "✓ " : ""}{s}</button>
+                      );
+                    })}
+                  </div>
+                  {second312.length !== 2 && (
+                    <span style={{ fontSize: 11, color: "#ff3b30" }}>请再选 2 科（已选 {second312.length} 科）</span>
+                  )}
+                </div>
+              )}
+
+              {/* 3+3 选科组件 */}
+              {examMode === "3+3" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                    {ALL_SUBJECTS.map(s => {
+                      const checked = subjects333.includes(s);
+                      return (
+                        <button
+                          key={s}
+                          onClick={() => {
+                            if (checked) {
+                              if (subjects333.length > 1) setSubjects333(subjects333.filter(x => x !== s));
+                            } else {
+                              if (subjects333.length < 3) setSubjects333([...subjects333, s]);
+                            }
+                          }}
+                          style={{
+                            flex: 1, minWidth: 60, padding: "7px 0", borderRadius: 8, border: "1.5px solid",
+                            borderColor: checked ? "var(--color-accent)" : "var(--color-separator)",
+                            background: checked ? "rgba(201,146,42,0.08)" : "var(--color-bg)",
+                            color: checked ? "var(--color-accent)" : "var(--color-text-secondary)",
+                            fontSize: 12, fontWeight: 500, cursor: "pointer",
+                          }}
+                        >{checked ? "✓ " : ""}{s}</button>
+                      );
+                    })}
+                  </div>
+                  {subjects333.length !== 3 && (
+                    <span style={{ fontSize: 11, color: "#ff3b30" }}>请选 3 科（已选 {subjects333.length} 科）</span>
+                  )}
+                </div>
+              )}
+
+              {/* 旧高考选科组件 */}
+              {examMode === "old" && (
+                <div style={{ display: "flex", gap: 6 }}>
+                  {OLD_OPTIONS.map(o => (
+                    <button
+                      key={o.value}
+                      onClick={() => setOldSubject(o.value)}
+                      style={{
+                        flex: 1, padding: "8px 0", borderRadius: 8, border: "1.5px solid",
+                        borderColor: oldSubject === o.value ? "var(--color-navy)" : "var(--color-separator)",
+                        background: oldSubject === o.value ? "var(--color-navy)" : "var(--color-bg)",
+                        color: oldSubject === o.value ? "#fff" : "var(--color-text-primary)",
+                        fontSize: 13, fontWeight: 600, cursor: "pointer",
+                      }}
+                    >{o.label}</button>
+                  ))}
+                </div>
+              )}
             </div>
+          </div>
+
+          {/* ── 偏好约束 ── */}
+          <div style={{ marginBottom: 20 }}>
+            <button
+              type="button"
+              onClick={() => setShowConstraints(v => !v)}
+              style={{
+                display: "flex", alignItems: "center", gap: 6,
+                background: "none", border: "none", cursor: "pointer",
+                fontSize: 13, color: "var(--color-text-secondary)", padding: 0,
+              }}
+            >
+              <span style={{
+                display: "inline-block", width: 20, height: 20, borderRadius: 6,
+                background: showConstraints ? "var(--color-navy)" : "var(--color-bg-secondary)",
+                color: showConstraints ? "#fff" : "var(--color-text-secondary)",
+                fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
+              }}>{showConstraints ? "−" : "+"}</span>
+              添加偏好约束
+              {(cMajor || cCityLevels.length || cNature.length || cTiers.length) ? (
+                <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
+              ) : null}
+            </button>
+
+            {showConstraints && (
+              <div style={{
+                marginTop: 12, padding: 16, borderRadius: 12,
+                background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
+              }}>
+                {/* 专业关键词 */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业（关键词匹配）</label>
+                  <input
+                    type="text"
+                    value={cMajor}
+                    onChange={e => setCMajor(e.target.value)}
+                    placeholder="如：计算机、医学、师范…多个用空格分隔"
+                    style={{
+                      width: "100%", padding: "10px 12px", borderRadius: 10,
+                      border: "1px solid var(--color-separator)", fontSize: 14,
+                      background: "var(--color-bg)", color: "var(--color-text-primary)", outline: "none",
+                    }}
+                  />
+                </div>
+
+                {/* 城市等级 */}
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>城市等级</label>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {CITY_LEVEL_OPTIONS.map(lv => {
+                      const active = cCityLevels.includes(lv);
+                      return (
+                        <button key={lv} onClick={() => setCCityLevels(prev => active ? prev.filter(x => x !== lv) : [...prev, lv])} style={{
+                          padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                          border: active ? "none" : "1px solid var(--color-separator)",
+                          background: active ? "var(--color-navy)" : "var(--color-bg)",
+                          color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                        }}>{lv}</button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 办学性质 + 院校档次 并排 */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>办学性质</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {NATURE_OPTIONS.map(n => {
+                        const active = cNature.includes(n);
+                        return (
+                          <button key={n} onClick={() => setCNature(prev => active ? prev.filter(x => x !== n) : [...prev, n])} style={{
+                            padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                            border: active ? "none" : "1px solid var(--color-separator)",
+                            background: active ? "var(--color-navy)" : "var(--color-bg)",
+                            color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                          }}>{n}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>院校档次</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                      {TIER_OPTIONS.map(t => {
+                        const active = cTiers.includes(t);
+                        return (
+                          <button key={t} onClick={() => setCTiers(prev => active ? prev.filter(x => x !== t) : [...prev, t])} style={{
+                            padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                            border: active ? "none" : "1px solid var(--color-separator)",
+                            background: active ? "var(--color-navy)" : "var(--color-bg)",
+                            color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                          }}>{t}</button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <button
@@ -342,25 +619,25 @@ export default function Home() {
         </div>
 
         {/* ── 工具入口 ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, width: "100%", maxWidth: 480, marginTop: 16 }}>
-          <div style={{ padding: "14px 16px", borderRadius: 14, background: "#111", color: "#e2e2e2" }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>SHUCHU</div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>输出工作台</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#b8b8b8", marginBottom: 12 }}>
-              上传 PDF 或图片，编译知识库，快速创作输出
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: 12, width: "100%", maxWidth: 480, marginTop: 16 }}>
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: "linear-gradient(135deg, rgba(201,146,42,0.12) 0%, rgba(26,39,68,0.08) 100%)", border: "1.5px solid rgba(201,146,42,0.35)", color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.6, marginBottom: 6, color: "var(--color-accent)" }}>SCHOOLS</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>学校库</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 14 }}>
+              全国院校信息、专业目录、学科评估、就业数据一站式查询
             </div>
-            <Link href="/shuchu" style={{ fontSize: 12, fontWeight: 600, color: "#a89cf7", textDecoration: "none" }}>
-              打开工作台 →
+            <Link href="/search" style={{ fontSize: 13, fontWeight: 600, color: "var(--color-accent)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              进入学校库 →
             </Link>
           </div>
-          <div style={{ padding: "14px 16px", borderRadius: 14, background: "linear-gradient(135deg, #211A17 0%, #4C3229 100%)", color: "#F8F1E8" }}>
-            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.5, marginBottom: 6 }}>MIROFISH</div>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>危机公关预测</div>
-            <div style={{ fontSize: 12, lineHeight: 1.6, color: "#E6D7CC", marginBottom: 12 }}>
-              模拟媒体与舆情反应，提前预判危机走向
+          <div style={{ padding: "16px 18px", borderRadius: 14, background: "linear-gradient(135deg, rgba(26,39,68,0.08) 0%, rgba(201,146,42,0.08) 100%)", border: "1.5px solid rgba(26,39,68,0.25)", color: "var(--color-text-primary)" }}>
+            <div style={{ fontSize: 10, letterSpacing: 1.5, opacity: 0.6, marginBottom: 6, color: "var(--color-navy)" }}>COMPARE</div>
+            <div style={{ fontSize: 16, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>学校对比</div>
+            <div style={{ fontSize: 12, lineHeight: 1.6, color: "var(--color-text-secondary)", marginBottom: 14 }}>
+              最多同时对比 3 所学校，录取数据、学科评估、就业流向横向比较
             </div>
-            <Link href="/crisis-pr" style={{ fontSize: 12, fontWeight: 600, color: "#e8c99a", textDecoration: "none" }}>
-              打开预测台 →
+            <Link href="/compare" style={{ fontSize: 13, fontWeight: 600, color: "var(--color-navy)", textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 4 }}>
+              开始对比 →
             </Link>
           </div>
         </div>
@@ -375,7 +652,8 @@ export default function Home() {
           <p style={{ textAlign: "center", fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 40 }}>
             4年后你在哪，取决于今天选了哪所学校
           </p>
-          <div style={{ overflowX: "auto" }}>
+          {/* Desktop table */}
+          <div className="hide-on-mobile" style={{ overflowX: "auto" }}>
             <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 14, minWidth: 540 }}>
               <thead>
                 <tr>
@@ -400,6 +678,23 @@ export default function Home() {
                 ))}
               </tbody>
             </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="show-on-mobile" style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {[
+              ["数据来源", "官方录取分数线", "官方数据 + 10万条民间口碑，交叉验证赋权"],
+              ["选学校", "看985/211名气和排名", "主动过滤虚高学校，挖掘真正就业强的冷门院校"],
+              ["看就业", "相信学校官方自报数据", "社区真实反馈 + 毕业生薪资，屏蔽学校公关数据"],
+              ["预测未来", "只看当年录取概率", "10年趋势预判：4年后哪些专业会崛起或衰落"],
+              ["花多少钱", "顾问咨询 ¥1,000–5,000", "免费预览 · 完整报告¥1.99，比机构便宜99.9%"],
+            ].map(([scene, traditional, algorithm], i) => (
+              <div key={scene} style={{ background: i % 2 === 0 ? "var(--color-bg)" : "transparent", borderRadius: 10, border: "1px solid var(--color-separator)", padding: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-tertiary)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>{scene}</div>
+                <div style={{ fontSize: 13, color: "#ff3b30", marginBottom: 6, lineHeight: 1.5 }}>❌ {traditional}</div>
+                <div style={{ fontSize: 13, color: "#34c759", fontWeight: 500, lineHeight: 1.5 }}>✅ {algorithm}</div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -716,6 +1011,12 @@ export default function Home() {
             onMouseOut={e => (e.currentTarget.style.color = "var(--color-text-secondary)")}
           >{label}</Link>
         ))}
+        <button
+          onClick={() => setShowFeedback(true)}
+          style={{ fontSize: 13, color: "var(--color-text-secondary)", background: "none", border: "none", cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 2 }}
+          onMouseOver={e => (e.currentTarget.style.color = "var(--color-text-primary)")}
+          onMouseOut={e => (e.currentTarget.style.color = "var(--color-text-secondary)")}
+        >意见反馈</button>
         <a
           href="https://beian.miit.gov.cn/"
           target="_blank"
@@ -723,6 +1024,8 @@ export default function Home() {
           style={{ fontSize: 12, color: "var(--color-text-tertiary)", textDecoration: "none" }}
         >京ICP备2026015008号</a>
       </footer>
+
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
 
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }

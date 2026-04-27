@@ -135,7 +135,7 @@ function HourlyBars({ data }: { data: HourlyData[] }) {
 export default function AdminPage() {
   const [tokenInput, setTokenInput] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "viral" | "insights" | "referral">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "viral" | "insights" | "referral" | "feedback">("dashboard");
   const [insights, setInsights] = useState<any>(null);
 
   const [stats, setStats] = useState<TodayStats | null>(null);
@@ -276,6 +276,18 @@ export default function AdminPage() {
     }).catch(e => setError(e.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, activeTab]);
+
+  // Feedback tab
+  const [feedbacks, setFeedbacks] = useState<any[]>([]);
+  const [feedbackTotal, setFeedbackTotal] = useState(0);
+  const [feedbackPage, setFeedbackPage] = useState(1);
+  useEffect(() => {
+    if (!authed || activeTab !== "feedback") return;
+    apiFetch(`/api/admin/feedbacks?page=${feedbackPage}&page_size=20`)
+      .then(d => { setFeedbacks(d.items); setFeedbackTotal(d.total); })
+      .catch(e => setError(e.message));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, activeTab, feedbackPage]);
 
   const handleLogin = () => {
     tokenRef.current = tokenInput;
@@ -435,6 +447,7 @@ export default function AdminPage() {
               <Tab id="users" label="用户" />
               <Tab id="viral" label="传播追踪" />
               <Tab id="referral" label="分销订阅" />
+              <Tab id="feedback" label={`反馈 ${feedbackTotal > 0 ? `(${feedbackTotal})` : ""}`} />
             </div>
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -1019,6 +1032,46 @@ export default function AdminPage() {
             })()}
           </>
         )}
+        {/* ── Feedback ── */}
+        {activeTab === "feedback" && (
+          <>
+            <div style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, padding: "20px 24px" }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", marginBottom: 16, textTransform: "uppercase", letterSpacing: 0.5 }}>用户反馈（共 {feedbackTotal} 条）</div>
+              {feedbacks.length > 0 ? (
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#F5F5F7" }}>
+                      {["ID", "内容", "联系方式", "IP", "时间"].map(h => (
+                        <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {feedbacks.map((f, i) => (
+                      <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                        <td style={{ padding: "8px 12px", color: "#aeaeb2", fontSize: 11 }}>{f.id}</td>
+                        <td style={{ padding: "8px 12px", maxWidth: 400, lineHeight: 1.5 }}>{f.content}</td>
+                        <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 12 }}>{f.contact || "—"}</td>
+                        <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{f.ip || "—"}</td>
+                        <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{f.created_at}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>暂无反馈</div>
+              )}
+              {feedbackTotal > 20 && (
+                <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 16 }}>
+                  <button disabled={feedbackPage <= 1} onClick={() => setFeedbackPage(p => p - 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>上一页</button>
+                  <span style={{ fontSize: 13, color: "#6E6E73", lineHeight: "28px" }}>第 {feedbackPage} 页 / 共 {Math.ceil(feedbackTotal / 20)} 页</span>
+                  <button disabled={feedbackPage >= Math.ceil(feedbackTotal / 20)} onClick={() => setFeedbackPage(p => p + 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>下一页</button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+
         {/* ── Referral & Subscription ── */}
         {activeTab === "referral" && (
           <>

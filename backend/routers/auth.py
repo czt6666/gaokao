@@ -3,6 +3,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import random, string, hashlib, time, os, json
+from urllib.parse import quote
 from database import get_db, User, SmsCode, Order
 
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -10,7 +11,9 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 # ── 微信扫码会话（内存存储，10分钟TTL）────────────────────────────────────
 _QR_SESSIONS: dict = {}   # {session_id: {"status": "pending"|"success"|"expired", "token": str|None, "expires": float}}
 
-SECRET_KEY = os.getenv("JWT_SECRET", "gaokao-dev-secret-change-in-prod")
+SECRET_KEY = os.getenv("JWT_SECRET")
+if not SECRET_KEY:
+    raise RuntimeError("环境变量 JWT_SECRET 未设置，无法启动服务")
 TOKEN_EXPIRE_DAYS = 30
 SMS_CODE_TTL = 300        # 验证码有效期 5分钟
 SMS_COOLDOWN = 60         # 同一手机号发送冷却 60秒
@@ -22,26 +25,54 @@ SMS_LOCKOUT_SECS = 600    # 锁定时长 10分钟
 _verify_failures: dict = {}
 
 
-# ── JWT helpers ──────────────────────────────────────────────────────────────
+import jwt as _pyjwt
+import uuid
+
+JWT_ISSUER = "gaokao-api"
+JWT_AUDIENCE = "gaokao-web"
+
+# ── JWT helpers（标准 PyJWT，兼容旧版自定义格式）────────────────────────────
 
 def _make_token(user_id: int, phone: str) -> str:
-    import base64, hmac
-    payload = json.dumps({"uid": user_id, "phone": phone, "exp": int(time.time()) + TOKEN_EXPIRE_DAYS * 86400})
-    payload_b64 = base64.b64encode(payload.encode()).decode()
-    sig = hmac.new(SECRET_KEY.encode(), payload_b64.encode(), hashlib.sha256).hexdigest()
-    return f"{payload_b64}.{sig}"
+    now = int(time.time())
+    payload = {
+        "jti": str(uuid.uuid4()),
+        "iss": JWT_ISSUER,
+        "aud": JWT_AUDIENCE,
+        "iat": now,
+        "exp": now + TOKEN_EXPIRE_DAYS * 86400,
+        "uid": user_id,
+        "phone": phone,
+    }
+    return _pyjwt.encode(payload, SECRET_KEY, algorithm="HS256")
 
 
 def _verify_token(token: str) -> dict | None:
-    import base64, hmac
+    # 1) 尝试标准 JWT（新格式）
     try:
+        payload = _pyjwt.decode(
+            token, SECRET_KEY, algorithms=["HS256"],
+            issuer=JWT_ISSUER, audience=JWT_AUDIENCE,
+        )
+        return payload
+    except _pyjwt.ExpiredSignatureError:
+        return None
+    except Exception:
+        pass
+
+    # 2) 回退旧版自定义格式（base64.payload.signature）
+    try:
+        import base64, hmac
         parts = token.split(".")
-        if len(parts) != 2: return None
+        if len(parts) != 2:
+            return None
         payload_b64, sig = parts
         expected = hmac.new(SECRET_KEY.encode(), payload_b64.encode(), hashlib.sha256).hexdigest()
-        if sig != expected: return None
+        if sig != expected:
+            return None
         payload = json.loads(base64.b64decode(payload_b64).decode())
-        if payload.get("exp", 0) < time.time(): return None
+        if payload.get("exp", 0) < time.time():
+            return None
         return payload
     except Exception:
         return None
@@ -313,6 +344,134 @@ async def qr_poll(session_id: str):
         _QR_SESSIONS.pop(session_id, None)
         return {"status": "success", "token": token}
     return {"status": "pending"}
+
+
+@router.post("/wechat/open/qr")
+async def wechat_open_qr():
+    """
+    网站应用扫码登录（开放平台 qrconnect）：创建会话，返回 session_id + 二维码 URL。
+    手机非微信浏览器 + 桌面浏览器都可用；前端轮询 /api/auth/qr/poll/{session_id}。
+    需要配置：
+      WECHAT_OPEN_APP_ID     — 微信开放平台「网站应用」AppID
+      WECHAT_OPEN_APP_SECRET — 微信开放平台「网站应用」AppSecret
+    """
+    import urllib.parse
+    app_id = os.getenv("WECHAT_OPEN_APP_ID", "")
+    if not app_id:
+        raise HTTPException(status_code=503, detail="网站应用未配置")
+
+    expired = [k for k, v in list(_QR_SESSIONS.items()) if time.time() > v["expires"]]
+    for k in expired:
+        _QR_SESSIONS.pop(k, None)
+
+    session_id = "".join(random.choices(string.ascii_letters + string.digits, k=24))
+    _QR_SESSIONS[session_id] = {"status": "pending", "token": None, "expires": time.time() + 600}
+
+    site_url = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
+    callback = f"{site_url}/api/auth/wechat/open/callback"
+    state_param = f"open_{session_id}"
+
+    qr_url = (
+        "https://open.weixin.qq.com/connect/qrconnect"
+        f"?appid={app_id}"
+        f"&redirect_uri={urllib.parse.quote(callback, safe='')}"
+        f"&response_type=code"
+        f"&scope=snsapi_login"
+        f"&state={state_param}"
+        f"#wechat_redirect"
+    )
+    return {"session_id": session_id, "wechat_url": qr_url}
+
+
+@router.get("/wechat/open/callback")
+async def wechat_open_callback(code: str, state: str = "", db: Session = Depends(get_db)):
+    """
+    网站应用扫码登录回调：用 code 换 openid + unionid + 用户信息，登录/注册用户。
+    优先用 unionid 匹配同主体下其它 AppID（服务号等）已注册的账号，避免重复建号。
+    """
+    import httpx
+    from fastapi.responses import HTMLResponse
+
+    app_id     = os.getenv("WECHAT_OPEN_APP_ID", "")
+    app_secret = os.getenv("WECHAT_OPEN_APP_SECRET", "")
+    if not app_id or not app_secret:
+        raise HTTPException(status_code=503, detail="网站应用未配置")
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(
+            "https://api.weixin.qq.com/sns/oauth2/access_token",
+            params={"appid": app_id, "secret": app_secret, "code": code, "grant_type": "authorization_code"},
+            timeout=10,
+        )
+    data = resp.json()
+    openid       = data.get("openid")
+    unionid      = data.get("unionid")
+    access_token = data.get("access_token")
+    if not openid:
+        raise HTTPException(status_code=400, detail="微信授权失败，请重试")
+
+    nickname = ""
+    try:
+        async with httpx.AsyncClient() as client:
+            u = await client.get(
+                "https://api.weixin.qq.com/sns/userinfo",
+                params={"access_token": access_token, "openid": openid, "lang": "zh_CN"},
+                timeout=10,
+            )
+        udata = u.json()
+        nickname = udata.get("nickname", "")
+        if not unionid:
+            unionid = udata.get("unionid")
+    except Exception:
+        pass
+
+    user = None
+    if unionid:
+        user = db.query(User).filter(User.wechat_unionid == unionid).first()
+    if not user:
+        user = db.query(User).filter(User.wechat_openid == openid).first()
+
+    if not user:
+        ref = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        user = User(
+            wechat_openid=openid,
+            wechat_unionid=unionid,
+            nickname=nickname,
+            referral_code=ref,
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        updated = False
+        if unionid and not user.wechat_unionid:
+            user.wechat_unionid = unionid; updated = True
+        if openid and not user.wechat_openid:
+            user.wechat_openid = openid; updated = True
+        if nickname and not user.nickname:
+            user.nickname = nickname; updated = True
+        if updated:
+            db.commit()
+
+    token = _make_token(user.id, user.phone or f"wx_{openid[:8]}")
+
+    if state.startswith("open_"):
+        session_id = state[5:]
+        sess = _QR_SESSIONS.get(session_id)
+        if sess:
+            sess["status"] = "success"
+            sess["token"] = token
+
+    return HTMLResponse(
+        """<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>登录成功</title></head>
+<body style="margin:0;padding:80px 20px 0;text-align:center;font-family:-apple-system,sans-serif;color:#333;background:#f7f7f7;min-height:100vh;box-sizing:border-box">
+<div style="font-size:72px;color:#07C160;line-height:1">✓</div>
+<h2 style="margin:20px 0 8px;font-size:22px">登录成功</h2>
+<p style="color:#888;font-size:14px;margin:0">请回到原页面，系统将自动完成登录</p>
+</body></html>"""
+    )
 
 
 @router.get("/wechat/mp/authorize")
@@ -623,10 +782,12 @@ async def get_paid_orders(request: Request, db: Session = Depends(get_db)):
         if not o.province or not o.rank_input:
             continue
         subject = o.subject or ""
+        # 注意：province/subject 必须 URL 编码，否则 "物理+化学" 里的 "+"
+        # 会被浏览器解析成空格，导致付费验证在 /api/recommend 里失败。
         results_url = (
-            f"/results?province={o.province}&rank={o.rank_input}"
-            + (f"&subject={subject}" if subject else "")
-            + f"&order_no={o.order_no}"
+            f"/results?province={quote(o.province)}&rank={o.rank_input}"
+            + (f"&subject={quote(subject)}" if subject else "")
+            + f"&order_no={quote(o.order_no)}"
         )
         result.append({
             "order_no":   o.order_no,

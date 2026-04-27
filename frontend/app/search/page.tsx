@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, useRef, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -54,6 +54,7 @@ interface MajorResult {
 type TabType = "school" | "major";
 
 function SearchPageInner() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabType>((searchParams.get("tab") as TabType) || "school");
 
@@ -138,7 +139,7 @@ function SearchPageInner() {
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
       <nav className="apple-nav">
         <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", gap: 12 }}>
-          <Link href="/" style={{ fontSize: 14, color: "var(--color-text-secondary)", textDecoration: "none" }}>← 返回</Link>
+          <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ color: "var(--color-separator)" }}>|</span>
           <span style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>高校 & 专业搜索</span>
         </div>

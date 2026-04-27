@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "";
@@ -67,6 +68,7 @@ function Row({ label, cells }: { label: string; cells: (React.ReactNode)[] }) {
 }
 
 export default function ComparePage() {
+  const router = useRouter();
   const [items, setItems] = useState<CompareItem[]>([]);
   const [searchQ, setSearchQ] = useState("");
   const [searchResults, setSearchResults] = useState<Array<{ name: string; tier: string; province: string }>>([]);
@@ -144,8 +146,8 @@ export default function ComparePage() {
     <div style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
       {/* 顶部导航 */}
       <nav className="apple-nav">
-        <div style={{ maxWidth: 960, margin: "0 auto", padding: "0 20px", height: 48, display: "flex", alignItems: "center", gap: 16 }}>
-          <Link href="/" style={{ fontSize: 14, color: "var(--color-text-secondary)", textDecoration: "none" }}>← 首页</Link>
+        <div style={{ maxWidth: 960, margin: "0 auto", padding: "8px 20px", minHeight: 48, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <button onClick={() => router.back()} className="btn-ghost" style={{ fontSize: 14, color: "var(--color-text-secondary)", paddingLeft: 0, paddingRight: 0 }}>← 返回</button>
           <span style={{ color: "var(--color-separator)" }}>|</span>
           <h1 style={{ fontSize: 14, fontWeight: 600 }}>学校对比</h1>
           <span style={{ fontSize: 12, color: "var(--color-text-tertiary)" }}>最多对比 {MAX_COMPARE} 所</span>
@@ -209,14 +211,14 @@ export default function ComparePage() {
             <div style={{ fontSize: 14 }}>在上方搜索框输入学校名称，或在推荐结果页点击「对比」</div>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
             {/* 学校头部卡片 */}
-            <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-              <div style={{ width: 80, flexShrink: 0 }} />
+            <div style={{ display: "flex", gap: 12, marginBottom: 24, minWidth: 640 }}>
+              <div style={{ width: 92, flexShrink: 0 }} />
               {items.map((item) => (
                 <div key={item.name} style={{
                   flex: 1, background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
-                  borderRadius: 14, padding: 16, position: "relative", minWidth: 0,
+                  borderRadius: 14, padding: 16, position: "relative", minWidth: 180,
                 }}>
                   <button
                     onClick={() => removeSchool(item.name)}
@@ -256,7 +258,7 @@ export default function ComparePage() {
                 <div key={`slot-${i}`} style={{
                   flex: 1, border: "2px dashed var(--color-separator)", borderRadius: 14, padding: 16,
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 13, color: "var(--color-text-tertiary)",
+                  fontSize: 13, color: "var(--color-text-tertiary)", minWidth: 180,
                 }}>
                   + 添加学校
                 </div>
@@ -267,7 +269,7 @@ export default function ComparePage() {
             {loaded.length > 0 && (
               <div style={{
                 background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
-                borderRadius: 14, padding: "0 16px", overflow: "hidden",
+                borderRadius: 14, padding: "0 16px", overflow: "hidden", minWidth: 640,
               }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <tbody>
@@ -323,8 +325,8 @@ export default function ComparePage() {
                         const recent = allRecords.sort((a, b) => b.year - a.year).slice(0, 5);
                         return (
                           <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                            {recent.map((r) => (
-                              <div key={`${r.year}-${r.min_rank}`} style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
+                            {recent.map((r, i) => (
+                              <div key={`${r.year}-${r.min_rank}-${i}`} style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
                                 {r.year}年: <strong>{r.min_rank.toLocaleString()}</strong> 位
                               </div>
                             ))}

@@ -133,6 +133,10 @@ def predict_admission(
     ranks_raw = normalized_ranks  # 标准差也基于归一化后的位次计算
     std_rank = statistics.stdev(ranks_raw) if len(ranks_raw) > 1 else avg_rank * 0.1
 
+    # rank_diff 必须在贝叶斯平滑前计算，否则学校级先验会把专业级位次拉偏，
+    # 导致用户看到的"位次差"不是该专业真实录取线，而是被学校其他专业稀释后的值。
+    rank_diff = avg_rank - candidate_rank
+
     # ── 贝叶斯平滑：小样本专业向学校级先验收缩 ──────────────────
     # 当历史数据仅1-2年时，单专业均值不可靠。
     # 用层级贝叶斯思想：posterior = (n * sample_mean + k * prior) / (n + k)
@@ -145,9 +149,6 @@ def predict_admission(
         # 标准差也收缩：小样本时放大不确定性
         if len(recent) == 1:
             std_rank = max(std_rank, avg_rank * 0.15)  # 至少15%不确定性
-
-    # 与候选人位次的差值（正=候选人有优势）
-    rank_diff = avg_rank - candidate_rank
     # 用标准差归一化，使得波动大的专业不过于自信
     volatility_factor = min(2.0, 1 + std_rank / avg_rank) if avg_rank > 0 else 1
     rank_diff_ratio = (rank_diff / avg_rank) / volatility_factor if avg_rank > 0 else 0

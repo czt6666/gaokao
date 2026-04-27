@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState, Suspense, Fragment } from "react";
+import { useEffect, useState, useRef, Suspense, Fragment } from "react";
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
@@ -133,7 +133,13 @@ function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
 function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; score?: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
   const [expanded, setExpanded] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(null), 2500); };
+  const toastRef = useRef<NodeJS.Timeout | null>(null);
+  const showToast = (msg: string) => {
+    if (toastRef.current) clearTimeout(toastRef.current);
+    setToast(msg);
+    toastRef.current = setTimeout(() => setToast(null), 2500);
+  };
+  useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);
   const prob = item.probability ?? 0;
   const scoreDiff = (score && item.avg_min_score_3yr) ? (Number(score) - item.avg_min_score_3yr) : null;
   const isGem = item.is_hidden_gem && item.top_gem;
@@ -148,7 +154,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
       style={{ marginBottom: 12, position: "relative" }}
     >
       <div className="result-card-inner" style={{ justifyContent: "space-between" }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ flex: 1 }}>
           {/* Badges — 最多3个，无emoji */}
           <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8, flexWrap: "wrap" }}>
             {item.is_top_pick && (
@@ -254,57 +260,6 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             </div>
           )}
 
-          {/* 就业数据 — 未付费时模糊锁定 */}
-          {item.employment && item.employment.avg_salary > 0 && (
-            isPaid ? (
-              <div style={{
-                display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-                gap: 8, paddingTop: 12, marginTop: 4,
-                borderTop: "1px solid var(--color-separator)"
-              }}>
-                <div className="data-cell">
-                  <span className="data-cell-label">月薪{item.employment.data_reliability === "数据存疑" ? <span title={item.employment.reliability_note || ""} style={{ color: "#DC2626", fontSize: 9, marginLeft: 2 }}>⚠</span> : item.employment.data_reliability === "多源验证" ? <span style={{ color: "#059669", fontSize: 9, marginLeft: 2 }}>✓</span> : null}</span>
-                  <span className="data-cell-value">¥{(Math.min(item.employment.avg_salary, 18000) / 1000).toFixed(1)}k</span>
-                </div>
-                {item.employment.school_employment_rate != null && item.employment.school_employment_rate > 0 && (
-                  <div className="data-cell">
-                    <span className="data-cell-label">就业率</span>
-                    <span className="data-cell-value">{(item.employment.school_employment_rate * 100).toFixed(1)}%</span>
-                  </div>
-                )}
-                {item.employment.school_postgrad_rate != null && item.employment.school_postgrad_rate > 0 && (
-                  <div className="data-cell">
-                    <span className="data-cell-label">深造率</span>
-                    <span className="data-cell-value">{(item.employment.school_postgrad_rate * 100).toFixed(1)}%</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div
-                onClick={() => onUnlock && onUnlock()}
-                style={{
-                  display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
-                  gap: 8, paddingTop: 12, marginTop: 4,
-                  borderTop: "1px solid var(--color-separator)",
-                  cursor: "pointer", position: "relative",
-                }}
-              >
-                {[["月薪", "¥X.Xk"], ["就业率", "XX%"], ["深造率", "XX%"]].map(([label, val]) => (
-                  <div key={label} className="data-cell" style={{ filter: "blur(4px)", userSelect: "none" }}>
-                    <span className="data-cell-label">{label}</span>
-                    <span className="data-cell-value">{val}</span>
-                  </div>
-                ))}
-                <div style={{
-                  position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: 11, color: "var(--color-accent)", fontWeight: 600, letterSpacing: "0.02em",
-                }}>
-                  🔒 解锁查看就业数据
-                </div>
-              </div>
-            )
-          )}
-
           {/* Big/small year hint */}
           {item.big_small_year?.status && (
             <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 8 }}>
@@ -321,7 +276,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
 
         </div>
 
-        {/* Right: 去年最低分（左）+ 均位次（右）并排 */}
+        {/* Right: 分数信息 + 操作按钮 */}
         <div className="result-card-right" style={{ flexShrink: 0 }}>
           <div style={{ display: "flex", gap: 12, alignItems: "flex-start", justifyContent: "flex-end", marginBottom: 8 }}>
             {/* 去年最低分 */}
@@ -348,9 +303,14 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
               </div>
-              <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: item.rank_diff > 0 ? "#059669" : "#DC2626" }}>
-                {item.rank_diff > 0 ? "+" : ""}{item.rank_diff?.toLocaleString()} 位
-              </div>
+              {(() => {
+                const diff = (item.avg_min_rank_3yr ?? 0) - Number(rank);
+                return (
+                  <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: diff > 0 ? "#059669" : "#DC2626" }}>
+                    {diff > 0 ? `领先 ${diff.toLocaleString()} 位` : `落后 ${Math.abs(diff).toLocaleString()} 位`}
+                  </div>
+                );
+              })()}
             </div>
           </div>
           <div className="rank-actions" style={{ display: "flex", flexDirection: "column", gap: 5 }}>
@@ -360,24 +320,61 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             <button onClick={() => addToCompare(item.school_name, showToast)} className="card-action-secondary">
               对比分析
             </button>
-            <Link
-              href={`/career-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}&school=${encodeURIComponent(item.school_name)}&major=${encodeURIComponent(item.major_name || "")}`}
-              style={{
-                display: "block", textAlign: "center", textDecoration: "none",
-                padding: "6px 0", borderRadius: 980,
-                background: "transparent", border: "1px solid #FF4500",
-                color: "#FF4500", fontSize: 12, fontWeight: 600,
-                letterSpacing: "0.02em", whiteSpace: "nowrap",
-                transition: "background .15s, color .15s",
-              }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "#FF4500"; (e.currentTarget as HTMLAnchorElement).style.color = "#fff"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "transparent"; (e.currentTarget as HTMLAnchorElement).style.color = "#FF4500"; }}
-            >
-              🔮 10年受益预测
-            </Link>
           </div>
         </div>
       </div>
+
+      {/* 就业数据 — 放到卡片底部 */}
+      {item.employment && item.employment.avg_salary > 0 && (
+        isPaid ? (
+          <div className="employment-bar" style={{
+            display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+            gap: 8, padding: "10px 0", marginTop: 8,
+            borderTop: "1px solid var(--color-separator)"
+          }}>
+            <div className="data-cell">
+              <span className="data-cell-label">月薪{item.employment.data_reliability === "数据存疑" ? <span title={item.employment.reliability_note || ""} style={{ color: "#DC2626", fontSize: 9, marginLeft: 2 }}>⚠</span> : item.employment.data_reliability === "多源验证" ? <span style={{ color: "#059669", fontSize: 9, marginLeft: 2 }}>✓</span> : null}</span>
+              <span className="data-cell-value">¥{(Math.min(item.employment.avg_salary, 18000) / 1000).toFixed(1)}k</span>
+            </div>
+            {item.employment.school_employment_rate != null && item.employment.school_employment_rate > 0 && (
+              <div className="data-cell">
+                <span className="data-cell-label">就业率</span>
+                <span className="data-cell-value">{(item.employment.school_employment_rate * 100).toFixed(1)}%</span>
+              </div>
+            )}
+            {item.employment.school_postgrad_rate != null && item.employment.school_postgrad_rate > 0 && (
+              <div className="data-cell">
+                <span className="data-cell-label">深造率</span>
+                <span className="data-cell-value">{(item.employment.school_postgrad_rate * 100).toFixed(1)}%</span>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div
+            className="employment-bar"
+            onClick={() => onUnlock && onUnlock()}
+            style={{
+              display: "grid", gridTemplateColumns: "repeat(3, 1fr)",
+              gap: 8, padding: "10px 0", marginTop: 8,
+              borderTop: "1px solid var(--color-separator)",
+              cursor: "pointer", position: "relative",
+            }}
+          >
+            {[["月薪", "¥X.Xk"], ["就业率", "XX%"], ["深造率", "XX%"]].map(([label, val]) => (
+              <div key={label} className="data-cell" style={{ filter: "blur(4px)", userSelect: "none" }}>
+                <span className="data-cell-label">{label}</span>
+                <span className="data-cell-value">{val}</span>
+              </div>
+            ))}
+            <div style={{
+              position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 11, color: "var(--color-accent)", fontWeight: 600, letterSpacing: "0.02em",
+            }}>
+              🔒 解锁查看就业数据
+            </div>
+          </div>
+        )
+      )}
 
       {/* Expandable analysis */}
       {(item.reason || item.is_hidden_gem || item.big_small_year?.reason) && (
@@ -626,10 +623,16 @@ function ResultsContent() {
   const rank = searchParams.get("rank") || "";
   const province = searchParams.get("province") || "广东";
   const subject = searchParams.get("subject") || "";
+  const examMode = searchParams.get("exam_mode") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
   /** 与卡片「去年最低分」对比用：显式 ?score= 或模考链路的 mock_score */
   const score = searchParams.get("score") || (fromMock ? mockScore : "");
+  // 约束条件（从首页带过来）
+  const cMajor = searchParams.get("c_major") || "";
+  const cCity = searchParams.get("c_city") || "";
+  const cNature = searchParams.get("c_nature") || "";
+  const cTier = searchParams.get("c_tier") || "";
 
   const [data, setData] = useState<RecommendResult | null>(null);
   const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("surge");
@@ -648,10 +651,21 @@ function ResultsContent() {
   const queryOrderKey = `gaokao_order_${province}_${rank}_${subject}`;
   const [orderNo, setOrderNo] = useState<string>(() => {
     try {
-      // 1. Try per-query key (new model)
+      // 1. URL param (from dashboard "我的订单" click / H5 pay redirect / cross-device share)
+      const fromUrl = typeof window !== "undefined"
+        ? new URL(window.location.href).searchParams.get("order_no") || ""
+        : "";
+      if (fromUrl) {
+        try {
+          localStorage.setItem(`gaokao_order_${province}_${rank}_${subject}`, fromUrl);
+          localStorage.setItem(ORDER_KEY, fromUrl);
+        } catch {}
+        return fromUrl;
+      }
+      // 2. Try per-query key (new model)
       const perQuery = localStorage.getItem(`gaokao_order_${province}_${rank}_${subject}`);
       if (perQuery) return perQuery;
-      // 2. Fall back to legacy global key (backward compat for users who already paid)
+      // 3. Fall back to legacy global key (backward compat for users who already paid)
       return localStorage.getItem(ORDER_KEY) || "";
     } catch { return ""; }
   });
@@ -664,7 +678,7 @@ function ResultsContent() {
       // 已付费但未登录（通过order_no识别），引导登录以绑定账户
       const go = confirm("导出报告需要登录账户，以确保报告可跨设备访问。立即前往登录？");
       if (go) {
-        const current = `/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`;
+        const current = typeof window !== "undefined" ? window.location.href : `/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`;
         window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
       }
       return;
@@ -673,7 +687,8 @@ function ResultsContent() {
     setExporting(true);
     try {
       const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${orderParam}`;
+      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${orderParam}${examParam}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
@@ -702,7 +717,8 @@ function ResultsContent() {
     setEmailSending(true);
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
-      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}`;
+      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}${examParam}`;
       const res = await fetch(url, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -813,9 +829,17 @@ function ResultsContent() {
     const timeout = setTimeout(() => controller.abort(), 30000);
 
     const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
+    const constraintParam = (() => {
+      const parts: string[] = [];
+      if (cMajor) parts.push(`c_major=${encodeURIComponent(cMajor)}`);
+      if (cCity) parts.push(`c_city=${encodeURIComponent(cCity)}`);
+      if (cNature) parts.push(`c_nature=${encodeURIComponent(cNature)}`);
+      if (cTier) parts.push(`c_tier=${encodeURIComponent(cTier)}`);
+      return parts.length ? `&${parts.join("&")}` : "";
+    })();
     const authToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     fetch(
-      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${orderParam}`,
+      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${examMode}` : ""}${orderParam}${constraintParam}`,
       {
         signal: controller.signal,
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
@@ -833,9 +857,9 @@ function ResultsContent() {
         setLoading(false);
         // Save to query history (max 5 entries)
         try {
-          const entry = { province, rank, subject, time: Date.now(), total: d.total_matched };
+          const entry = { province, rank, subject, exam_mode: examMode, time: Date.now(), total: d.total_matched };
           const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-          const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject));
+          const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject && h.exam_mode === examMode));
           localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...filtered].slice(0, 5)));
         } catch {}
       })
@@ -855,7 +879,7 @@ function ResultsContent() {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [rank, province, subject, orderNo]);
+  }, [rank, province, subject, orderNo, cMajor, cCity, cNature, cTier]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -898,7 +922,7 @@ function ResultsContent() {
     <div style={{ minHeight: "100vh", background: "var(--color-bg)" }}>
       {/* Nav */}
       <nav className="apple-nav" style={{ position: "relative" }}>
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 20px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto", padding: "8px 20px", minHeight: 52, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <button onClick={() => router.push("/")} className="btn-ghost" style={{ fontSize: 14, paddingLeft: 0, paddingRight: 0, flexShrink: 0 }}>
             ← 重新查询
           </button>
@@ -962,8 +986,8 @@ function ResultsContent() {
             <AuthNav />
           </div>
 
-          {/* 移动端：我的 按钮 */}
-          <div className="nav-mobile-only nav-mobile-menu" style={{ position: "relative", flexShrink: 0 }}>
+          {/* 移动端：更多 按钮 */}
+          <div className="nav-mobile-only nav-mobile-menu" style={{ flexShrink: 0 }}>
             <button
               onClick={() => setShowMobileMenu((v) => !v)}
               style={{
@@ -973,12 +997,12 @@ function ResultsContent() {
                 color: "var(--color-text-secondary)", cursor: "pointer",
               }}
             >
-              我的 {showMobileMenu ? "▴" : "▾"}
+              ⋮
             </button>
             {showMobileMenu && (
               <div
                 style={{
-                  position: "fixed", top: 52, right: 0, left: 0,
+                  position: "absolute", top: "100%", right: 0, left: 0,
                   background: "var(--color-bg-secondary)",
                   borderBottom: "1px solid var(--color-separator)",
                   boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
@@ -1036,13 +1060,43 @@ function ResultsContent() {
                   发送邮件报告
                 </button>
                 <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
-                  <AuthNav redirectOnLogin={typeof window !== "undefined" ? window.location.pathname + window.location.search : undefined} />
+                  <button
+                    onClick={() => router.push("/dashboard")}
+                    style={{
+                      width: "100%", fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                      background: "transparent", border: "none",
+                      color: "var(--color-text-secondary)", cursor: "pointer", textAlign: "left",
+                      display: "flex", alignItems: "center", justifyContent: "space-between",
+                    }}
+                  >
+                    <span>我的</span>
+                    <span style={{ color: "var(--color-text-tertiary)" }}>→</span>
+                  </button>
                 </div>
               </div>
             )}
           </div>
         </div>
       </nav>
+
+      {/* 已应用约束提示 */}
+      {(cMajor || cCity || cNature || cTier) && (
+        <div style={{ background: "#EEF2FF", borderBottom: "1px solid #C7D2FE", padding: "10px 20px" }}>
+          <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: "#1E3A8A" }}>
+            <span style={{ fontWeight: 600 }}>已应用偏好约束：</span>
+            {cMajor && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>专业含「{cMajor}」</span>}
+            {cCity && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>城市：{cCity}</span>}
+            {cNature && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>性质：{cNature}</span>}
+            {cTier && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>档次：{cTier}</span>}
+            <button
+              onClick={() => router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`)}
+              style={{ marginLeft: "auto", background: "none", border: "none", color: "#1E40AF", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
+            >
+              清除约束
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Email input panel */}
       {showEmailInput && (
@@ -1118,72 +1172,26 @@ function ResultsContent() {
           </div>
         )}
 
-        {/* AI 预测入口 */}
+        {/* AI 预测入口 —— 已隐藏（2026-04-26）
+          原因：ai-predict 页面依赖外部 MiroFish 服务，当前未部署，用户反馈入口混乱。
+          Result 页已具备本地群体智能（swarm_predictor.py，<30ms），功能重叠。
+          如需恢复，取消注释下方代码并确保 NEXT_PUBLIC_MIROFISH_URL 已配置。
+        */}
+        {/*
         {(data?.total_matched ?? 0) > 0 && (
-          <Link
-            href={`/ai-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}&subject=${encodeURIComponent(subject)}`}
-            style={{ textDecoration: "none", display: "block", margin: "12px 0 0" }}
-          >
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-              padding: "14px 18px", borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(201,146,42,0.05) 100%)",
-              border: "1px solid rgba(201,146,42,0.25)",
-              borderLeft: "3px solid var(--color-accent)",
-              cursor: "pointer",
-              transition: "box-shadow 0.2s",
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-navy)", marginBottom: 3 }}>
-                  🤖 AI群体智能预测
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                  模拟全省考生填报博弈，预测今年大年/小年 + 冷门窗口期
-                </div>
-              </div>
-              <div style={{
-                flexShrink: 0, padding: "8px 16px", borderRadius: 980,
-                background: "var(--color-navy)", color: "#fff",
-                fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-              }}>
-                立即预测 →
-              </div>
-            </div>
-          </Link>
+          <Link ... > ... </Link>
         )}
+        */}
 
-        {/* 长期受益预测入口 */}
+        {/* 长期受益预测入口 —— 已隐藏（2026-04-26）
+          原因：career-predict 页面依赖外部 MiroFish 服务，当前未部署。
+          如需恢复，取消注释下方代码并确保 NEXT_PUBLIC_MIROFISH_URL 已配置。
+        */}
+        {/*
         {(data?.total_matched ?? 0) > 0 && (
-          <Link
-            href={`/career-predict?province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}`}
-            style={{ textDecoration: "none", display: "block", margin: "10px 0 0" }}
-          >
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
-              padding: "14px 18px", borderRadius: 12,
-              background: "linear-gradient(135deg, rgba(255,69,0,0.04) 0%, rgba(255,200,100,0.06) 100%)",
-              border: "1px solid rgba(255,69,0,0.2)",
-              borderLeft: "3px solid #FF4500",
-              cursor: "pointer",
-            }}>
-              <div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: "#CC2200", marginBottom: 3 }}>
-                  🔮 长期受益预测
-                </div>
-                <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
-                  模拟毕业生、雇主、分析师博弈，预测某所学校10年后的真实职业价值
-                </div>
-              </div>
-              <div style={{
-                flexShrink: 0, padding: "8px 16px", borderRadius: 980,
-                background: "#FF4500", color: "#fff",
-                fontSize: 13, fontWeight: 700, whiteSpace: "nowrap",
-              }}>
-                深度预测 →
-              </div>
-            </div>
-          </Link>
+          <Link ... > ... </Link>
         )}
+        */}
 
         {/* Contextual rank note */}
         {(data?.total_matched ?? 0) > 0 && (() => {
@@ -1219,7 +1227,7 @@ function ResultsContent() {
         })()}
 
         {/* Tab bar */}
-        <div className="tab-bar" style={{ margin: "12px 0 0" }}>
+        <div className="tab-bar" style={{ margin: "12px 0 0", display: "flex", flexWrap: "wrap", gap: 8 }}>
           {tabs.map((t) => (
             <button
               key={t.key}
@@ -1240,7 +1248,7 @@ function ResultsContent() {
         </div>
 
         {/* Tier filter */}
-        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "nowrap", alignItems: "center" }}>
+        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "wrap", alignItems: "center" }}>
           {["", "985", "211", "双一流", "普通"].map((t) => (
             <button
               key={t}

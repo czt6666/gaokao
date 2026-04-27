@@ -269,7 +269,9 @@ export default function SchoolDetailPage() {
     }
     setExportLoading(true);
     try {
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rankStr}&subject=${encodeURIComponent(searchParams.get("subject") || "物理")}`;
+      const examMode = searchParams.get("exam_mode") || "";
+      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rankStr}&subject=${encodeURIComponent(searchParams.get("subject") || "物理")}${examParam}`;
       const res = await fetch(url);
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "未知错误" }));

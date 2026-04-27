@@ -7,11 +7,13 @@ from typing import List, Optional
 import datetime, os, json, csv, io
 from pydantic import BaseModel
 
-from database import get_db, User, Order, UserEvent, ReportLog, ReportScan
+from database import get_db, User, Order, UserEvent, ReportLog, ReportScan, Feedback
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
-ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "yuanxi-admin-2026")
+ADMIN_TOKEN = os.getenv("ADMIN_TOKEN")
+if not ADMIN_TOKEN:
+    raise RuntimeError("环境变量 ADMIN_TOKEN 未设置，无法启动服务")
 
 
 def _verify_admin(x_admin_token: str = Header(...)):
@@ -782,6 +784,7 @@ class AdmissionRecord(BaseModel):
 class ImportRequest(BaseModel):
     records: List[AdmissionRecord]
     delete_existing: bool = False  # if True, delete province+subject_req+years first
+    confirm_code: str = ""  # 当 delete_existing=True 时必须提供确认码
 
 @router.post("/import_admission_records", dependencies=[Depends(_verify_admin)])
 def import_admission_records(req: ImportRequest, db: Session = Depends(get_db)):
@@ -795,7 +798,12 @@ def import_admission_records(req: ImportRequest, db: Session = Depends(get_db)):
         m = re.search(r'(\d+)组', major_name)
         return m.group(1) if m else ''
 
-    if req.delete_existing and req.records:
+    if req.delete_existing:
+        # 二次确认：防止误操作或 token 泄露导致数据被批量删除
+        if req.confirm_code != "DELETE_IMPORT_DATA":
+            raise HTTPException(status_code=400, detail="批量删除需要 confirm_code='DELETE_IMPORT_DATA'")
+        if not req.records:
+            raise HTTPException(status_code=400, detail="delete_existing=True 时 records 不能为空")
         # Group by province+subject_req+year combos to delete
         combos = set((r.province, r.subject_req, r.year) for r in req.records)
         deleted_total = 0
@@ -927,5 +935,37 @@ def get_insights(db: Session = Depends(get_db)):
                 "status": "可校准" if r[2] >= 8 else f"积累中({r[2]}/8)",
             }
             for r in calibration_rows
+        ],
+    }
+
+
+# ── 用户反馈 ──────────────────────────────────────────────────
+@router.get("/feedbacks", dependencies=[Depends(_verify_admin)])
+def list_feedbacks(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    total = db.query(func.count(Feedback.id)).scalar() or 0
+    items = (
+        db.query(Feedback)
+        .order_by(Feedback.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+        .all()
+    )
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [
+            {
+                "id": i.id,
+                "content": i.content,
+                "contact": i.contact,
+                "ip": i.ip,
+                "created_at": i.created_at.strftime("%Y-%m-%d %H:%M:%S") if i.created_at else "",
+            }
+            for i in items
         ],
     }

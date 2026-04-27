@@ -44,10 +44,10 @@ WARM_SPECS: list[dict] = [
     {"province": "广东", "subjects": ["物理"], "rank_lo": 5000, "rank_hi": 100_000, "step": 5000},
     {"province": "广东", "subjects": ["历史"], "rank_lo": 5000, "rank_hi": 40_000, "step": 5000},
     {"province": "河南", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 120_000, "step": 5000},
-    {"province": "山东", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 80_000, "step": 5000},
-    {"province": "浙江", "subjects": ["综合"], "rank_lo": 10_000, "rank_hi": 80_000, "step": 5000},
-    {"province": "北京", "subjects": ["物理"], "rank_lo": 3000, "rank_hi": 60_000, "step": 2500},
-    {"province": "北京", "subjects": ["历史"], "rank_lo": 3000, "rank_hi": 25_000, "step": 2500},
+    {"province": "山东", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 80_000, "step": 5000, "exam_mode": "3+3"},
+    {"province": "浙江", "subjects": ["综合"], "rank_lo": 10_000, "rank_hi": 80_000, "step": 5000, "exam_mode": "3+3"},
+    {"province": "北京", "subjects": ["物理"], "rank_lo": 3000, "rank_hi": 60_000, "step": 2500, "exam_mode": "3+3"},
+    {"province": "北京", "subjects": ["历史"], "rank_lo": 3000, "rank_hi": 25_000, "step": 2500, "exam_mode": "3+3"},
     {"province": "湖北", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 70_000, "step": 5000},
     {"province": "湖南", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 70_000, "step": 5000},
     {"province": "四川", "subjects": ["物理"], "rank_lo": 10_000, "rank_hi": 80_000, "step": 5000},
@@ -55,22 +55,24 @@ WARM_SPECS: list[dict] = [
 ]
 
 
-def iter_warm_tasks() -> Iterable[tuple[str, int, str, bool]]:
-    """生成 (province, rank, subject, is_paid)。"""
+def iter_warm_tasks() -> Iterable[tuple[str, int, str, bool, str]]:
+    """生成 (province, rank, subject, is_paid, exam_mode)。"""
     for spec in WARM_SPECS:
         prov = spec["province"]
         ranks = _rank_grid(spec["rank_lo"], spec["rank_hi"], spec["step"])
+        exam_mode = spec.get("exam_mode", "")
         for subj in spec["subjects"]:
             for r in ranks:
-                yield prov, r, subj, True
+                yield prov, r, subj, True, exam_mode
 
     if os.environ.get("GAOKAO_PREWARM_FREE", "0").lower() in ("1", "true", "yes"):
         for spec in WARM_SPECS[:3]:
             prov = spec["province"]
             ranks = _rank_grid(spec["rank_lo"], spec["rank_hi"], max(spec["step"], 10_000))
+            exam_mode = spec.get("exam_mode", "")
             for subj in spec["subjects"]:
                 for r in ranks:
-                    yield prov, r, subj, False
+                    yield prov, r, subj, False, exam_mode
 
 
 def _prewarm_cache_loop() -> None:
@@ -85,10 +87,10 @@ def _prewarm_cache_loop() -> None:
         warmed = 0
         skipped = 0
         tasks = list(iter_warm_tasks())
-        logger.info(f"[Prewarm] 开始：共 {len(tasks)} 个 (省,位次,选科,is_paid) 任务")
-        for province, rank, subject, is_paid in tasks:
+        logger.info(f"[Prewarm] 开始：共 {len(tasks)} 个 (省,位次,选科,is_paid,exam_mode) 任务")
+        for province, rank, subject, is_paid, exam_mode in tasks:
             try:
-                if _rec_cache_get(province, rank, subject, is_paid) is None:
+                if _rec_cache_get(province, rank, subject, is_paid, exam_mode=exam_mode) is None:
                     _run_recommend_core(
                         province=province,
                         rank=rank,
@@ -96,6 +98,7 @@ def _prewarm_cache_loop() -> None:
                         mode="all",
                         db=db,
                         is_paid=is_paid,
+                        exam_mode=exam_mode,
                     )
                     warmed += 1
                 else:

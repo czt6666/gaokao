@@ -82,6 +82,7 @@ def predict_admission(
     current_year: int = 2025,
     province: str = None,
     school_prior_rank: float = 0,  # 学校级先验位次（同校所有专业均值），用于小样本贝叶斯平滑
+    skip_calibration: bool = False,  # True=返回未校准的 raw sigmoid 概率（用于校准器训练）
 ) -> Dict:
     """
     预测录取概率
@@ -149,9 +150,12 @@ def predict_admission(
         # 标准差也收缩：小样本时放大不确定性
         if len(recent) == 1:
             std_rank = max(std_rank, avg_rank * 0.15)  # 至少15%不确定性
-    # 用标准差归一化，使得波动大的专业不过于自信
-    volatility_factor = min(2.0, 1 + std_rank / avg_rank) if avg_rank > 0 else 1
-    rank_diff_ratio = (rank_diff / avg_rank) / volatility_factor if avg_rank > 0 else 0
+    # ── 缺陷1修复：去掉 volatility_factor 双重波动惩罚 ──────────────
+    # 原设计：volatility_factor = 1 + CV 放在分母，让波动大的专业 sigmoid 更平缓。
+    # 但这和高波动收缩（输出阶段把概率拉向50%）是同一问题的两次惩罚。
+    # 修复：固定 volatility_factor = 1，只保留高波动收缩做单一控制。
+    volatility_factor = 1.0
+    rank_diff_ratio = (rank_diff / avg_rank) if avg_rank > 0 else 0
 
     # 概率计算（sigmoid模型，限制输入范围防止溢出）
     clamped = max(-10.0, min(10.0, rank_diff_ratio * 9))
@@ -159,14 +163,17 @@ def predict_admission(
 
     # P0校准：19.2万条数据训练的分段线性校准（ECE 0.177→0.028）
     _calibrate = _get_calibrator()
-    prob = _calibrate(prob_raw, province)
+    if skip_calibration:
+        prob = prob_raw  # 训练校准器时需要原始 sigmoid 输出
+    else:
+        prob = _calibrate(prob_raw, province)
 
     # ── 高波动收缩：CV>0.20时概率向50%收缩，减轻中间区过度自信 ──
-    # 回测发现：高波动校专业在40-80%概率段系统性偏乐观（河北ECE=0.07）
-    # 收缩公式：prob = 0.5 + (prob - 0.5) * shrink_factor
-    # CV=0.20 → 不收缩；CV=0.40 → 收缩20%（shrink=0.80）
+    # 缺陷2修复：只对真正有问题的中间概率段（40%-80%）做收缩。
+    # 原设计对全范围收缩，会把低概率区间（如10%）也拉向50%，引入新的悲观偏差。
+    # CV 阈值（0.20/0.40/0.50）是经验值，尚未经系统回测验证。
     cv = std_rank / avg_rank if avg_rank > 0 else 1.0
-    if cv > 0.20:
+    if cv > 0.20 and 0.40 < prob < 0.80:
         shrink = max(0.70, 1.0 - (cv - 0.20) * 1.0)  # CV=0.50→0.70
         prob = 0.5 + (prob - 0.5) * shrink
 
@@ -178,23 +185,27 @@ def predict_admission(
         if assumed_avg <= 0:
             return 0.0
         diff = assumed_avg - candidate_rank
-        vf = min(2.0, 1 + std_rank / assumed_avg)
-        ratio = (diff / assumed_avg) / vf
+        # 同步修复：置信区间计算也去掉 volatility_factor 双重惩罚
+        ratio = (diff / assumed_avg)
         c = max(-10.0, min(10.0, ratio * 9))
         return round(1 / (1 + math.exp(-c)) * 100, 1)
 
     sigma_scale = 0.7   # 参考区间缩放系数（非统计置信区间）
-    # 置信区间用 raw prob 计算后再校准（保持单调性）
-    prob_high_raw = _prob_at(avg_rank + sigma_scale * std_rank) / 100
-    prob_low_raw  = _prob_at(avg_rank - sigma_scale * std_rank) / 100
     prob_pct  = round(prob * 100, 1)
-    prob_high = round(_calibrate(max(0.0, min(1.0, prob_high_raw)), province) * 100, 1)
-    prob_low  = round(_calibrate(max(0.0, min(1.0, prob_low_raw)),  province) * 100, 1)
-    prob_high = max(prob_pct, prob_high)
-    prob_low  = min(prob_pct, prob_low)
-    # Only report interval if spread is meaningful (> 3 points)
-    if prob_high - prob_low < 3:
+    if skip_calibration:
+        # 训练校准器时不需要置信区间，减少计算
         prob_high = prob_low = None
+    else:
+        # 置信区间用 raw prob 计算后再校准（保持单调性）
+        prob_high_raw = _prob_at(avg_rank + sigma_scale * std_rank) / 100
+        prob_low_raw  = _prob_at(avg_rank - sigma_scale * std_rank) / 100
+        prob_high = round(_calibrate(max(0.0, min(1.0, prob_high_raw)), province) * 100, 1)
+        prob_low  = round(_calibrate(max(0.0, min(1.0, prob_low_raw)),  province) * 100, 1)
+        prob_high = max(prob_pct, prob_high)
+        prob_low  = min(prob_pct, prob_low)
+        # Only report interval if spread is meaningful (> 3 points)
+        if prob_high - prob_low < 3:
+            prob_high = prob_low = None
 
     # 置信度：综合考虑数据年数 + 位次波动系数（CV = std/mean）
     # 数据多且波动小 → 高置信；数据少或波动大 → 中/低置信
@@ -216,24 +227,35 @@ def predict_admission(
     else:
         big_small = detect_big_small_year(recent)
 
-    # ── 招生计划变动惩罚 ─────────────────────────────────────────
-    # 若今年招生计划显著少于历史均值，历史位次数据偏乐观，需下调概率
+    # ── 招生计划变动惩罚（缺陷3修复：分档处理）───────────────────
+    # 极端缩招时，历史位次完全失去参考价值，线性封顶15%会严重误导用户。
+    # 分三档：
+    #   <20%  正常惩罚
+    #   20-50% 加重惩罚 + 强警告
+    #   >50%   标记数据可靠性极低，概率数字仅供参考
     plan_penalty = 0.0
     plan_warning = ""
+    data_reliability = "正常"
     valid_plans = [r.get("plan_count") for r in recent if r.get("plan_count") and r.get("plan_count", 0) > 0]
     if len(valid_plans) >= 2:
         hist_avg_plan = sum(valid_plans[1:]) / len(valid_plans[1:])   # 往年均值
         latest_plan   = valid_plans[0]                                  # 最新年计划
         if hist_avg_plan > 0:
             change_ratio = (latest_plan - hist_avg_plan) / hist_avg_plan
-            if change_ratio < -0.10:   # 缩招超10%（原30%阈值过高）
-                # 缩招惩罚：概率下调量 = min(15%, 缩招幅度 × 0.3)
-                # 对称设计：与扩招奖励使用同一系数，上下界均为±15%
+            if change_ratio < -0.50:   # 缩招超50%：历史数据参考价值极低
+                plan_penalty = 0.30      # 大幅下调，但更重要的是标记不可靠
+                plan_warning = f"🚨 近年缩招{abs(change_ratio)*100:.0f}%，招生计划发生质变，历史录取数据已失去参考价值，建议直接咨询招生办"
+                data_reliability = "极低"
+            elif change_ratio < -0.20:  # 缩招20%-50%：加重惩罚
+                plan_penalty = min(0.25, 0.06 + abs(change_ratio) * 0.38)
+                plan_warning = f"⚠️ 近年缩招{abs(change_ratio)*100:.0f}%，招生计划大幅缩减，历史数据参考价值下降"
+                data_reliability = "低"
+            elif change_ratio < -0.10:  # 缩招10%-20%：正常惩罚
                 plan_penalty = min(0.15, abs(change_ratio) * 0.3)
                 plan_warning = f"⚠️ 近年缩招{abs(change_ratio)*100:.0f}%，实际难度可能高于历史数据"
-            elif change_ratio > 0.10:  # 扩招超10%
-                # 扩招奖励：对称设计，奖励量 = min(15%, 扩招幅度 × 0.3)
-                plan_penalty = -min(0.15, change_ratio * 0.3)          # 负惩罚=提升概率
+                data_reliability = "中"
+            elif change_ratio > 0.10:   # 扩招超10%
+                plan_penalty = -min(0.15, change_ratio * 0.3)
                 plan_warning = f"📈 近年扩招{change_ratio*100:.0f}%，录取机会大于历史数据"
     prob = min(0.99, max(0.01, prob - plan_penalty))
     prob_pct = round(prob * 100, 1)
@@ -259,6 +281,7 @@ def predict_admission(
         "confidence": confidence,
         "recent_years_data": recent,
         "plan_warning": plan_warning,   # 招生计划变动提示（空字符串=无异常）
+        "data_reliability": data_reliability,  # 正常/中/低/极低
     }
 
 

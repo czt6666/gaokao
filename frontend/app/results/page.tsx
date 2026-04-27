@@ -635,7 +635,7 @@ function ResultsContent() {
   const cTier = searchParams.get("c_tier") || "";
 
   const [data, setData] = useState<RecommendResult | null>(null);
-  const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("surge");
+  const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("stable");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -647,6 +647,15 @@ function ResultsContent() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [lockedExpanded, setLockedExpanded] = useState(false);
+
+  // 登录前把查询条件持久化，供登录后恢复（避免依赖 URL redirect）
+  useEffect(() => {
+    try {
+      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode }));
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [province, rank, subject, examMode]);
+
   // Per-query order_no: keyed by province+rank+subject so one payment can't unlock other queries
   const queryOrderKey = `gaokao_order_${province}_${rank}_${subject}`;
   const [orderNo, setOrderNo] = useState<string>(() => {
@@ -839,7 +848,7 @@ function ResultsContent() {
     })();
     const authToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     fetch(
-      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${examMode}` : ""}${orderParam}${constraintParam}`,
+      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : ""}${orderParam}${constraintParam}`,
       {
         signal: controller.signal,
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},

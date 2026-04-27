@@ -48,7 +48,18 @@ export default function LoginPage() {
     const qrDone = params.get("qr_done");
     if (token) {
       localStorage.setItem("auth_token", token);
-      router.push(params.get("redirect_to") || params.get("redirect") || "/");
+      // 优先从 localStorage 恢复查询条件
+      let target = params.get("redirect_to") || params.get("redirect") || "/";
+      try {
+        const saved = localStorage.getItem("gaokao_query_restore");
+        if (saved) {
+          const q = JSON.parse(saved);
+          if (q.province && q.rank && q.subject) {
+            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+          }
+        }
+      } catch {}
+      router.push(target);
     }
     if (qrDone === "1") {
       setWechatMode("done");
@@ -106,7 +117,20 @@ export default function LoginPage() {
           clearInterval(pollRef.current!);
           localStorage.setItem("auth_token", d.token);
           setWechatMode("done");
-          setTimeout(() => router.push(redirectTarget), 800);
+          setTimeout(() => {
+            // 优先从 localStorage 恢复查询条件
+            let target = redirectTarget;
+            try {
+              const saved = localStorage.getItem("gaokao_query_restore");
+              if (saved) {
+                const q = JSON.parse(saved);
+                if (q.province && q.rank && q.subject) {
+                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+                }
+              }
+            } catch {}
+            router.push(target);
+          }, 800);
         } else if (d.status === "expired") {
           clearInterval(pollRef.current!);
           setWechatMode("error");
@@ -149,7 +173,18 @@ export default function LoginPage() {
         const d = await res.json();
         localStorage.setItem("auth_token", d.token);
         localStorage.setItem("auth_phone", phone);
-        router.push(redirectTarget);
+        // 优先从 localStorage 恢复查询条件，而非依赖 URL redirect
+        let target = redirectTarget;
+        try {
+          const saved = localStorage.getItem("gaokao_query_restore");
+          if (saved) {
+            const q = JSON.parse(saved);
+            if (q.province && q.rank && q.subject) {
+              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+            }
+          }
+        } catch {}
+        router.push(target);
       } else { const d = await res.json(); setError(d.detail || "验证码错误"); }
     } catch { setError("网络错误，请稍后重试"); }
     finally { setLoading(false); }

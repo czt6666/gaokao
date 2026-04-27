@@ -1828,32 +1828,13 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
 
     display_list = combined_96  # 竞争密度惩罚只需对96所运算，无重复
 
-    # 7a. 竞争密度惩罚（PLOS ONE 2022 竞争感知模型）
-    # 仅对展示结果运算（~42条），避免全量 O(n²) 扫描
-    _comp_pen = 0
-    for r in display_list:
-        avg_rank = r["avg_min_rank_3yr"]
-        if avg_rank <= 0:
-            continue
-        band_lo, band_hi = avg_rank * 0.8, avg_rank * 1.2
-        competitors = sum(
-            1 for other in display_list
-            if other is not r and band_lo <= other["avg_min_rank_3yr"] <= band_hi
-        )
-        r["competition_count"] = competitors
-        if competitors > 0:
-            penalty = min(0.12, competitors * 0.004)
-            r["probability"] = round(max(0, r["probability"] * (1 - penalty)), 1)
-            if r["prob_low"] is not None:
-                r["prob_low"] = round(max(0, r["prob_low"] * (1 - penalty)), 1)
-            if r["prob_high"] is not None:
-                r["prob_high"] = round(max(0, r["prob_high"] * (1 - penalty)), 1)
-            _comp_pen += 1
-    _rc("⑳ 竞争密度惩罚", display_n=len(display_list), rows_with_penalty=_comp_pen)
-
-    # 7b. 热门学校流量惩罚（相关性忽视纠正，Jiang SJTU 2021）
+    # 7a+7b. 市场热度指数：合并竞争密度与热门流量惩罚，总惩罚封顶15%
+    # 缺陷6修复：原设计竞争密度（max 12%）和热门流量（max 10%）顺序叠加，
+    # 对同一热门学校可能总惩罚超20%。合并为单一热度指数，封顶15%。
     _heat_pen = 0
     _click_event_rows = 0
+    click_counts: dict = defaultdict(int)
+    avg_clicks = 0.0
     try:
         week_ago = datetime.datetime.utcnow() - datetime.timedelta(days=7)
         click_events = db.query(UserEvent).filter(
@@ -1861,7 +1842,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             UserEvent.created_at >= week_ago
         ).all()
         _click_event_rows = len(click_events)
-        click_counts: dict = defaultdict(int)
         for ev in click_events:
             try:
                 edata = json.loads(ev.event_data or "{}")
@@ -1872,23 +1852,48 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 pass
         if click_counts:
             avg_clicks = sum(click_counts.values()) / len(click_counts)
-            for r in display_list:
-                heat = click_counts.get(r["school_name"], 0)
-                if avg_clicks > 0 and heat > avg_clicks * 2:
-                    heat_ratio = min(heat / avg_clicks, 5.0)
-                    penalty_pct = min(0.10, (heat_ratio - 2.0) / 3.0 * 0.10)
-                    r["probability"] = round(max(0, r["probability"] * (1 - penalty_pct)), 1)
-                    if r["prob_low"] is not None:
-                        r["prob_low"] = round(max(0, r["prob_low"] * (1 - penalty_pct)), 1)
-                    if r["prob_high"] is not None:
-                        r["prob_high"] = round(max(0, r["prob_high"] * (1 - penalty_pct)), 1)
-                    _heat_pen += 1
     except Exception:
         pass
+
+    _comp_pen = 0
+    for r in display_list:
+        avg_rank = r["avg_min_rank_3yr"]
+        # 竞争密度信号 [0, 1]
+        density_signal = 0.0
+        if avg_rank > 0:
+            band_lo, band_hi = avg_rank * 0.8, avg_rank * 1.2
+            competitors = sum(
+                1 for other in display_list
+                if other is not r and band_lo <= other["avg_min_rank_3yr"] <= band_hi
+            )
+            r["competition_count"] = competitors
+            density_signal = min(1.0, competitors / 25.0)  # 25个竞争者=信号满格
+            if competitors > 0:
+                _comp_pen += 1
+
+        # 热门流量信号 [0, 1]
+        traffic_signal = 0.0
+        if avg_clicks > 0:
+            heat = click_counts.get(r["school_name"], 0)
+            if heat > avg_clicks * 2:
+                heat_ratio = min(heat / avg_clicks, 5.0)
+                traffic_signal = min(1.0, (heat_ratio - 2.0) / 3.0)
+                _heat_pen += 1
+
+        # 合并热度指数，总惩罚封顶 15%
+        if density_signal > 0 or traffic_signal > 0:
+            heat_index = 0.6 * density_signal + 0.4 * traffic_signal
+            total_penalty = min(0.15, heat_index * 0.15)
+            r["probability"] = round(max(0, r["probability"] * (1 - total_penalty)), 1)
+            if r["prob_low"] is not None:
+                r["prob_low"] = round(max(0, r["prob_low"] * (1 - total_penalty)), 1)
+            if r["prob_high"] is not None:
+                r["prob_high"] = round(max(0, r["prob_high"] * (1 - total_penalty)), 1)
     _rc(
-        "㉑ 近7日点击热度惩罚",
-        school_click_events=_click_event_rows,
-        rows_with_heat_penalty=_heat_pen,
+        "⑳ 市场热度指数惩罚",
+        display_n=len(display_list),
+        rows_with_penalty=_comp_pen,
+        heat_rows=_heat_pen,
     )
 
     # 7c. 惩罚后后处理

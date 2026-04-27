@@ -9,10 +9,10 @@ import FeedbackModal from "@/components/FeedbackModal";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const PROVINCES = [
-  "北京","河北","四川","贵州","安徽","广西","江西","云南","山西","重庆",
-  "内蒙古","陕西","吉林","新疆","天津","青海","黑龙江","辽宁","湖南",
-  "河南","广东","上海","福建","江苏","山东","浙江","湖北","甘肃","宁夏",
-  "海南","西藏",
+  "安徽","北京","重庆","福建","甘肃","广东","广西","贵州","海南","河北",
+  "河南","黑龙江","湖北","湖南","吉林","江苏","江西","辽宁","内蒙古","宁夏",
+  "青海","山东","山西","陕西","上海","四川","天津","西藏","新疆","云南",
+  "浙江",
 ];
 
 // ── 省份 → 高考模式映射 ───────────────────────────────────────
@@ -75,7 +75,7 @@ function HistoryQuickAccess() {
         {history.map((h: any, i: number) => (
           <button
             key={i}
-            onClick={() => router.push(`/results?province=${encodeURIComponent(h.province)}&rank=${h.rank}&subject=${encodeURIComponent(h.subject)}${h.exam_mode ? `&exam_mode=${h.exam_mode}` : ""}`)}
+            onClick={() => router.push(`/results?province=${encodeURIComponent(h.province)}&rank=${h.rank}&subject=${encodeURIComponent(h.subject)}${h.exam_mode ? `&exam_mode=${encodeURIComponent(h.exam_mode)}` : ""}`)}
             style={{
               padding: "6px 14px", borderRadius: 99, fontSize: 12,
               background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
@@ -93,7 +93,7 @@ function HistoryQuickAccess() {
 export default function Home() {
   const router = useRouter();
   const queryRef = useRef<HTMLDivElement>(null);
-  const [mode, setMode] = useState<"rank"|"score">("rank");
+  const [mode, setMode] = useState<"rank"|"score">("score");
   const [rank, setRank] = useState("");
   const [mockScore, setMockScore] = useState("");
   const [province, setProvince] = useState("北京");
@@ -187,9 +187,9 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${examMode}&from_mock=1&mock_score=${mockScore}${constraintQs}`);
+        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}&from_mock=1&mock_score=${mockScore}${constraintQs}`);
       } else {
-        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${examMode}${constraintQs}`);
+        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}${constraintQs}`);
       }
     } catch (e: any) {
       const msg = e?.name === "AbortError"
@@ -213,7 +213,7 @@ export default function Home() {
     <main style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
       {/* ── Nav ── */}
       <nav className="apple-nav">
-        <div style={{ maxWidth: 980, margin: "0 auto", padding: "0 24px", height: 48, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto", padding: "8px 20px", minHeight: 48, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <span style={{ fontSize: 15, fontFamily: "var(--font-display)" }}>
             <span style={{ fontWeight: 700, color: "var(--color-text-primary)" }}>水卢冷门高报引擎</span>
           </span>
@@ -280,7 +280,7 @@ export default function Home() {
 
       {/* ── Section 1: Hero (full viewport) ── */}
       <section className="hero-section">
-        <div style={{ textAlign: "center", marginBottom: 48, maxWidth: 640 }}>
+        <div style={{ textAlign: "center", marginBottom: 48, maxWidth: 640, width: "100%" }}>
 
           {/* H1 */}
           <h1 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(36px, 7vw, 72px)", fontWeight: 700, lineHeight: 1.3, letterSpacing: "-1.5px", color: "var(--color-text-primary)", marginBottom: 20, wordBreak: "keep-all", overflowWrap: "break-word" }}>
@@ -304,16 +304,16 @@ export default function Home() {
         </div>
 
         {/* Data strip */}
-        <div style={{ display: "flex", gap: 0, borderTop: "1px solid var(--color-separator)", borderBottom: "1px solid var(--color-separator)", padding: "16px 0", width: "100%", maxWidth: 700, justifyContent: "space-around", marginBottom: 56 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, borderTop: "1px solid var(--color-separator)", borderBottom: "1px solid var(--color-separator)", padding: "16px 0", width: "100%", maxWidth: 700, justifyContent: "space-around", marginBottom: 56 }}>
           {[
             ["127,439名", "考生通过这里发现了隐藏的好学校"],
             ["追踪9年", "告诉你今年哪所学校分数线在下滑"],
             ["真实口碑", "宿舍·就业·转专业难度，骗不了人"],
             ["3分钟", "今天填报季，知道你还有哪些选择"],
           ].map(([num, label]) => (
-            <div key={label} style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--color-text-primary)" }}>{num}</div>
-              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2, maxWidth: 120 }}>{label}</div>
+            <div key={label} style={{ textAlign: "center", flex: "1 1 120px", minWidth: 0 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--color-text-primary)", wordBreak: "keep-all" }}>{num}</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 2, wordBreak: "keep-all" }}>{label}</div>
             </div>
           ))}
         </div>
@@ -321,11 +321,11 @@ export default function Home() {
         {/* Query card */}
         <div ref={queryRef} className="apple-card-elevated query-card-mobile" style={{ width: "100%", maxWidth: 480 }}>
           <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 16, textAlign: "center", lineHeight: 1.6 }}>
-            输入你的全省位次，看看你「还能去哪些被低估的学校」
+            输入你的分数或位次，看看你「还能去哪些被低估的学校」
           </p>
           {/* Mode toggle */}
           <div style={{ display: "flex", background: "var(--color-bg-secondary)", borderRadius: "var(--radius-md)", padding: 4, marginBottom: 24 }}>
-            {([["rank","已出分 · 输入位次"], ["score","考前模拟 · 输入分数"]] as const).map(([m, label]) => (
+            {([["score","输入分数"], ["rank","输入位次"]] as const).map(([m, label]) => (
               <button key={m} onClick={() => setMode(m)} style={{
                 flex: 1, padding: "9px 12px", borderRadius: 10, border: "none", cursor: "pointer",
                 fontSize: 13, fontWeight: 500, fontFamily: "var(--font)",
@@ -339,7 +339,7 @@ export default function Home() {
 
           <div style={{ marginBottom: 16 }}>
             <label style={{ fontSize: 12, fontWeight: 500, color: "var(--color-text-secondary)", display: "block", marginBottom: 8, textTransform: "uppercase", letterSpacing: ".5px" }}>
-              {mode === "rank" ? "全省排名位次" : "模考成绩（分）"}
+              {mode === "rank" ? "全省排名位次" : "分数"}
             </label>
             <input
               type="number"
@@ -517,12 +517,12 @@ export default function Home() {
               }}>
                 {/* 专业关键词 */}
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业（关键词匹配）</label>
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业（空格隔开）</label>
                   <input
                     type="text"
                     value={cMajor}
                     onChange={e => setCMajor(e.target.value)}
-                    placeholder="如：计算机、医学、师范…多个用空格分隔"
+                    placeholder="如：计算机 医学 师范…多个用空格分隔"
                     style={{
                       width: "100%", padding: "10px 12px", borderRadius: 10,
                       border: "1px solid var(--color-separator)", fontSize: 14,

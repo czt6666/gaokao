@@ -11,7 +11,7 @@ LOCAL_FRONTEND="$SCRIPT_DIR/frontend"
 REMOTE_BACKEND="/app/mega/backend"
 REMOTE_FRONTEND="/app/mega/frontend"
 PYPI_MIRROR="${UV_PYPI_MIRROR:-https://pypi.tuna.tsinghua.edu.cn/simple}"
-DOMAIN="www.mega.theyuanxi.cn"
+DOMAIN="mega.theyuanxi.cn"
 
 echo "========================================"
 echo "  袁希高报 · mega.theyuanxi.cn 部署"

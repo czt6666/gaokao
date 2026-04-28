@@ -1173,7 +1173,7 @@ export default function AdminPage() {
                 ) : (
                   <div style={{ fontSize: 13, color: "#aeaeb2" }}>暂无推荐数据（用户通过邀请链接注册后显示）</div>
                 )}
-                <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 8 }}>每成功邀请一名付费用户，邀请人额外获得7天会员</div>
+                <div style={{ fontSize: 11, color: "#aeaeb2", marginTop: 8 }}>每成功邀请一名付费用户，邀请人额外获得3天会员</div>
               </div>
             </div>
 

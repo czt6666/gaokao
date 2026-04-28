@@ -15,7 +15,7 @@ const PRODUCT = {
 interface PayModalProps {
   onClose: () => void;
   onSuccess?: (orderNo: string) => void;
-  queryParams?: { province?: string; rank?: number; subject?: string };
+  queryParams?: { province?: string; rank?: number; subject?: string; c_major?: string; c_city?: string; c_nature?: string; c_tier?: string };
   totalSchools?: number;
   isPaid?: boolean; // 由父组件传入，替代 localStorage 判断
 }
@@ -39,6 +39,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
   const [manualCheckLoading, setManualCheckLoading] = useState(false);
   const [manualCheckResult, setManualCheckResult] = useState<"idle" | "not_paid" | "error">("idle");
   const [qrExpiry, setQrExpiry] = useState(0);
+  const [simulateMode, setSimulateMode] = useState(false);
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number>(0);
   const onSuccessRef = useRef(onSuccess);
@@ -88,6 +89,14 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
+  // 检测是否开启本地模拟支付
+  useEffect(() => {
+    fetch(`${API}/api/payment/config`)
+      .then(async (r) => { if (r.ok) return r.json(); return null; })
+      .then((d) => { if (d?.simulate) setSimulateMode(true); })
+      .catch(() => {});
+  }, []);
+
   // 从 localStorage 恢复待付款订单（应对 iOS Safari 后台杀页面）
   useEffect(() => {
     try {
@@ -126,6 +135,10 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           province: queryParams?.province || "",
           rank_input: queryParams?.rank || 0,
           subject: queryParams?.subject || "",
+          c_major: queryParams?.c_major || "",
+          c_city: queryParams?.c_city || "",
+          c_nature: queryParams?.c_nature || "",
+          c_tier: queryParams?.c_tier || "",
         }),
       });
       if (!res.ok) return false;
@@ -168,6 +181,11 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       province: queryParams?.province || "",
       rank_input: queryParams?.rank || 0,
       subject: queryParams?.subject || "",
+      ref_code: typeof window !== "undefined" ? (sessionStorage.getItem("gaokao_ref") || localStorage.getItem("gaokao_ref") || "") : "",
+      c_major: queryParams?.c_major || "",
+      c_city: queryParams?.c_city || "",
+      c_nature: queryParams?.c_nature || "",
+      c_tier: queryParams?.c_tier || "",
     };
 
     try {
@@ -279,6 +297,26 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       }
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function simulatePay() {
+    if (!orderNo) return;
+    try {
+      const res = await fetch(`${API}/api/payment/simulate/${orderNo}`, { method: "POST" });
+      if (res.ok) {
+        const d = await res.json();
+        if (d.status === "paid") {
+          setStatus("paid");
+          try {
+            localStorage.setItem("gaokao_order", orderNo);
+            localStorage.removeItem(pendingKey);
+          } catch {}
+          setTimeout(() => { onSuccessRef.current?.(orderNo); }, 1500);
+        }
+      }
+    } catch {
+      setStatus("failed");
     }
   }
 
@@ -639,6 +677,17 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
                   重新调起 →
                 </button>
               </div>
+            )}
+            {simulateMode && orderNo && (status as string) !== "paid" && (
+              <button
+                onClick={simulatePay}
+                style={{
+                  marginTop: 14, width: "100%", padding: "10px", borderRadius: 8, fontSize: 13,
+                  background: "#34C759", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700,
+                }}
+              >
+                🧪 模拟支付（本地调试）
+              </button>
             )}
           </div>
         )}

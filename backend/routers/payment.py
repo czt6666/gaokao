@@ -14,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 
+# 本地调试：设置 SIMULATE_PAY=1 可跳过真实微信支付
+SIMULATE_PAY = os.getenv("SIMULATE_PAY", "0") == "1"
+
 # 产品定价表（分）
 PRODUCT_AMOUNTS: dict[str, int] = {
     "single_report":  199,   # ¥1.99 — 单次报告解锁
@@ -57,6 +60,11 @@ class CreateOrderRequest(BaseModel):
     province: str = ""
     rank_input: int = 0
     subject: str = ""            # 选科，如"物理+化学"，绑定单次查询
+    ref_code: str = ""           # 邀请码（支付时传入，用于奖励邀请人）
+    c_major: str = ""            # 用户筛选：专业
+    c_city: str = ""             # 用户筛选：城市
+    c_nature: str = ""           # 用户筛选：性质
+    c_tier: str = ""             # 用户筛选：档次
 
 
 @router.post("/create")
@@ -83,6 +91,11 @@ async def create_order(req: CreateOrderRequest, request: Request, db: Session = 
         rank_input=req.rank_input or None,
         subject=req.subject,
         ip=request.client.host if request.client else "",
+        ref_code=req.ref_code or "",
+        c_major=req.c_major or "",
+        c_city=req.c_city or "",
+        c_nature=req.c_nature or "",
+        c_tier=req.c_tier or "",
     )
     db.add(order)
     db.commit()
@@ -124,6 +137,10 @@ class CreateJSAPIRequest(BaseModel):
     province: str = ""
     rank_input: int = 0
     subject: str = ""    # 选科，绑定单次查询
+    c_major: str = ""    # 用户筛选：专业
+    c_city: str = ""     # 用户筛选：城市
+    c_nature: str = ""   # 用户筛选：性质
+    c_tier: str = ""     # 用户筛选：档次
 
 
 @router.post("/wechat/jsapi")
@@ -154,6 +171,10 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
         rank_input=req.rank_input or None,
         subject=req.subject,
         ip=request.client.host if request.client else "",
+        c_major=req.c_major or "",
+        c_city=req.c_city or "",
+        c_nature=req.c_nature or "",
+        c_tier=req.c_tier or "",
     )
     db.add(order)
     db.commit()
@@ -179,6 +200,10 @@ class CreateH5Request(BaseModel):
     province: str = ""
     rank_input: int = 0
     subject: str = ""
+    c_major: str = ""    # 用户筛选：专业
+    c_city: str = ""     # 用户筛选：城市
+    c_nature: str = ""   # 用户筛选：性质
+    c_tier: str = ""     # 用户筛选：档次
 
 
 @router.post("/wechat/h5")
@@ -205,6 +230,10 @@ async def create_h5_order(req: CreateH5Request, request: Request, db: Session = 
         rank_input=req.rank_input or None,
         subject=req.subject,
         ip=client_ip,
+        c_major=req.c_major or "",
+        c_city=req.c_city or "",
+        c_nature=req.c_nature or "",
+        c_tier=req.c_tier or "",
     )
     db.add(order)
     db.commit()
@@ -268,6 +297,10 @@ class CreateJSAPIWebRequest(BaseModel):
     province: str = ""
     rank_input: int = 0
     subject: str = ""
+    c_major: str = ""    # 用户筛选：专业
+    c_city: str = ""     # 用户筛选：城市
+    c_nature: str = ""   # 用户筛选：性质
+    c_tier: str = ""     # 用户筛选：档次
 
 
 @router.post("/wechat/jsapi_web")
@@ -297,6 +330,10 @@ async def create_jsapi_web_order(req: CreateJSAPIWebRequest, request: Request, d
         rank_input=req.rank_input or None,
         subject=req.subject,
         ip=_get_client_ip(request),
+        c_major=req.c_major or "",
+        c_city=req.c_city or "",
+        c_nature=req.c_nature or "",
+        c_tier=req.c_tier or "",
     )
     db.add(order)
     db.commit()
@@ -463,21 +500,32 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
                     base = user.subscription_end_at if (user.subscription_end_at and user.subscription_end_at > now) else now
                     user.subscription_end_at = base + datetime.timedelta(days=90)
                 # single_report / report_export: is_paid=1 永久，subscription_end_at 不变
-        # 推荐奖励：如果该用户是被推荐注册的，奖励推荐人7天（无论推荐人是否已付费）
-        if order.user_id:
+        # 推荐奖励：优先从订单 ref_code 读取（支付环节传入），fallback 到用户注册时的 referred_by
+        def _reward_referrer(referrer_id: int, source: str):
+            referrer = db.query(User).filter(User.id == referrer_id).first()
+            if not referrer:
+                return
+            now = datetime.datetime.utcnow()
+            base = referrer.subscription_end_at if (referrer.subscription_end_at and referrer.subscription_end_at > now) else now
+            new_end = min(base + datetime.timedelta(days=3), SEASON_END)
+            referrer.subscription_end_at = new_end
+            if not referrer.is_paid:
+                referrer.is_paid = 1
+                referrer.subscription_type = "season_2026"
+            logger.info(f"Referral reward: user {referrer.id} +3 days via {source}")
+
+        rewarded = False
+        # 1) 新逻辑：支付时传入的 ref_code
+        if order.ref_code:
+            referrer = db.query(User).filter(User.referral_code == order.ref_code).first()
+            if referrer:
+                _reward_referrer(referrer.id, f"ref_code={order.ref_code}")
+                rewarded = True
+        # 2) 旧逻辑：注册时绑定的 referred_by（向后兼容）
+        if not rewarded and order.user_id:
             paying_user = db.query(User).filter(User.id == order.user_id).first()
             if paying_user and paying_user.referred_by:
-                referrer = db.query(User).filter(User.id == paying_user.referred_by).first()
-                if referrer:
-                    now = datetime.datetime.utcnow()
-                    # 推荐人有有效订阅则顺延，否则从现在起给7天（不超过赛季结束）
-                    base = referrer.subscription_end_at if (referrer.subscription_end_at and referrer.subscription_end_at > now) else now
-                    new_end = min(base + datetime.timedelta(days=7), SEASON_END)
-                    referrer.subscription_end_at = new_end
-                    if not referrer.is_paid:
-                        referrer.is_paid = 1
-                        referrer.subscription_type = "season_2026"
-                    logger.info(f"Referral reward: user {referrer.id} +7 days for referring {order.user_id}")
+                _reward_referrer(paying_user.referred_by, f"referred_by user={order.user_id}")
         db.commit()  # 单次 commit：Order + User 要么同时成功，要么同时回滚
         logger.info(f"Order {order_no} marked PAID, user={order.user_id}")
         # 发送支付成功通知邮件（静默失败，不影响支付结果）
@@ -850,3 +898,26 @@ def _verify_wechat_signature(timestamp: str, nonce: str, body: str, signature: s
 async def _alipay_precreate(order_no: str) -> str | None:
     """支付宝预创建（预留，待支付宝资质通过后实现）"""
     return None
+
+
+# ── 本地调试：模拟支付（仅当 SIMULATE_PAY=1 时启用）─────────────────────────
+
+@router.get("/config")
+async def payment_config():
+    """返回支付配置，前端据此决定是否显示模拟支付按钮。"""
+    return {"simulate": SIMULATE_PAY}
+
+
+@router.post("/simulate/{order_no}")
+async def simulate_pay(order_no: str, db: Session = Depends(get_db)):
+    """本地调试：跳过真实微信支付，直接将订单标记为已支付。"""
+    if not SIMULATE_PAY:
+        raise HTTPException(status_code=403, detail="模拟支付未启用")
+    order = db.query(Order).filter(Order.order_no == order_no).first()
+    if not order:
+        raise HTTPException(status_code=404, detail="订单不存在")
+    if order.status == "paid":
+        return {"status": "paid", "order_no": order_no}
+    _mark_paid(order_no, transaction_id=f"SIMULATE_{datetime.datetime.utcnow().timestamp()}")
+    db.refresh(order)
+    return {"status": order.status, "order_no": order_no}

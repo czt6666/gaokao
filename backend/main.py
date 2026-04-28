@@ -312,6 +312,11 @@ def recommend(
                     ).first()
                     if matching_order:
                         is_paid = True
+                    # 订阅制会员：未过期内无限次查询（不依赖单笔订单匹配）
+                    if not is_paid and u.is_paid and u.subscription_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+                        now = datetime.datetime.utcnow()
+                        if u.subscription_end_at and u.subscription_end_at > now:
+                            is_paid = True
 
     constraints = {}
     if c_major.strip():

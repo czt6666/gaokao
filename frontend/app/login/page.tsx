@@ -55,7 +55,7 @@ export default function LoginPage() {
         if (saved) {
           const q = JSON.parse(saved);
           if (q.province && q.rank && q.subject) {
-            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
           }
         }
       } catch {}
@@ -125,7 +125,7 @@ export default function LoginPage() {
               if (saved) {
                 const q = JSON.parse(saved);
                 if (q.province && q.rank && q.subject) {
-                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
                 }
               }
             } catch {}
@@ -164,7 +164,7 @@ export default function LoginPage() {
     if (code.length !== 6) { setError("请输入6位验证码"); return; }
     setError(""); setLoading(true);
     try {
-      const refCode = typeof window !== "undefined" ? localStorage.getItem("gaokao_ref") || "" : "";
+      const refCode = typeof window !== "undefined" ? (sessionStorage.getItem("gaokao_ref") || localStorage.getItem("gaokao_ref") || "") : "";
       const res = await fetch(`${API}/api/auth/sms/verify`, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone, code, ref_code: refCode }),
@@ -180,7 +180,7 @@ export default function LoginPage() {
           if (saved) {
             const q = JSON.parse(saved);
             if (q.province && q.rank && q.subject) {
-              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}`;
+              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
             }
           }
         } catch {}

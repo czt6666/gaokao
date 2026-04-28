@@ -727,16 +727,16 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
         "single_report":  "单次报告",
         "report_export":  "单次报告",
     }
-    # 推荐统计
+    # 推荐统计：注册时绑定 referred_by 的用户 + 支付时带 ref_code 的订单用户
     referral_count = 0
     try:
         from database import Order as _Order
-        referral_count = db.query(_Order).filter(
-            _Order.user_id.in_(
-                db.query(User.id).filter(User.referred_by == user.id)
-            ),
+        referred_via_reg = [r[0] for r in db.query(User.id).filter(User.referred_by == user.id).all()]
+        referred_via_order = [r[0] for r in db.query(_Order.user_id).filter(
+            _Order.ref_code == user.referral_code,
             _Order.status == "paid"
-        ).count()
+        ).distinct().all()]
+        referral_count = len(set(referred_via_reg + referred_via_order))
     except Exception:
         pass
 
@@ -797,6 +797,10 @@ async def get_paid_orders(request: Request, db: Session = Depends(get_db)):
             "amount":     round((o.amount or 0) / 100, 2),
             "pay_time":   o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
             "results_url": results_url,
+            "c_major":    o.c_major or "",
+            "c_city":     o.c_city or "",
+            "c_nature":   o.c_nature or "",
+            "c_tier":     o.c_tier or "",
         })
 
     return {"orders": result}

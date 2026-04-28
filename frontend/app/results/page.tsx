@@ -665,10 +665,10 @@ function ResultsContent() {
   // 登录前把查询条件持久化，供登录后恢复（避免依赖 URL redirect）
   useEffect(() => {
     try {
-      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode }));
+      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode, fromMock, mockScore }));
     } catch {}
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [province, rank, subject, examMode]);
+  }, [province, rank, subject, examMode, fromMock, mockScore]);
 
   // Per-query order_no: keyed by province+rank+subject so one payment can't unlock other queries
   const queryOrderKey = `gaokao_order_${province}_${rank}_${subject}`;
@@ -1565,7 +1565,7 @@ function ResultsContent() {
             setTimeout(() => setToast(null), 4000);
             setLoading(true);
           }}
-          queryParams={{ province, rank: rank ? Number(rank) : undefined, subject }}
+          queryParams={{ province, rank: rank ? Number(rank) : undefined, subject, c_major: cMajor, c_city: cCity, c_nature: cNature, c_tier: cTier }}
           totalSchools={totalSchools}
           isPaid={data?.is_paid ?? false}
         />

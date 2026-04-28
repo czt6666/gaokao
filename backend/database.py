@@ -234,6 +234,11 @@ class Order(Base):
     rank_input      = Column(Integer, nullable=True)        # 用户查询位次
     province        = Column(String(10), default="")
     subject         = Column(String(50), default="")        # 选科，如"物理+化学"
+    ref_code        = Column(String(10), default="")        # 邀请码（支付时传入，用于奖励邀请人）
+    c_major         = Column(String(50), default="")        # 用户筛选：专业
+    c_city          = Column(String(20), default="")        # 用户筛选：城市
+    c_nature        = Column(String(20), default="")        # 用户筛选：性质
+    c_tier          = Column(String(20), default="")        # 用户筛选：档次
 
     __table_args__ = (Index("ix_order_status_created", "status", "created_at"),)
 

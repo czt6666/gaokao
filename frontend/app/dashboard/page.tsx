@@ -13,6 +13,10 @@ interface PaidOrder {
   amount: number;
   pay_time: string;
   results_url: string;
+  c_major?: string;
+  c_city?: string;
+  c_nature?: string;
+  c_tier?: string;
 }
 
 interface UserInfo {
@@ -105,7 +109,7 @@ export default function DashboardPage() {
     : null;
 
   const referralCount = user.referral_count ?? 0;
-  const rewardDays = referralCount * 7;
+  const rewardDays = referralCount * 3;
 
   // Build re-query URL from stored params
   const savedProvince = typeof window !== "undefined" ? (localStorage.getItem("gaokao_province") || "") : "";
@@ -227,64 +231,15 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* ── 推荐返佣 ── */}
-        {user.referral_code && (
+        {/* ── 推荐返佣 ── 暂时隐藏 ── */}
+        {/* {user?.referral_code && (
           <div style={{
             background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
             borderRadius: 16, padding: "18px 20px", marginBottom: 16,
           }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>邀请好友 · 你们都省钱</div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
-              朋友通过你的链接付费后，<strong style={{ color: "var(--color-accent)" }}>你自动获得7天免费</strong>——在最关键的高考季，白送一次重查机会。
-            </div>
-
-            {/* Progress bar to next milestone */}
-            {(() => {
-              const MILESTONES = [4, 8, 15];
-              const LABELS = ["近1个月免费", "近2个月免费", "整季度免费"];
-              const nextIdx = MILESTONES.findIndex(m => referralCount < m);
-              const next = nextIdx >= 0 ? MILESTONES[nextIdx] : MILESTONES[2];
-              const nextLabel = nextIdx >= 0 ? LABELS[nextIdx] : LABELS[2];
-              const prev = nextIdx > 0 ? MILESTONES[nextIdx - 1] : 0;
-              const pct = nextIdx >= 0 ? (next === prev ? 100 : Math.min(((referralCount - prev) / (next - prev)) * 100, 100)) : 100;
-              return (
-                <div style={{ marginBottom: 12 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 5 }}>
-                    <span>已邀请 <strong style={{ color: "var(--color-text-primary)" }}>{referralCount}</strong> 人付费</span>
-                    <span style={{ color: "var(--color-accent)", fontWeight: 600 }}>
-                      {referralCount < next ? `再邀 ${next - referralCount} 人 → ${nextLabel}` : `✓ ${nextLabel}`}
-                    </span>
-                  </div>
-                  <div style={{ height: 5, background: "var(--color-separator)", borderRadius: 99, overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: "var(--color-accent)", borderRadius: 99, transition: "width 0.5s" }} />
-                  </div>
-                  {rewardDays > 0 && (
-                    <div style={{ fontSize: 11, color: "#34C759", marginTop: 5, fontWeight: 500 }}>
-                      ✓ 已累计获得 {rewardDays} 天奖励
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-
-            <button
-              onClick={() => {
-                const link = `https://www.theyuanxi.cn/?ref=${user.referral_code}`;
-                const text = `高考志愿填报神器！输入位次自动算出每所学校录取概率，冷门宝藏院校一键找到，比找机构便宜太多了。用我的专属链接还有优惠 👉 ${link}`;
-                try { navigator.clipboard.writeText(text); } catch {}
-                setRefCopied(true);
-                setTimeout(() => setRefCopied(false), 2500);
-              }}
-              style={{
-                width: "100%", padding: "11px", borderRadius: 10, fontSize: 13,
-                background: refCopied ? "#34C759" : "#07C160", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, transition: "background 0.2s",
-              }}
-            >
-              {refCopied ? "✓ 已复制，发给朋友即可" : "复制专属邀请链接"}
-            </button>
+            ...
           </div>
-        )}
+        )} */}
 
         {/* ── 已购报告历史 ── */}
         {paidOrders.length > 0 && (
@@ -293,36 +248,63 @@ export default function DashboardPage() {
             borderRadius: 16, padding: "18px 20px", marginBottom: 16,
           }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>已购报告</div>
-            {paidOrders.map((o) => (
-              <div
-                key={o.order_no}
-                style={{
-                  display: "flex", alignItems: "center", justifyContent: "space-between",
-                  padding: "10px 0",
-                  borderBottom: "1px solid var(--color-separator)",
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
-                    {o.province} · 位次 {o.rank_input.toLocaleString()}
-                    {o.subject ? ` · ${o.subject}` : ""}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 2 }}>
-                    {o.pay_time} · ¥{o.amount.toFixed(2)}
-                  </div>
-                </div>
-                <a
-                  href={o.results_url}
+            {paidOrders.map((o) => {
+              const hasConstraints = o.c_major || o.c_city || o.c_nature || o.c_tier;
+              return (
+                <div
+                  key={o.order_no}
                   style={{
-                    fontSize: 12, fontWeight: 600, color: "var(--color-navy)",
-                    background: "rgba(0,56,179,0.07)", borderRadius: 8,
-                    padding: "5px 12px", textDecoration: "none", flexShrink: 0,
+                    display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "10px 0",
+                    borderBottom: "1px solid var(--color-separator)",
                   }}
                 >
-                  查看报告
-                </a>
-              </div>
-            ))}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: 500, color: "var(--color-text-primary)" }}>
+                      {o.province} · 位次 {o.rank_input.toLocaleString()}
+                      {o.subject ? ` · ${o.subject}` : ""}
+                    </div>
+                    {hasConstraints && (
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 4 }}>
+                        {o.c_major && (
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#EEF2FF", color: "#1E3A8A" }}>
+                            专业含「{o.c_major}」
+                          </span>
+                        )}
+                        {o.c_city && (
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#F0FDF4", color: "#14532D" }}>
+                            城市：{o.c_city}
+                          </span>
+                        )}
+                        {o.c_nature && (
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#FFFBEB", color: "#92400E" }}>
+                            性质：{o.c_nature}
+                          </span>
+                        )}
+                        {o.c_tier && (
+                          <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#FEF2F2", color: "#7F1D1D" }}>
+                            档次：{o.c_tier}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 2 }}>
+                      {o.pay_time} · ¥{o.amount.toFixed(2)}
+                    </div>
+                  </div>
+                  <a
+                    href={o.results_url}
+                    style={{
+                      fontSize: 12, fontWeight: 600, color: "var(--color-navy)",
+                      background: "rgba(0,56,179,0.07)", borderRadius: 8,
+                      padding: "5px 12px", textDecoration: "none", flexShrink: 0, marginLeft: 10,
+                    }}
+                  >
+                    查看报告
+                  </a>
+                </div>
+              );
+            })}
           </div>
         )}
 

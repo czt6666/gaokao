@@ -155,12 +155,12 @@ export default function Home() {
       }
     } catch {}
     track("page_view", { page: "/" });
-    // Capture referral code from URL and persist to localStorage
+    // Capture referral code from URL and persist to sessionStorage
     try {
       const params = new URLSearchParams(window.location.search);
       const ref = params.get("ref");
       if (ref && ref.match(/^[A-Z0-9]{6,10}$/)) {
-        localStorage.setItem("gaokao_ref", ref);
+        sessionStorage.setItem("gaokao_ref", ref);
       }
     } catch {}
   }, []);

@@ -425,7 +425,7 @@ export default function Home() {
         </div>
 
         {/* Query card */}
-        <div ref={queryRef} className="apple-card-elevated query-card-mobile" style={{ width: "100%", maxWidth: 480 }}>
+        <div ref={queryRef} id="query-form" className="apple-card-elevated query-card-mobile" style={{ width: "100%", maxWidth: 480 }}>
           <p style={{ fontSize: 14, color: "var(--color-text-secondary)", marginBottom: 16, textAlign: "center", lineHeight: 1.6 }}>
             输入你的分数或位次，看看你「还能去哪些被低估的学校」
           </p>

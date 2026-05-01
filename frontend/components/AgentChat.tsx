@@ -9,11 +9,25 @@ const API_BASE =
     ? "https://api.theyuanxi.cn"
     : "http://localhost:8000");
 
+interface Source {
+  title: string;
+  url: string;
+}
+
+interface Action {
+  label: string;
+  url: string;
+  icon: string;
+  desc?: string;
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   searched?: boolean;
   searchQuery?: string;
+  sources?: Source[];
+  actions?: Action[];
   pending?: boolean;
 }
 
@@ -232,6 +246,8 @@ export default function AgentChat() {
       let accumulated = "";
       let searched = false;
       let searchQuery = "";
+      let sources: Source[] = [];
+      let actions: Action[] = [];
 
       while (true) {
         const { done, value } = await reader.read();
@@ -264,7 +280,10 @@ export default function AgentChat() {
             } else if (evt.type === "meta") {
               searched = !!evt.searched;
               searchQuery = evt.query || "";
+              sources = evt.sources || [];
               setStatusText("");
+            } else if (evt.type === "actions") {
+              actions = evt.actions || [];
             }
           } catch {
             // ignore parse errors
@@ -283,6 +302,8 @@ export default function AgentChat() {
             pending: false,
             searched,
             searchQuery,
+            sources,
+            actions,
           };
         }
         return next;
@@ -575,19 +596,92 @@ export default function AgentChat() {
                   )}
                 </div>
 
-                {/* 搜索标记 */}
-                {msg.role === "assistant" && msg.searched && msg.searchQuery && (
-                  <div
-                    style={{
-                      marginTop: 4,
-                      fontSize: 11,
-                      color: "#c9922a",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 4,
-                    }}
-                  >
-                    <span>🔍 联网搜索：{msg.searchQuery}</span>
+                {/* 来源 / 搜索标记 */}
+                {msg.role === "assistant" && msg.searched && (
+                  <div style={{ marginTop: 6, maxWidth: "95%" }}>
+                    {msg.sources && msg.sources.length > 0 ? (
+                      <>
+                        <div style={{ fontSize: 11, color: "#888", marginBottom: 4 }}>参考来源</div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+                          {msg.sources.map((s, si) => {
+                            const href = s.url || `https://www.baidu.com/s?wd=${encodeURIComponent(s.title)}`;
+                            const label = s.url
+                              ? (s.title && s.title !== s.url ? s.title : (() => { try { return new URL(s.url).hostname; } catch { return s.url; } })())
+                              : s.title;
+                            return (
+                              <a
+                                key={si}
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  fontSize: 11,
+                                  color: "#c9922a",
+                                  textDecoration: "none",
+                                  padding: "2px 8px",
+                                  background: "rgba(201,146,42,0.07)",
+                                  borderRadius: 6,
+                                  border: "1px solid rgba(201,146,42,0.2)",
+                                }}
+                              >
+                                🔗 {label}
+                              </a>
+                            );
+                          })}
+                        </div>
+                      </>
+                    ) : msg.searchQuery ? (
+                      <div style={{ fontSize: 11, color: "#c9922a", display: "flex", alignItems: "center", gap: 4 }}>
+                        🔍 联网搜索：{msg.searchQuery}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+
+                {/* 意图导航按钮 */}
+                {msg.role === "assistant" && msg.actions && msg.actions.length > 0 && (
+                  <div style={{ marginTop: 10, maxWidth: "95%", display: "flex", flexDirection: "column", gap: 6 }}>
+                    <div style={{ fontSize: 11, color: "#888" }}>快速跳转</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {msg.actions.map((action, ai) => (
+                        <a
+                          key={ai}
+                          href={action.url}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "7px 12px",
+                            background: "linear-gradient(135deg, rgba(26,39,68,0.06) 0%, rgba(201,146,42,0.08) 100%)",
+                            border: "1px solid rgba(26,39,68,0.12)",
+                            borderRadius: 10,
+                            textDecoration: "none",
+                            color: "#1a2744",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            transition: "all 0.15s",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(26,39,68,0.1) 0%, rgba(201,146,42,0.15) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(201,146,42,0.4)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "linear-gradient(135deg, rgba(26,39,68,0.06) 0%, rgba(201,146,42,0.08) 100%)";
+                            e.currentTarget.style.borderColor = "rgba(26,39,68,0.12)";
+                          }}
+                        >
+                          <span style={{ fontSize: 14 }}>{action.icon}</span>
+                          <div>
+                            <div style={{ lineHeight: 1.3 }}>{action.label}</div>
+                            {action.desc && (
+                              <div style={{ fontSize: 10, color: "#888", fontWeight: 400, lineHeight: 1.3, marginTop: 1 }}>{action.desc}</div>
+                            )}
+                          </div>
+                          <span style={{ marginLeft: 2, color: "#c9922a", fontSize: 11 }}>→</span>
+                        </a>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

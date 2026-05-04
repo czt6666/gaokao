@@ -14,6 +14,7 @@ interface ChartDay { date: string; queries: number; paid: number; revenue: numbe
 interface Order {
   order_no: string; amount: number; status: string; pay_method: string;
   province: string; rank_input: number; created_at: string; pay_time: string; user_id: number;
+  c_major: string; c_city: string; c_nature: string; c_tier: string; mock_score: number;
 }
 interface UserRow {
   id: number; phone: string; province: string; is_paid: number; wechat: string;
@@ -316,11 +317,11 @@ export default function AdminPage() {
 
   const handleGrantPaid = (userId: number, phone: string) => {
     setConfirmDialog({
-      msg: `确认为「${phone || `用户${userId}`}」开通付费权限？`,
+      msg: `确认为「${phone || `用户${userId}`}」开通 2026 填报季会员？\n到期时间：2026-09-01`,
       onConfirm: async () => {
         try {
           await apiFetch(`/api/admin/users/${userId}/grant_paid`, { method: "POST" });
-          setGrantMsg(`已为 ${phone || `用户${userId}`} 开通付费权限`);
+          setGrantMsg(`已为 ${phone || `用户${userId}`} 开通季会员`);
           setTimeout(() => setGrantMsg(""), 3000);
           _refreshUsers();
         } catch { setError("操作失败"); }
@@ -448,7 +449,7 @@ export default function AdminPage() {
       <div style={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E5E5EA", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-            <div style={{ fontSize: 15, fontWeight: 700 }}>水卢冷门高报引擎</div>
+            <a href="/" style={{ fontSize: 15, fontWeight: 700, color: "#000", textDecoration: "none" }}>水卢冷门高报引擎</a>
             <div style={{ width: 1, height: 16, background: "#E5E5EA" }} />
             <div style={{ display: "flex", gap: 2 }}>
               <Tab id="dashboard" label="概览" />
@@ -864,7 +865,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#F5F5F7" }}>
-                    {["订单号", "金额", "状态", "支付方式", "省份", "位次", "创建时间", "支付时间", "操作"].map(h => (
+                    {["订单号", "金额", "状态", "支付方式", "省份", "位次", "分数", "筛选条件", "创建时间", "支付时间", "操作"].map(h => (
                       <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -883,6 +884,16 @@ export default function AdminPage() {
                       <td style={{ padding: "10px 16px", color: "#6E6E73" }}>{o.pay_method || "—"}</td>
                       <td style={{ padding: "10px 16px" }}>{o.province || "—"}</td>
                       <td style={{ padding: "10px 16px" }}>{o.rank_input?.toLocaleString() || "—"}</td>
+                      <td style={{ padding: "10px 16px" }}>{o.mock_score || "—"}</td>
+                      <td style={{ padding: "10px 16px", fontSize: 11 }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200 }}>
+                          {o.c_major && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#E8F4FD", color: "#0071E3" }}>专业:{o.c_major}</span>}
+                          {o.c_city && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#EDFBF2", color: "#34C759" }}>城市:{o.c_city}</span>}
+                          {o.c_nature && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#FFF9E6", color: "#FF9500" }}>性质:{o.c_nature}</span>}
+                          {o.c_tier && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#F5F5F7", color: "#6E6E73" }}>档次:{o.c_tier}</span>}
+                          {!o.c_major && !o.c_city && !o.c_nature && !o.c_tier && <span style={{ color: "#aeaeb2" }}>—</span>}
+                        </div>
+                      </td>
                       <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{o.created_at}</td>
                       <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{o.pay_time || "—"}</td>
                       <td style={{ padding: "10px 16px" }}>
@@ -896,7 +907,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {!orders.length && (
-                    <tr><td colSpan={9} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无订单数据</td></tr>
+                    <tr><td colSpan={11} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无订单数据</td></tr>
                   )}
                 </tbody>
               </table>

@@ -4,25 +4,25 @@ import { useRouter } from "next/navigation";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
-// 唯一产品：2026高考填报季
-const PRODUCT = {
-  productType: "single_report",
-  price: 1.99,
-  label: "解锁完整报告",
-  desc: "本次查询的完整分析报告",
-};
+const PRODUCTS = [
+  { productType: "trial_report",  price: 9.9,  label: "试看报告",       desc: "解锁前3所学校的完整分析", highlight: false },
+  { productType: "single_report", price: 39,   label: "单次完整报告",   desc: "本次查询的全部院校完整分析", highlight: true },
+  { productType: "season_2026",   price: 99,   label: "2026填报季会员", desc: "即日起至2026年9月1日 · 无限次查询", highlight: false },
+];
 
 interface PayModalProps {
   onClose: () => void;
   onSuccess?: (orderNo: string) => void;
-  queryParams?: { province?: string; rank?: number; subject?: string; c_major?: string; c_city?: string; c_nature?: string; c_tier?: string };
+  queryParams?: { province?: string; rank?: number; subject?: string; c_major?: string; c_city?: string; c_nature?: string; c_tier?: string; mock_score?: number };
   totalSchools?: number;
   isPaid?: boolean; // 由父组件传入，替代 localStorage 判断
+  defaultProductType?: string; // 默认选中的产品类型，如 "trial_report"
+  existingProductType?: string; // 用户已购产品类型，用于过滤已购选项
 }
 
 type OrderStatus = "idle" | "pending" | "paid" | "failed" | "timeout";
 
-export default function PayModal({ onClose, onSuccess, queryParams, totalSchools, isPaid }: PayModalProps) {
+export default function PayModal({ onClose, onSuccess, queryParams, totalSchools, isPaid, defaultProductType, existingProductType }: PayModalProps) {
   const router = useRouter();
 
   // Key for persisting pending payment across page reloads (iOS Safari kills bg tabs)
@@ -40,10 +40,33 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
   const [manualCheckResult, setManualCheckResult] = useState<"idle" | "not_paid" | "error">("idle");
   const [qrExpiry, setQrExpiry] = useState(0);
   const [simulateMode, setSimulateMode] = useState(false);
+  // 根据已购产品过滤选项：已购 trial 隐藏 ¥9.9；已购 single 隐藏 ¥9.9 和 ¥39
+  const visibleProducts = PRODUCTS.filter((p) => {
+    if (existingProductType === "trial_report") {
+      return p.productType !== "trial_report";
+    }
+    if (existingProductType === "single_report" || existingProductType === "report_export") {
+      return p.productType === "season_2026";
+    }
+    return true;
+  });
+
+  const [selectedProduct, setSelectedProduct] = useState(() => {
+    if (defaultProductType) {
+      const found = visibleProducts.find(p => p.productType === defaultProductType);
+      if (found) return found;
+    }
+    // 如果 ¥39 不可见（已购 trial），默认选 ¥99；否则默认 ¥39
+    return visibleProducts.find(p => p.productType === "single_report")
+      || visibleProducts[0]
+      || PRODUCTS[1];
+  });
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number>(0);
   const onSuccessRef = useRef(onSuccess);
   useEffect(() => { onSuccessRef.current = onSuccess; }, [onSuccess]);
+  const selectedProductRef = useRef(selectedProduct);
+  useEffect(() => { selectedProductRef.current = selectedProduct; }, [selectedProduct]);
   const POLL_TIMEOUT_MS = 8 * 60 * 1000;
 
   const isMobile = typeof window !== "undefined" && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -130,7 +153,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          product_type: PRODUCT.productType,
+          product_type: selectedProductRef.current.productType,
           pay_method: "wechat",
           province: queryParams?.province || "",
           rank_input: queryParams?.rank || 0,
@@ -177,7 +200,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
     const basePayload = {
-      product_type: PRODUCT.productType,
+      product_type: selectedProductRef.current.productType,
       province: queryParams?.province || "",
       rank_input: queryParams?.rank || 0,
       subject: queryParams?.subject || "",
@@ -186,6 +209,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       c_city: queryParams?.c_city || "",
       c_nature: queryParams?.c_nature || "",
       c_tier: queryParams?.c_tier || "",
+      mock_score: queryParams?.mock_score || 0,
     };
 
     try {
@@ -407,59 +431,17 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
 
   // ── 支付成功界面 ──
   if (status === "paid") {
-    const shareText = `我刚用「水卢冷门高报引擎」查了高考志愿，${queryParams?.province || ""}位次${queryParams?.rank || ""}的冷门宝藏学校一键筛出来了！还有就业薪资分析，比机构便宜多了 👉 www.theyuanxi.cn`;
     return (
       <div className="modal-overlay" onClick={onClose}>
-        <div className="modal-sheet" style={{ padding: "32px 28px", textAlign: "center", maxWidth: 400 }} onClick={(e) => e.stopPropagation()}>
-          <div style={{ fontSize: 48, marginBottom: 12, lineHeight: 1 }}>✅</div>
-          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 6 }}>支付成功</div>
-
-          <div style={{
-            background: "rgba(52,199,89,0.06)", border: "1px solid rgba(52,199,89,0.2)",
-            borderRadius: 10, padding: "12px 16px", margin: "14px 0", textAlign: "left",
-          }}>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "#34c759", marginBottom: 6 }}>
-              解锁完整报告 · ¥1.99
-            </div>
-            <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-              有效期至：<strong>2026年7月31日</strong> · 期内可无限次重新查询
-            </div>
-          </div>
-
-          <div style={{
-            background: "var(--color-bg-secondary)", borderRadius: 10,
-            padding: "12px 14px", marginBottom: 14, textAlign: "left",
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>分享给同学家长，帮他们也找到冷门机会</div>
-            <div style={{
-              fontSize: 11, color: "var(--color-text-secondary)", background: "var(--color-bg)",
-              borderRadius: 6, padding: "8px 10px", lineHeight: 1.5, marginBottom: 8, wordBreak: "break-all",
-            }}>
-              {shareText}
-            </div>
-            <button
-              onClick={() => {
-                try { navigator.clipboard.writeText(shareText); } catch {}
-                setCopyDone(true);
-                setTimeout(() => setCopyDone(false), 2500);
-              }}
-              style={{
-                width: "100%", padding: "8px", borderRadius: 8, fontSize: 13,
-                background: copyDone ? "#34C759" : "#07C160", color: "#fff",
-                border: "none", cursor: "pointer", fontWeight: 600, transition: "background 0.2s",
-              }}
-            >
-              {copyDone ? "✓ 已复制，粘贴到微信发送即可" : "复制分享文案"}
-            </button>
-          </div>
-
+        <div className="modal-sheet" style={{ padding: "40px 28px", textAlign: "center", maxWidth: 320, alignSelf: "center", borderRadius: 20 }} onClick={(e) => e.stopPropagation()}>
+          <div style={{ fontSize: 40, marginBottom: 16, lineHeight: 1 }}>✅</div>
+          <div style={{ fontSize: 20, fontWeight: 700, marginBottom: 24 }}>支付成功</div>
           <button onClick={onClose} style={{
-            width: "100%", padding: "10px", borderRadius: 8, fontSize: 13,
-            background: "var(--color-accent)", color: "#fff", border: "none", cursor: "pointer",
+            width: "100%", padding: "12px", borderRadius: 10, fontSize: 15,
+            background: "var(--color-accent)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 700,
           }}>
             查看完整报告 →
           </button>
-          <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 10 }}>祝高考顺利！</div>
         </div>
       </div>
     );
@@ -511,24 +493,49 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           ))}
         </div>
 
-        {/* 定价块 — 唯一方案 */}
-        <div style={{
-          background: "rgba(201,146,42,0.06)", border: "2px solid var(--color-accent)",
-          borderRadius: 12, padding: "14px 16px", marginBottom: 12,
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-        }}>
-          <div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-text-primary)" }}>
-              2026高考填报季完整解锁
-            </div>
-            <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 3 }}>
-              即日起至 2026年7月31日 · 无限次重新查询
-            </div>
-          </div>
-          <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 12 }}>
-            <div style={{ fontSize: 26, fontWeight: 800, color: "var(--color-accent)", lineHeight: 1 }}>¥1.99</div>
-            <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 2, textDecoration: "line-through" }}>机构收费¥3000+</div>
-          </div>
+        {/* 定价块 — 动态过滤后方案 */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+          {visibleProducts.map((p) => (
+            <button
+              key={p.productType}
+              onClick={() => {
+                setSelectedProduct(p);
+                if (payConfirmed) {
+                  selectedProductRef.current = p;
+                  if (pollRef.current) clearInterval(pollRef.current);
+                  setOrderNo(null);
+                  setQrCode(null);
+                  setH5Url(null);
+                  setStatus("idle");
+                  setJsapiError("");
+                  setFallbackUsed(false);
+                  createOrder();
+                }
+              }}
+              style={{
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                background: selectedProduct.productType === p.productType
+                  ? (p.highlight ? "rgba(201,146,42,0.08)" : "var(--color-bg-secondary)")
+                  : "var(--color-bg)",
+                border: selectedProduct.productType === p.productType
+                  ? "2px solid var(--color-accent)"
+                  : "2px solid rgba(0,0,0,0.06)",
+                borderRadius: 12, padding: "12px 14px", cursor: "pointer", textAlign: "left",
+                width: "100%",
+              }}
+            >
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: "var(--color-text-primary)", display: "flex", alignItems: "center", gap: 6 }}>
+                  {p.highlight && <span style={{ fontSize: 10, background: "var(--color-accent)", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>推荐</span>}
+                  {p.label}
+                </div>
+                <div style={{ fontSize: 11, color: "var(--color-text-secondary)", marginTop: 3 }}>{p.desc}</div>
+              </div>
+              <div style={{ textAlign: "right", flexShrink: 0, marginLeft: 10 }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--color-accent)", lineHeight: 1 }}>¥{p.price}</div>
+              </div>
+            </button>
+          ))}
         </div>
 
         {/* 确认 + 支付区域 */}
@@ -539,7 +546,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           }}>
             <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>确认支付内容</div>
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 10 }}>
-              <div>套餐：<strong style={{ color: "var(--color-text-primary)" }}>2026填报季 · ¥1.99</strong></div>
+              <div>套餐：<strong style={{ color: "var(--color-text-primary)" }}>{selectedProduct.label} · ¥{selectedProduct.price}</strong></div>
               {queryParams?.province && <div>省份：<strong style={{ color: "var(--color-text-primary)" }}>{queryParams.province}</strong></div>}
               {queryParams?.rank && <div>位次：<strong style={{ color: "var(--color-text-primary)" }}>{queryParams.rank.toLocaleString()} 名</strong></div>}
               <div style={{ marginTop: 6, padding: "5px 8px", background: "rgba(255,59,48,0.06)", borderRadius: 6, color: "#c0392b", fontSize: 11 }}>

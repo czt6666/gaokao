@@ -721,7 +721,7 @@ export default function Home() {
             </div>
           )}
           <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", textAlign: "center", marginTop: 12 }}>
-            免费预览结果 · 完整报告¥1.99 · 无需注册
+            免费预览结果 · 完整报告 ¥39 起 · 无需注册
           </p>
           <p style={{ fontSize: 11, color: "#D97706", textAlign: "center", marginTop: 6 }}>
             ⚠️ 每年都有人在填报截止前一天才发现这里——别成为那个人
@@ -778,7 +778,7 @@ export default function Home() {
                   ["选学校", "看985/211名气和排名", "主动过滤虚高学校，挖掘真正就业强的冷门院校"],
                   ["看就业", "相信学校官方自报数据", "社区真实反馈 + 毕业生薪资，屏蔽学校公关数据"],
                   ["预测未来", "只看当年录取概率", "10年趋势预判：4年后哪些专业会崛起或衰落"],
-                  ["花多少钱", "顾问咨询 ¥1,000–5,000", "免费预览 · 完整报告¥1.99，比机构便宜99.9%"],
+                  ["花多少钱", "顾问咨询 ¥1,000–5,000", "免费预览 · 完整报告 ¥39，比机构便宜96%"],
                 ].map(([scene, traditional, algorithm], i) => (
                   <tr key={scene} style={{ background: i % 2 === 0 ? "var(--color-bg)" : "transparent" }}>
                     <td style={{ padding: "14px 16px", color: "var(--color-text-secondary)", fontWeight: 500, borderBottom: "1px solid var(--color-separator)" }}>{scene}</td>
@@ -797,7 +797,7 @@ export default function Home() {
               ["选学校", "看985/211名气和排名", "主动过滤虚高学校，挖掘真正就业强的冷门院校"],
               ["看就业", "相信学校官方自报数据", "社区真实反馈 + 毕业生薪资，屏蔽学校公关数据"],
               ["预测未来", "只看当年录取概率", "10年趋势预判：4年后哪些专业会崛起或衰落"],
-              ["花多少钱", "顾问咨询 ¥1,000–5,000", "免费预览 · 完整报告¥1.99，比机构便宜99.9%"],
+              ["花多少钱", "顾问咨询 ¥1,000–5,000", "免费预览 · 完整报告 ¥39，比机构便宜96%"],
             ].map(([scene, traditional, algorithm], i) => (
               <div key={scene} style={{ background: i % 2 === 0 ? "var(--color-bg)" : "transparent", borderRadius: 10, border: "1px solid var(--color-separator)", padding: 14 }}>
                 <div style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-tertiary)", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.5 }}>{scene}</div>
@@ -1058,7 +1058,7 @@ export default function Home() {
                 avatar: "👨‍👩‍👧",
                 name: "湖北 · 王先生",
                 score: "位次 8,300",
-                text: "机构报价4000，这里¥1.99，数据比机构还详细。孩子最后上了华中农大的冷门强势学科，毕业薪资比我们预期高30%。",
+                text: "机构报价4000，这里¥39，数据比机构还详细。孩子最后上了华中农大的冷门强势学科，毕业薪资比我们预期高30%。",
               },
               {
                 avatar: "👩",

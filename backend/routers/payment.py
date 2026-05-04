@@ -19,13 +19,15 @@ SIMULATE_PAY = os.getenv("SIMULATE_PAY", "0") == "1"
 
 # 产品定价表（分）
 PRODUCT_AMOUNTS: dict[str, int] = {
-    "single_report":  199,   # ¥1.99 — 单次报告解锁
+    "trial_report":    990,   # ¥9.9 — 试看，解锁前3所学校
+    "single_report":  3900,   # ¥39 — 单次完整报告
+    "season_2026":    9900,   # ¥99 — 填报季会员至2026-09-01
     # 以下为向后兼容旧订单，不再对外销售
-    "report_export":  590,
-    "monthly_sub":    990,
-    "quarterly_sub": 2990,
+    "report_export":   590,
+    "monthly_sub":     990,
+    "quarterly_sub":  2990,
 }
-AMOUNT_FEN = 199  # 默认兜底 ¥1.99
+AMOUNT_FEN = 3900  # 默认兜底 ¥39
 
 # ── 微信支付 V3 配置（从环境变量读取）──
 WECHAT_MCH_ID       = os.getenv("WECHAT_MCH_ID", "")
@@ -65,6 +67,7 @@ class CreateOrderRequest(BaseModel):
     c_city: str = ""             # 用户筛选：城市
     c_nature: str = ""           # 用户筛选：性质
     c_tier: str = ""             # 用户筛选：档次
+    mock_score: int = 0          # 用户模考分数
 
 
 @router.post("/create")
@@ -96,6 +99,7 @@ async def create_order(req: CreateOrderRequest, request: Request, db: Session = 
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        mock_score=req.mock_score or None,
     )
     db.add(order)
     db.commit()
@@ -141,6 +145,7 @@ class CreateJSAPIRequest(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    mock_score: int = 0  # 用户模考分数
 
 
 @router.post("/wechat/jsapi")
@@ -175,6 +180,7 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        mock_score=req.mock_score or None,
     )
     db.add(order)
     db.commit()
@@ -204,6 +210,7 @@ class CreateH5Request(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    mock_score: int = 0  # 用户模考分数
 
 
 @router.post("/wechat/h5")
@@ -234,6 +241,7 @@ async def create_h5_order(req: CreateH5Request, request: Request, db: Session = 
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        mock_score=req.mock_score or None,
     )
     db.add(order)
     db.commit()
@@ -301,6 +309,7 @@ class CreateJSAPIWebRequest(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    mock_score: int = 0  # 用户模考分数
 
 
 @router.post("/wechat/jsapi_web")
@@ -334,6 +343,7 @@ async def create_jsapi_web_order(req: CreateJSAPIWebRequest, request: Request, d
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        mock_score=req.mock_score or None,
     )
     db.add(order)
     db.commit()
@@ -484,7 +494,7 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
         #   Layer 1/3 订单匹配 → main.py recommend 端点（order_no + province/rank/subject）
         #   Layer 3/3 失败 UI  → frontend/components/PayModal.tsx:439-442
         # 在同一事务中更新 user.is_paid，防止 Order 已 paid 但 User 未升级的状态分裂
-        SEASON_END = datetime.datetime(2026, 7, 31, 23, 59, 59)
+        SEASON_END = datetime.datetime(2026, 9, 1, 23, 59, 59)
         if order.user_id:
             user = db.query(User).filter(User.id == order.user_id).first()
             if user:
@@ -499,7 +509,7 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
                 elif order.product_type == "quarterly_sub":
                     base = user.subscription_end_at if (user.subscription_end_at and user.subscription_end_at > now) else now
                     user.subscription_end_at = base + datetime.timedelta(days=90)
-                # single_report / report_export: is_paid=1 永久，subscription_end_at 不变
+                # trial_report / single_report / report_export: is_paid=1 永久，subscription_end_at 不变
         # 推荐奖励：优先从订单 ref_code 读取（支付环节传入），fallback 到用户注册时的 referred_by
         def _reward_referrer(referrer_id: int, source: str):
             referrer = db.query(User).filter(User.id == referrer_id).first()
@@ -513,6 +523,24 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
                 referrer.is_paid = 1
                 referrer.subscription_type = "season_2026"
             logger.info(f"Referral reward: user {referrer.id} +3 days via {source}")
+
+            # 里程碑奖励：累计4人付费时额外+30天（仅一次）
+            if referrer.referral_reward_days < 30:
+                from sqlalchemy import func as _func
+                paid_count = db.query(_func.count(Order.id)).filter(
+                    Order.ref_code == referrer.referral_code,
+                    Order.status == "paid"
+                ).scalar() or 0
+                reg_count = db.query(_func.count(User.id)).filter(
+                    User.referred_by == referrer.id
+                ).scalar() or 0
+                total = paid_count + reg_count
+                if total >= 4:
+                    referrer.subscription_end_at = min(
+                        referrer.subscription_end_at + datetime.timedelta(days=30), SEASON_END
+                    )
+                    referrer.referral_reward_days = 30
+                    logger.info(f"Referral milestone: user {referrer.id} +30 days for {total} referrals")
 
         rewarded = False
         # 1) 新逻辑：支付时传入的 ref_code
@@ -918,6 +946,6 @@ async def simulate_pay(order_no: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="订单不存在")
     if order.status == "paid":
         return {"status": "paid", "order_no": order_no}
-    _mark_paid(order_no, transaction_id=f"SIMULATE_{datetime.datetime.utcnow().timestamp()}")
+    _mark_paid(db, order_no, transaction_id=f"SIMULATE_{datetime.datetime.utcnow().timestamp()}")
     db.refresh(order)
     return {"status": order.status, "order_no": order_no}

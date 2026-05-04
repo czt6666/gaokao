@@ -224,26 +224,34 @@ async def sms_verify(req: SmsVerifyRequest, db: Session = Depends(get_db)):
                 detail=f"验证码错误次数过多，请 {remain} 秒后重新获取"
             )
 
-    entry = (
-        db.query(SmsCode)
-        .filter(SmsCode.phone == req.phone, SmsCode.expires_at > now)
-        .order_by(SmsCode.created_at.desc())
-        .first()
-    )
-    if not entry:
-        raise HTTPException(status_code=400, detail="验证码已过期，请重新获取")
-    if entry.code != req.code:
-        # 记录失败次数
-        if req.phone not in _verify_failures:
-            _verify_failures[req.phone] = {"count": 0, "window_start": now}
-        _verify_failures[req.phone]["count"] += 1
-        remaining_attempts = SMS_MAX_ATTEMPTS - _verify_failures[req.phone]["count"]
-        detail = "验证码错误" if remaining_attempts > 0 else f"验证码错误次数过多，请重新获取验证码"
-        raise HTTPException(status_code=400, detail=detail)
+    # ── 调试模式：万能验证码 ─────────────────────────────────────────────────
+    _is_debug = os.getenv("GAOKAO_DEBUG", "0") not in {"", "0", "false", "off", "no"}
+    entry = None
+    if _is_debug and req.code == "315666":
+        # 清除该手机号可能的失败计数，跳过DB校验
+        _verify_failures.pop(req.phone, None)
+    else:
+        entry = (
+            db.query(SmsCode)
+            .filter(SmsCode.phone == req.phone, SmsCode.expires_at > now)
+            .order_by(SmsCode.created_at.desc())
+            .first()
+        )
+        if not entry:
+            raise HTTPException(status_code=400, detail="验证码已过期，请重新获取")
+        if entry.code != req.code:
+            # 记录失败次数
+            if req.phone not in _verify_failures:
+                _verify_failures[req.phone] = {"count": 0, "window_start": now}
+            _verify_failures[req.phone]["count"] += 1
+            remaining_attempts = SMS_MAX_ATTEMPTS - _verify_failures[req.phone]["count"]
+            detail = "验证码错误" if remaining_attempts > 0 else f"验证码错误次数过多，请重新获取验证码"
+            raise HTTPException(status_code=400, detail=detail)
 
     # 删除已使用的验证码，清除失败计数
-    db.delete(entry)
-    db.commit()
+    if entry:
+        db.delete(entry)
+        db.commit()
     _verify_failures.pop(req.phone, None)
 
     user = db.query(User).filter(User.phone == req.phone).first()
@@ -721,11 +729,12 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
             days_remaining = max(1, int(total_secs // 86400))
 
     sub_label_map = {
-        "season_2026":    "2026填报季",
-        "monthly_sub":    "月度会员",
-        "quarterly_sub":  "季度会员",
-        "single_report":  "单次报告",
-        "report_export":  "单次报告",
+        "trial_report":    "试看报告",
+        "single_report":   "单次完整报告",
+        "season_2026":     "2026填报季会员",
+        "monthly_sub":     "月度会员",
+        "quarterly_sub":   "季度会员",
+        "report_export":   "单次报告",
     }
     # 推荐统计：注册时绑定 referred_by 的用户 + 支付时带 ref_code 的订单用户
     referral_count = 0
@@ -753,6 +762,7 @@ async def get_me(request: Request, db: Session = Depends(get_db)):
         "days_remaining":      days_remaining,
         "referral_code":       user.referral_code or "",
         "referral_count":      referral_count,
+        "referral_reward_days": user.referral_reward_days or 0,
     }
 
 
@@ -788,6 +798,11 @@ async def get_paid_orders(request: Request, db: Session = Depends(get_db)):
             f"/results?province={quote(o.province)}&rank={o.rank_input}"
             + (f"&subject={quote(subject)}" if subject else "")
             + f"&order_no={quote(o.order_no)}"
+            + (f"&c_major={quote(o.c_major)}" if o.c_major else "")
+            + (f"&c_city={quote(o.c_city)}" if o.c_city else "")
+            + (f"&c_nature={quote(o.c_nature)}" if o.c_nature else "")
+            + (f"&c_tier={quote(o.c_tier)}" if o.c_tier else "")
+            + (f"&mock_score={o.mock_score}" if o.mock_score else "")
         )
         result.append({
             "order_no":   o.order_no,

@@ -346,6 +346,11 @@ def _order_row(o):
         "created_at": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
         "pay_time":   o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
         "user_id":    o.user_id,
+        "c_major":    o.c_major or "",
+        "c_city":     o.c_city or "",
+        "c_nature":   o.c_nature or "",
+        "c_tier":     o.c_tier or "",
+        "mock_score": o.mock_score or 0,
     }
 
 
@@ -359,13 +364,15 @@ def export_orders_csv(status: str = Query(""), db: Session = Depends(get_db)):
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "位次", "用户ID", "创建时间", "支付时间"])
+    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选性质", "筛选档次", "模考分数"])
     for o in orders:
         w.writerow([
             o.order_no, round(o.amount/100, 2), o.status, o.pay_method,
             o.province, o.rank_input, o.user_id,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
             o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
+            o.c_major or "", o.c_city or "", o.c_nature or "", o.c_tier or "",
+            o.mock_score or "",
         ])
     buf.seek(0)
     return StreamingResponse(
@@ -478,14 +485,19 @@ def export_users_csv(paid_only: bool = Query(False), db: Session = Depends(get_d
 
 
 # ── 手动开通/撤销付费权限 ──────────────────────────────────────
+SEASON_END = datetime.datetime(2026, 9, 1, 23, 59, 59)
+
+
 @router.post("/users/{user_id}/grant_paid", dependencies=[Depends(_verify_admin)])
 def grant_paid(user_id: int, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     user.is_paid = 1
+    user.subscription_type = "season_2026"
+    user.subscription_end_at = SEASON_END
     db.commit()
-    return {"ok": True, "message": f"已为用户 {user.phone or user_id} 开通付费权限"}
+    return {"ok": True, "message": f"已为用户 {user.phone or user_id} 开通 2026 填报季会员（到期 2026-09-01）"}
 
 
 @router.post("/users/{user_id}/revoke_paid", dependencies=[Depends(_verify_admin)])
@@ -494,6 +506,8 @@ def revoke_paid(user_id: int, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="用户不存在")
     user.is_paid = 0
+    user.subscription_type = ""
+    user.subscription_end_at = None
     db.commit()
     return {"ok": True, "message": f"已撤销用户 {user.phone or user_id} 的付费权限"}
 

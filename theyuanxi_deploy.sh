@@ -19,9 +19,9 @@ echo "========================================"
 # ── 0. 同步环境变量（先传 .env，确保重启后新配置已生效）──
 echo ""
 echo "→ [0/4] 同步环境变量..."
-if [ -f "$LOCAL_BACKEND/.env.production" ]; then
-  echo "  同步 backend/.env.production → server:/app/backend/.env"
-  rsync -av --no-owner --no-group "$LOCAL_BACKEND/.env.production" "$SERVER:$REMOTE_BACKEND/.env"
+if [ -f "$LOCAL_BACKEND/.env" ]; then
+  echo "  同步 backend/.env → server:/app/backend/.env"
+  rsync -av --no-owner --no-group "$LOCAL_BACKEND/.env" "$SERVER:$REMOTE_BACKEND/.env"
 fi
 if [ -f "$LOCAL_FRONTEND/.env.production" ]; then
   echo "  同步 frontend/.env.production → server:/app/frontend/.env.production"

@@ -215,6 +215,7 @@ class User(Base):
     is_paid             = Column(Integer, default=0)        # 0=未付费, 1=已付费
     subscription_type   = Column(String(20), default="")   # single_report / monthly_sub / quarterly_sub
     subscription_end_at = Column(DateTime, nullable=True)   # None=单次(永久); 订阅型到期时间
+    referral_reward_days = Column(Integer, default=0)        # 已发放的里程碑奖励天数（如4人+30天）
 
 
 class Order(Base):
@@ -239,6 +240,7 @@ class Order(Base):
     c_city          = Column(String(20), default="")        # 用户筛选：城市
     c_nature        = Column(String(20), default="")        # 用户筛选：性质
     c_tier          = Column(String(20), default="")        # 用户筛选：档次
+    mock_score      = Column(Integer, nullable=True)        # 用户模考分数（分数模式下单时传入）
 
     __table_args__ = (Index("ix_order_status_created", "status", "created_at"),)
 
@@ -376,11 +378,18 @@ def _ensure_schema():
                 ("wechat_unionid",      "VARCHAR(64)"),
                 ("subscription_type",   "VARCHAR(20) DEFAULT ''"),
                 ("subscription_end_at", "DATETIME"),
+                ("referral_reward_days", "INTEGER DEFAULT 0"),
             ],
             "orders": [
                 ("rank_input", "INTEGER"),
                 ("province",   "VARCHAR(10) DEFAULT ''"),
                 ("subject",    "VARCHAR(50) DEFAULT ''"),
+                ("ref_code",   "VARCHAR(10) DEFAULT ''"),
+                ("c_major",    "VARCHAR(50) DEFAULT ''"),
+                ("c_city",     "VARCHAR(20) DEFAULT ''"),
+                ("c_nature",   "VARCHAR(20) DEFAULT ''"),
+                ("c_tier",     "VARCHAR(20) DEFAULT ''"),
+                ("mock_score", "INTEGER"),
             ],
         }
         for table, cols in plans.items():

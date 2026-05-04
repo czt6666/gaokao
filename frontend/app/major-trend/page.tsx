@@ -759,7 +759,7 @@ export default function MajorTrendPage() {
                 输入位次，开始志愿规划 →
               </Link>
               <div style={{ marginTop: 20, fontSize: 10, color: "rgba(255,255,255,0.2)", letterSpacing: "0.05em" }}>
-                3,217所高校 · 229万条录取数据 · ¥1.99完整报告
+                3,217所高校 · 229万条录取数据 · 完整报告 ¥39 起
               </div>
             </div>
           </div>

@@ -654,22 +654,24 @@ _rec_cache: dict = {}   # key → (result_dict, timestamp)
 _REC_CACHE_TTL = 1800   # 30分钟
 _REC_RANK_BUCKET = 1000 # 每1000位次共用一个缓存桶
 
-def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = ""):
+def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None):
     _c_key = ""
     if constraints:
         # 稳定的字符串表示，用于缓存 key
         _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}"
+    _trial_key = f"|trial{trial_limit}" if trial_limit is not None else ""
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}"
     entry = _rec_cache.get(key)
     if entry and time.time() - entry[1] < _REC_CACHE_TTL:
         return entry[0]
     return None
 
-def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = ""):
+def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None):
     _c_key = ""
     if constraints:
         _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}"
+    _trial_key = f"|trial{trial_limit}" if trial_limit is not None else ""
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}"
     _rec_cache[key] = (result, time.time())
     if len(_rec_cache) > 500:  # 超过500项时清理最旧的50项
         oldest = sorted(_rec_cache.items(), key=lambda x: x[1][1])[:50]
@@ -1265,39 +1267,16 @@ def _build_recommend_data(
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
-def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "") -> dict:
+def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None) -> dict:
     """
     核心推荐逻辑（纯函数，不依赖 Request）。
     供 /api/recommend 端点和 PDF 报告生成共同调用。
     主推荐接口：输入位次，返回冲稳保分层推荐 + 冷门挖掘（接入真实学科评估）
     """
-    # print(11, province,rank,subject)
-    _debug_rc = os.getenv("GAOKAO_DEBUG", "0") not in {"", "0", "false", "off", "no"}
-
-    def _rc(step: str, **kw: object) -> None:
-        """调试：统一前缀打印各阶段状态。关闭：环境变量 GAOKAO_DEBUG=0"""
-        if not _debug_rc:
-            return
-        if kw:
-            parts = ", ".join(f"{k}={v!r}" for k, v in kw.items())
-            print(f"[recommend_core] {step} | {parts}", flush=True)
-        else:
-            print(f"[recommend_core] {step}", flush=True)
-
     # 缓存命中快速返回
-    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode)
+    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode, trial_limit)
     if _cached is not None:
-        _rc("① 缓存命中，直接返回（未执行后续阶段）", province=province, rank=rank, subject=subject, is_paid=is_paid, constraints=constraints, exam_mode=exam_mode)
         return _cached
-
-    _rc(
-        "② 开始全量计算",
-        province=province,
-        rank=rank,
-        subject=subject or "(空)",
-        mode=mode + "（当前未参与分支，仅占位）",
-        is_paid=is_paid,
-    )
 
     # ── 数据层：一次性加载全部 cache + 组合候选画像 ───────────
     data = _build_recommend_data(province, rank, subject, db, exam_mode)
@@ -1369,34 +1348,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             k: v for k, v in grouped.items()
             if _pass_constraint(k[0], k[1])
         }
-        _rc("②-① 约束过滤", before=_pre, after=len(grouped), constraints=constraints)
+    
     # ── 约束过滤结束 ───────────────────────────────────────────
-
-    # 调试：随机打印至多 5 条 candidates（长字符串截断便于终端阅读）
-    def _truncate_log_strings(obj: object, maxlen: int = 20) -> object:
-        if isinstance(obj, str):
-            return obj[:maxlen] + ("..." if len(obj) > maxlen else "")
-        if isinstance(obj, dict):
-            return {k: _truncate_log_strings(v, maxlen) for k, v in obj.items()}
-        if isinstance(obj, list):
-            return [_truncate_log_strings(v, maxlen) for v in obj]
-        if isinstance(obj, tuple):
-            return tuple(_truncate_log_strings(v, maxlen) for v in obj)
-        return obj
-
-    _rc("③ 位次池/选科解析", student_pool=_student_pool or "(未指定)")
-    _rc(
-        "④-⑮ 数据层加载完成（_build_recommend_data）",
-        grouped=len(grouped),
-        schools=len(school_cache),
-        strong_subjects=sum(len(v) for v in subject_eval_cache.values()),
-        emp_majors=len(emp_full_cache),
-        school_emp=len(school_emp_cache),
-        reviews=len(review_cache),
-        subject_cache=len(major_subject_cache),
-        prior_rank=len(_school_prior_rank),
-    )
-
     # ⑯ 学生可报专业缓存（依赖 rank，不能内联到 _build_recommend_data）
     # P2修复：按与学生位次的接近程度排序，过滤掉完全无法企及的专业
     school_available_majors_cache: dict = {}
@@ -1420,11 +1373,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         for sname, majors in _avail_with_rank.items():
             majors.sort(key=lambda x: abs(x[1] - rank) if x[1] > 0 else float("inf"))
             school_available_majors_cache[sname] = [m[0] for m in majors[:10]]
-    _rc(
-        "⑰ 学生可报专业缓存 school_available_majors_cache",
-        schools=len(school_available_majors_cache),
-        user_subjects=sorted(user_subjects),
-    )
+
 
     # 4e. recent_data 构建函数：专业级数据 + 学校级补充
     def _build_recent_data(records: list, school_name: str,
@@ -1717,20 +1666,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         results.append(result)
         _scan["kept"] += 1
 
-    _rc(
-        "⑯ 逐专业评分结束",
-        grouped=len(grouped),
-        results=len(results),
-        skip_subject=_scan["skip_subject"],
-        skip_avg_rank_0=_scan["skip_avg_rank_0"],
-        skip_rank_window=_scan["skip_rank_window"],
-        gap_rate_surge=f"[{-0.20}, {-0.10})",
-        gap_rate_stable=f"[{-0.10}, {+0.10}]",
-        gap_rate_safe=f"({+0.10}, {+0.40}]",
-        rank_surge_lo=int(rank * 0.80),
-        rank_stable_hi=int(rank * 1.10),
-        rank_safe_hi=int(rank * 1.40),
-    )
 
     # 6. 按桶定义独立排序函数（各桶权重不同，体现不同决策逻辑）
     def _opp_n(x): return (x.get("opportunity_score", 0) + 20) / 65  # [-20,45]→[0,1]
@@ -1750,7 +1685,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         return (-(x["quality_score"] * 0.60 + x["gem_score"] * 0.25 + _opp_n(x) * 100 * 0.15),
                 x.get("school_name", ""), x.get("major_name", ""))
 
-    _rc("⑰ 三桶独立排序函数就绪（冲:gem0.4/质0.35 稳:质0.5/gem0.3 保:质0.6/gem0.25）")
 
     # 7. 冲/稳/保硬排名分桶（gap_rate = (avg_school_rank - student_rank) / student_rank）
     # ─────────────────────────────────────────────────────────────────────────────────
@@ -1782,23 +1716,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     stable_list = _capped_pick(sorted(stable, key=_stable_sort), 46, defaultdict(int))
     safe_list   = _capped_pick(sorted(safe,   key=_safe_sort),   25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
-    _rc(
-        "⑱ 冲/稳/保初分桶（gap_rate硬边界）与校名额 cap",
-        surge_pool=len(surge),
-        stable_pool=len(stable),
-        safe_pool=len(safe),
-        surge_pick=len(surge_list),
-        stable_pick=len(stable_list),
-        safe_pick=len(safe_list),
-        school_cap=_SCHOOL_CAP,
-    )
 
     # 冷门宝藏：从冲+稳区（gap_rate ≤ 0.10）提取，保区宝藏价值低不展示
     gems_list = sorted(
         [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
         key=lambda x: -(x["gem_score"] * 0.55 + x["quality_score"] * 0.30 + _opp_n(x) * 100 * 0.15)
     )
-    _rc("⑲ 冷门 gems_list（惩罚前）", n=len(gems_list))
 
     display_list = combined_96  # 竞争密度惩罚只需对96所运算，无重复
 
@@ -1863,12 +1786,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 r["prob_low"] = round(max(0, r["prob_low"] * (1 - total_penalty)), 1)
             if r["prob_high"] is not None:
                 r["prob_high"] = round(max(0, r["prob_high"] * (1 - total_penalty)), 1)
-    _rc(
-        "⑳ 市场热度指数惩罚",
-        display_n=len(display_list),
-        rows_with_penalty=_comp_pen,
-        heat_rows=_heat_pen,
-    )
 
     # 7c. 惩罚后后处理
     for r in display_list:
@@ -1894,13 +1811,6 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         sorted([r for r in display_list if  0.10 <  r["gap_rate"] <= 0.40],  key=_safe_sort),
         25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
-    _rc(
-        "㉒ 惩罚后重分桶+截断",
-        surge=len(surge_list),
-        stable=len(stable_list),
-        safe=len(safe_list),
-        combined=len(combined_96),
-    )
 
     # P8修复（终稿）：惩罚后重新分桶后再次检查数量不足
     # 场景A：所有结果概率<10%，三桶均空 → 取最高30条填入safe，标"参考"
@@ -1924,14 +1834,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             safe_list.append(_ex)
             combined_96.append(_ex)
         _p8_note = f"不足30条→补齐{_need}条标「参考」"
-    _rc("㉓ P8 数量兜底", action=_p8_note, combined=len(combined_96))
 
     gems_list = sorted(
         [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
         key=lambda x: (-(x["gem_score"]*0.55 + x["quality_score"]*0.30 + _opp_n(x)*100*0.15),
                        x.get("school_name",""), x.get("major_name",""))
     )
-    _rc("㉔ 冷门 gems_list（惩罚+P8 后）", n=len(gems_list))
 
     # ── 智能精选：标记每档第一名为"本档首选" ─────────────────────────────
     # 从该校最强信号生成1行非模板化理由，让家长一眼看出重点
@@ -1964,11 +1872,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             _item["is_top_pick"]      = True
             _item["top_pick_headline"] = _make_top_pick_headline(_item)
             _item["top_pick_rank"]    = _i + 1  # 1=本档首选, 2-3=精选
-    _rc("㉕ 智能精选", marked="冲/稳/保各前3条 is_top_pick")
 
     # ── 付费墙：由调用方传入 is_paid ────────────────────────────
-    # 免费层：冲前2条、稳前2条、保前1条、冷门0条（共最多5所）
-    FREE_LIMITS = {"surge": 2, "stable": 2, "safe": 1, "hidden_gems": 0}
+    # 免费层：每类前2条完整展示（共最多8所）
+    FREE_LIMITS = {"surge": 2, "stable": 2, "safe": 2, "hidden_gems": 2}
 
     def _apply_paywall(lst: list, category: str) -> list:
         """For paid users: full data. For unpaid: first N items full, rest as locked placeholders."""
@@ -1994,16 +1901,22 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         "safe":        _apply_paywall(safe_list,   "safe"),
         "hidden_gems": _apply_paywall(gems_list,   "hidden_gems"),
     }
-    _rc(
-        "㉖ 写缓存前最终条数",
-        total_raw=_result["total_raw"],
-        total_matched=_result["total_matched"],
-        surge=len(_result["surge"]),
-        stable=len(_result["stable"]),
-        safe=len(_result["safe"]),
-        hidden_gems=len(_result["hidden_gems"]),
-        is_paid=is_paid,
-    )
-    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode)
-    _rc("㉗ 完成（已写入进程内缓存）")
+
+    # ── 试看层分类截断：trial_limit 每类保留前 N 条完整数据 ──────────
+    if trial_limit is not None and trial_limit > 0:
+        _kept_ids = set()
+        for _key in ("surge", "stable", "safe", "hidden_gems"):
+            _count = 0
+            for _item in _result[_key]:
+                if not _item.get("locked", False):
+                    if _count < trial_limit:
+                        _kept_ids.add(id(_item))
+                        _count += 1
+        for _key in ("surge", "stable", "safe", "hidden_gems"):
+            for _i, _item in enumerate(_result[_key]):
+                if id(_item) not in _kept_ids:
+                    _result[_key][_i] = _paywall_strip(_item)
+    
+
+    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode, trial_limit)
     return _result

@@ -87,6 +87,8 @@ type RecommendResult = {
   province: string;
   total_matched: number;
   is_paid: boolean;
+  is_trial?: boolean;
+  trial_limit?: number;
   surge: SchoolResult[];
   stable: SchoolResult[];
   safe: SchoolResult[];
@@ -529,7 +531,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
   );
 }
 
-function LockedSchoolCard({ item, onUnlock }: { item: SchoolResult; onUnlock: () => void }) {
+function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult; onUnlock: () => void; unlockLabel?: string }) {
   const tierColor = item.tier === "冲" ? "#DC2626" : item.tier === "稳" ? "#1A2744" : "#059669";
   const tierBg   = item.tier === "冲" ? "#FEF2F2" : item.tier === "稳" ? "#EFF6FF" : "#F0FDF4";
   return (
@@ -615,18 +617,66 @@ function LockedSchoolCard({ item, onUnlock }: { item: SchoolResult; onUnlock: ()
             onClick={onUnlock}
             style={{
               padding: "9px 24px", borderRadius: 99,
-              background: "var(--color-navy)", color: "#fff",
+              background: unlockLabel?.includes("39") ? "var(--color-accent)" : "var(--color-navy)", color: "#fff",
               border: "none", fontSize: 13, fontWeight: 700,
               cursor: "pointer", boxShadow: "0 2px 12px rgba(26,39,68,0.25)",
             }}
           >
-            ¥1.99 解锁完整分析
+            {unlockLabel || "¥9.9 起解锁"}
           </button>
           <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>
             含录取概率 · 安全线 · 历年趋势 · 口碑
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function SeasonPromoCard({ onUnlock }: { onUnlock: () => void }) {
+  return (
+    <div style={{
+      borderRadius: 14, marginBottom: 12,
+      border: "1px solid rgba(26,39,68,0.12)",
+      background: "linear-gradient(135deg, rgba(26,39,68,0.03) 0%, rgba(201,146,42,0.06) 100%)",
+      overflow: "hidden",
+      marginTop: 12,
+      padding: "16px",
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+        <span style={{ fontSize: 24 }}>♾️</span>
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-navy)" }}>
+            2026 填报季会员 · ¥99
+          </div>
+          <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginTop: 2 }}>
+            即日起至 2026年9月1日 · 无限次查询 + 全部院校完整分析
+          </div>
+        </div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 12 }}>
+        {[
+          ["无限次重查", "位次微调随时查"],
+          ["全部报告", "冲稳保+冷门"],
+          ["有效期", "至2026.9.1"],
+        ].map(([t, d]) => (
+          <div key={t} style={{ textAlign: "center", padding: "6px 4px", background: "rgba(255,255,255,0.6)", borderRadius: 8 }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: "var(--color-navy)" }}>{t}</div>
+            <div style={{ fontSize: 10, color: "var(--color-text-tertiary)", marginTop: 1 }}>{d}</div>
+          </div>
+        ))}
+      </div>
+      <button
+        onClick={onUnlock}
+        style={{
+          width: "100%", padding: "10px", borderRadius: 10,
+          background: "var(--color-navy)", color: "#fff",
+          border: "none", fontSize: 13, fontWeight: 700,
+          cursor: "pointer",
+        }}
+      >
+        开通季会员 ¥99 →
+      </button>
     </div>
   );
 }
@@ -640,8 +690,8 @@ function ResultsContent() {
   const examMode = searchParams.get("exam_mode") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
-  /** 与卡片「去年最低分」对比用：显式 ?score= 或模考链路的 mock_score */
-  const score = searchParams.get("score") || (fromMock ? mockScore : "");
+  /** 与卡片「去年最低分」对比用：显式 ?score= 或 mock_score */
+  const score = searchParams.get("score") || searchParams.get("mock_score") || "";
   // 约束条件（从首页带过来）
   const cMajor = searchParams.get("c_major") || "";
   const cCity = searchParams.get("c_city") || "";
@@ -657,6 +707,7 @@ function ResultsContent() {
   const [exporting, setExporting] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
+  const [defaultProductType, setDefaultProductType] = useState<string | undefined>(undefined);
   const [showEmailInput, setShowEmailInput] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [emailInput, setEmailInput] = useState("");
@@ -693,9 +744,14 @@ function ResultsContent() {
     } catch { return ""; }
   });
 
+  function openPayModal(productType?: string) {
+    setDefaultProductType(productType);
+    setShowPayModal(true);
+  }
+
   async function handleExportPDF() {
     if (!rank || !province) return;
-    if (!data?.is_paid) { setShowPayModal(true); return; }
+    if (!data?.is_paid) { openPayModal(data?.is_trial ? "single_report" : undefined); return; }
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     if (!token) {
       // 已付费但未登录（通过order_no识别），引导登录以绑定账户
@@ -731,7 +787,7 @@ function ResultsContent() {
   }
 
   async function handleSendEmail() {
-    if (!data?.is_paid) { setShowPayModal(true); setShowEmailInput(false); return; }
+    if (!data?.is_paid) { openPayModal(data?.is_trial ? "single_report" : undefined); setShowEmailInput(false); return; }
     if (!emailInput || !emailInput.includes("@")) {
       alert("请输入有效的邮箱地址");
       return;
@@ -928,10 +984,10 @@ function ResultsContent() {
   ].filter(i => i.locked).length;
 
   const tabs = [
-    { key: "gems", label: "冷门宝藏", icon: "◆", count: gemCount },
     { key: "surge", label: "冲击", icon: "↑", count: data?.surge.length || 0 },
     { key: "stable", label: "稳妥", icon: "＝", count: data?.stable.length || 0 },
     { key: "safe", label: "保底", icon: "■", count: data?.safe.length || 0 },
+    { key: "gems", label: "冷门宝藏", icon: "◆", count: gemCount },
   ];
 
   const baseList = activeTab === "gems" ? (data?.hidden_gems || [])
@@ -953,11 +1009,11 @@ function ResultsContent() {
           {/* 中间：查询信息 */}
           <div style={{ textAlign: "center", flex: 1, padding: "0 12px" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
-              {fromMock
+              {mockScore
                 ? `模考 ${mockScore}分 · 估算 ${Number(rank).toLocaleString()}`
                 : `位次 ${Number(rank).toLocaleString()} · ${province}`}
             </div>
-            {fromMock && (
+            {mockScore && (
               <div style={{ fontSize: 11, color: "#ff9500" }}>此为估算位次，出分后请用真实位次重查</div>
             )}
           </div>
@@ -980,7 +1036,7 @@ function ResultsContent() {
               </button>
             ) : (
               <button
-                onClick={() => setShowPayModal(true)}
+                onClick={() => openPayModal(data?.is_trial ? "single_report" : undefined)}
                 disabled={!data || data.total_matched === 0}
                 style={{
                   fontSize: 12, padding: "6px 14px", borderRadius: 980,
@@ -988,7 +1044,7 @@ function ResultsContent() {
                   border: "none", cursor: "pointer", fontWeight: 600,
                 }}
               >
-                ¥1.99 解锁完整报告
+                解锁完整报告
               </button>
             )}
             <button
@@ -1023,17 +1079,27 @@ function ResultsContent() {
               ⋮
             </button>
             {showMobileMenu && (
-              <div
-                style={{
-                  position: "absolute", top: "100%", right: 0, left: 0,
-                  background: "var(--color-bg-secondary)",
-                  borderBottom: "1px solid var(--color-separator)",
-                  boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                  padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10,
-                  zIndex: 200,
-                }}
-                onClick={() => setShowMobileMenu(false)}
-              >
+              <>
+                {/* 黑色遮罩 — 从导航栏下方开始，不罩住顶部 */}
+                <div
+                  style={{
+                    position: "fixed", top: 68, left: 0, right: 0, bottom: 0,
+                    background: "rgba(0,0,0,0.45)",
+                    zIndex: 199,
+                  }}
+                  onClick={() => setShowMobileMenu(false)}
+                />
+                <div
+                  style={{
+                    position: "absolute", top: "100%", right: 0, left: 0,
+                    background: "var(--color-bg-secondary)",
+                    borderBottom: "1px solid var(--color-separator)",
+                    boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                    padding: "12px 20px", display: "flex", flexDirection: "column", gap: 10,
+                    zIndex: 200,
+                  }}
+                  onClick={() => setShowMobileMenu(false)}
+                >
                 {data?.is_paid ? (
                   <button
                     onClick={handleExportPDF}
@@ -1049,7 +1115,7 @@ function ResultsContent() {
                   </button>
                 ) : (
                   <button
-                    onClick={() => { setShowMobileMenu(false); setShowPayModal(true); }}
+                    onClick={() => { setShowMobileMenu(false); openPayModal(data?.is_trial ? "single_report" : undefined); }}
                     disabled={!data || data.total_matched === 0}
                     style={{
                       fontSize: 14, padding: "10px 16px", borderRadius: 10,
@@ -1057,7 +1123,7 @@ function ResultsContent() {
                       border: "none", cursor: "pointer", fontWeight: 600, textAlign: "left",
                     }}
                   >
-                    ¥1.99 解锁完整报告
+                    解锁完整报告
                   </button>
                 )}
                 <Link
@@ -1097,7 +1163,8 @@ function ResultsContent() {
                   </button>
                 </div>
               </div>
-            )}
+            </>
+          )}
           </div>
         </div>
       </nav>
@@ -1189,7 +1256,7 @@ function ResultsContent() {
             </div>
             {!data?.is_paid && lockedCount > 0 && (
               <div style={{ marginTop: 10, fontSize: 13, color: "#7F1D1D", lineHeight: 1.6 }}>
-                还有 <strong>{lockedCount} 所</strong>被锁定——包括完整概率分析、历年趋势、在读生口碑，解锁后全部可见。
+                每类可免费查看前 2 所，还有 <strong>{lockedCount} 所</strong>被锁定——解锁后查看完整概率分析、历年趋势、在读生口碑。
               </div>
             )}
           </div>
@@ -1248,6 +1315,11 @@ function ResultsContent() {
             </div>
           );
         })()}
+
+        {/* 季卡推广 — 未付费或 trial 用户可见 */}
+        {data && (!data.is_paid || data.is_trial) && data.total_matched > 0 && (
+          <SeasonPromoCard onUnlock={() => openPayModal("season_2026")} />
+        )}
 
         {/* Tab bar */}
         <div className="tab-bar" style={{ margin: "12px 0 0", display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "space-around" }}>
@@ -1377,22 +1449,59 @@ function ResultsContent() {
                 {activeTab === "gems" ? "该位次区间暂无冷门推荐" : "暂无匹配数据"}
               </div>
             ) : (() => {
-              const FREE_LOCKED_PREVIEW = 3; // max locked cards shown before collapse
-              const freeItems = currentList.filter(item => !item.locked);
-              const lockedItems = currentList.filter(item => item.locked);
-              const visibleLocked = (!data?.is_paid && !lockedExpanded)
-                ? lockedItems.slice(0, FREE_LOCKED_PREVIEW)
-                : lockedItems;
-              const hiddenLockedCount = lockedItems.length - visibleLocked.length;
-              const doUnlock = () => { track("unlock_click", { province, rankInput: Number(rank) }); setShowPayModal(true); };
+              const doUnlock = (productType?: string) => { track("unlock_click", { province, rankInput: Number(rank) }); openPayModal(productType); };
+
+              // 渐进式解锁渲染
+              const renderedItems: React.ReactNode[] = [];
+              let lockedBeyondCount = 0;
+              for (let i = 0; i < currentList.length; i++) {
+                const item = currentList[i];
+                const key = `${item.school_name}-${item.major_name}-${i}`;
+                if (!item.locked) {
+                  renderedItems.push(
+                    <SchoolCard key={`free-${key}`} item={item} province={province} rank={rank} score={score} subject={subject} isPaid={data?.is_paid ?? false} onUnlock={doUnlock} />
+                  );
+                  continue;
+                }
+                // locked
+                if (!data?.is_paid && !data?.is_trial) {
+                  if (i === 2) {
+                    // 第3所：跟原来一样的 LockedSchoolCard，按钮为 9.9 解锁前三所
+                    lockedBeyondCount++;
+                    if (!lockedExpanded && lockedBeyondCount > 3) continue;
+                    renderedItems.push(
+                      <LockedSchoolCard key={`locked-${key}`} item={item} onUnlock={() => doUnlock("trial_report")} unlockLabel="¥9.9 解锁前三所" />
+                    );
+                  } else if (i >= 4) {
+                    lockedBeyondCount++;
+                    if (!lockedExpanded && lockedBeyondCount > 3) continue;
+                    renderedItems.push(
+                      <LockedSchoolCard key={`locked-${key}`} item={item} onUnlock={() => doUnlock("single_report")} unlockLabel="¥39 解锁完整报告" />
+                    );
+                  }
+                } else if (data?.is_trial) {
+                  if (i >= 3) {
+                    lockedBeyondCount++;
+                    if (!lockedExpanded && lockedBeyondCount > 3) continue;
+                    renderedItems.push(
+                      <LockedSchoolCard key={`locked-${key}`} item={item} onUnlock={() => doUnlock("single_report")} unlockLabel="¥39 解锁完整报告" />
+                    );
+                  }
+                }
+              }
+
+              // 计算实际隐藏的锁定数量（用于展开/收起）
+              const totalLockedBeyond = currentList.filter((item, idx) => {
+                if (!item.locked) return false;
+                if (!data?.is_paid && !data?.is_trial) return idx >= 3;
+                if (data?.is_trial) return idx >= 3;
+                return false;
+              }).length;
+              const hiddenLockedCount = totalLockedBeyond - Math.min(totalLockedBeyond, lockedExpanded ? totalLockedBeyond : 3);
+
               return (
                 <div>
-                  {freeItems.map((item, i) => (
-                    <SchoolCard key={`free-${item.school_name}-${item.major_name}-${i}`} item={item} province={province} rank={rank} score={score} subject={subject} isPaid={data?.is_paid ?? false} onUnlock={doUnlock} />
-                  ))}
-                  {visibleLocked.map((item, i) => (
-                    <LockedSchoolCard key={`locked-${item.school_name}-${item.major_name}-${i}`} item={item} onUnlock={doUnlock} />
-                  ))}
+                  {renderedItems}
                   {hiddenLockedCount > 0 && (
                     <div style={{
                       margin: "8px 0 16px", borderRadius: 12,
@@ -1401,31 +1510,34 @@ function ResultsContent() {
                       display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12,
                     }}>
                       <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>
-                        还有 <strong style={{ color: "var(--color-navy)" }}>{hiddenLockedCount} 所</strong>锁定，解锁后全部可见
+                        还有 <strong style={{ color: "var(--color-navy)" }}>{hiddenLockedCount} 所</strong>锁定
                       </div>
-                      <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
-                        <button
-                          onClick={() => setLockedExpanded(true)}
-                          style={{
-                            fontSize: 12, padding: "6px 12px", borderRadius: 8,
-                            border: "1px solid var(--color-border-light)",
-                            background: "transparent", color: "var(--color-text-secondary)",
-                            cursor: "pointer",
-                          }}
-                        >
-                          展开预览
-                        </button>
-                        <button
-                          onClick={doUnlock}
-                          style={{
-                            fontSize: 12, fontWeight: 700, padding: "6px 14px", borderRadius: 8,
-                            background: "var(--color-navy)", color: "#fff",
-                            border: "none", cursor: "pointer",
-                          }}
-                        >
-                          ¥1.99 解锁
-                        </button>
-                      </div>
+                      <button
+                        onClick={() => setLockedExpanded(true)}
+                        style={{
+                          fontSize: 12, padding: "6px 14px", borderRadius: 8,
+                          border: "1px solid var(--color-border-light)",
+                          background: "transparent", color: "var(--color-text-secondary)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        展开预览
+                      </button>
+                    </div>
+                  )}
+                  {lockedExpanded && totalLockedBeyond > 3 && (
+                    <div style={{ textAlign: "center", margin: "8px 0 16px" }}>
+                      <button
+                        onClick={() => setLockedExpanded(false)}
+                        style={{
+                          fontSize: 12, padding: "6px 14px", borderRadius: 8,
+                          border: "1px solid var(--color-border-light)",
+                          background: "transparent", color: "var(--color-text-secondary)",
+                          cursor: "pointer",
+                        }}
+                      >
+                        收起预览 ↑
+                      </button>
                     </div>
                   )}
                 </div>
@@ -1446,16 +1558,16 @@ function ResultsContent() {
             {!data?.is_paid && lockedCount > 0 ? (
               <>
                 <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-navy)", marginBottom: 6 }}>
-                  你已经看到了前 5 所
+                  每类可免费查看前 2 所
                 </div>
                 <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 14, lineHeight: 1.6 }}>
-                  解锁剩余 <strong>{lockedCount} 所</strong> + 每所学校真实安全录取线 + 近3年分数线趋势 + 在读生口碑
+                  ¥9.9 解锁每类前 3 所 · ¥39 解锁<strong>{lockedCount} 所</strong>完整分析 + 安全录取线 + 历年趋势 + 在读生口碑
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 16, textAlign: "center" }}>
                   {[
                     ["复读费", "¥30,000+"],
                     ["四年学费差距", "¥40,000+"],
-                    ["完整报告", "¥1.99"],
+                    ["完整报告", "¥39"],
                   ].map(([label, val]) => (
                     <div key={label} style={{
                       padding: "10px 6px", borderRadius: 10,
@@ -1468,7 +1580,7 @@ function ResultsContent() {
                   ))}
                 </div>
                 <button
-                  onClick={() => setShowPayModal(true)}
+                  onClick={() => openPayModal(data?.is_trial ? "single_report" : undefined)}
                   style={{
                     width: "100%", padding: "12px 0", borderRadius: 10,
                     background: "var(--color-navy)", color: "#fff",
@@ -1476,7 +1588,7 @@ function ResultsContent() {
                     cursor: "pointer",
                   }}
                 >
-                  ¥1.99 解锁完整报告（含全部 {totalSchools} 所）
+                  解锁完整报告（含全部 {totalSchools} 所）
                 </button>
                 <div style={{ textAlign: "center", marginTop: 8, fontSize: 11, color: "var(--color-text-tertiary)" }}>
                   无风险 · 如果没用，截图找我们退款
@@ -1565,9 +1677,11 @@ function ResultsContent() {
             setTimeout(() => setToast(null), 4000);
             setLoading(true);
           }}
-          queryParams={{ province, rank: rank ? Number(rank) : undefined, subject, c_major: cMajor, c_city: cCity, c_nature: cNature, c_tier: cTier }}
+          queryParams={{ province, rank: rank ? Number(rank) : undefined, subject, c_major: cMajor, c_city: cCity, c_nature: cNature, c_tier: cTier, mock_score: mockScore ? Number(mockScore) : undefined }}
           totalSchools={totalSchools}
           isPaid={data?.is_paid ?? false}
+          defaultProductType={defaultProductType}
+          existingProductType={data?.is_trial ? "trial_report" : undefined}
         />
       )}
 
@@ -1601,8 +1715,8 @@ function ResultsContent() {
         </div>
       )}
 
-      {/* Sticky unlock banner for unpaid users */}
-      {data && !data.is_paid && data.total_matched > 0 && (
+      {/* Sticky unlock banner for unpaid / trial users */}
+      {data && (!data.is_paid || data.is_trial) && data.total_matched > 0 && (
         <div style={{
           position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 90,
           background: "linear-gradient(135deg, var(--color-navy) 0%, #2d4a8a 100%)",
@@ -1612,14 +1726,24 @@ function ResultsContent() {
         }}>
           <div style={{ color: "#fff", minWidth: 0 }}>
             <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>
-              你已看到前 5 所 · 还有 {lockedCount} 所被锁定
+              {data.is_trial
+                ? `试看结束 · 每类已展示前 ${data.trial_limit || 3} 所`
+                : `每类可免费查看前 2 所 · 还有 ${lockedCount} 所被锁定`}
             </div>
             <div style={{ fontSize: 11, color: "rgba(255,255,255,0.65)", marginTop: 2 }}>
-              解锁完整安全线分析 + 历年趋势 + 在读生口碑 · ¥1.99
+              {data.is_trial
+                ? "升级完整报告 ¥39 或会员 ¥99 查看全部"
+                : "解锁完整安全线分析 + 历年趋势 + 在读生口碑 · ¥9.9 起"}
+              <span
+                onClick={() => router.push("/pricing")}
+                style={{ marginLeft: 8, textDecoration: "underline", cursor: "pointer", color: "rgba(255,255,255,0.85)" }}
+              >
+                查看定价规则
+              </span>
             </div>
           </div>
           <button
-            onClick={() => setShowPayModal(true)}
+            onClick={() => openPayModal(data?.is_trial ? "single_report" : undefined)}
             style={{
               flexShrink: 0, fontSize: 13, fontWeight: 700,
               padding: "10px 20px", borderRadius: 980,
@@ -1627,7 +1751,7 @@ function ResultsContent() {
               border: "none", cursor: "pointer", whiteSpace: "nowrap",
             }}
           >
-            ¥1.99 立即解锁
+            {data?.is_trial ? "升级完整报告 ¥39" : "¥9.9 起解锁"}
           </button>
         </div>
       )}

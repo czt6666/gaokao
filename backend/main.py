@@ -264,8 +264,8 @@ def recommend(
     #   - 创建订单失败时显示「创建订单失败，点击重试」按钮
     #   - 二维码超时时显示「二维码已过期，重新获取」按钮
     # 订阅到期时间设置 → routers/payment.py:246-261 (_finalize_order)
-    #   - season_2026: 2026-07-31, monthly: +30天, quarterly: +90天
-    # ¥1.99 = 解锁「某省×某位次×某选科」单次查询
+    #   - season_2026: 2026-09-01, monthly: +30天, quarterly: +90天
+    # ¥39 = 解锁「某省×某位次×某选科」单次查询
     # order_no 必须同时满足：已支付 + province/rank/subject 与当前查询匹配
     is_paid = False
     if order_no:
@@ -284,6 +284,14 @@ def recommend(
             # 选科必须匹配（空字符串=历史兼容订单，视为匹配）
             subject_match = (paid_order.subject == "" or paid_order.subject == subject)
             is_paid = province_match and rank_match and subject_match
+
+            # 订阅制订单：即使订单本身有效，也需检查用户订阅状态是否仍然有效
+            if is_paid and paid_order.product_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+                if paid_order.user_id:
+                    order_user = db.query(User).filter(User.id == paid_order.user_id).first()
+                    now = datetime.datetime.utcnow()
+                    if not order_user or not order_user.is_paid or not (order_user.subscription_end_at and order_user.subscription_end_at > now):
+                        is_paid = False
 
     if not is_paid:
         auth_header = request.headers.get("Authorization", "")
@@ -328,9 +336,20 @@ def recommend(
     if c_tier.strip():
         constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
 
+    # 试看层门控：trial_report 只解锁前 3 所
+    trial_limit = None
+    if is_paid and order_no:
+        paid_order = db.query(Order).filter(Order.order_no == order_no, Order.status == "paid").first()
+        if paid_order and paid_order.product_type == "trial_report":
+            trial_limit = 3
+
     try:
-        return _run_recommend_core(province=province, rank=rank, subject=subject,
-                                   exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid, constraints=constraints or None)
+        result = _run_recommend_core(province=province, rank=rank, subject=subject,
+                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid,
+                                     constraints=constraints or None, trial_limit=trial_limit)
+        result["is_trial"] = trial_limit is not None
+        result["trial_limit"] = trial_limit
+        return result
     except Exception as e:
         logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")

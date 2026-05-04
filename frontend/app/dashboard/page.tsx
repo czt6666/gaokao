@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PayModal from "@/components/PayModal";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -41,6 +42,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [refCopied, setRefCopied] = useState(false);
   const [paidOrders, setPaidOrders] = useState<PaidOrder[]>([]);
+  const [showPayModal, setShowPayModal] = useState(false);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
@@ -95,10 +97,11 @@ export default function DashboardPage() {
     ? `${user.phone.slice(0, 3)}****${user.phone.slice(-4)}`
     : `用户${String(user.user_id).slice(-4)}`;
 
-  // single_report / report_export = 永久无到期；season_2026 / monthly_sub / quarterly_sub = 有到期日
+  // single_report / report_export / trial_report = 永久无到期；season_2026 / monthly_sub / quarterly_sub = 有到期日
   const isSingle = !user.subscription_type
     || user.subscription_type === "single_report"
-    || user.subscription_type === "report_export";
+    || user.subscription_type === "report_export"
+    || user.subscription_type === "trial_report";
   // isExpired 以服务端 lazy check 的 is_paid 为准，避免 days_remaining 四舍五入误判
   const isExpired = !isSingle && !user.is_paid;
   const isExpiringSoon = !isSingle && user.is_paid
@@ -109,7 +112,7 @@ export default function DashboardPage() {
     : null;
 
   const referralCount = user.referral_count ?? 0;
-  const rewardDays = referralCount * 3;
+  const rewardDays = (referralCount * 3) + (user.referral_reward_days ?? 0);
 
   // Build re-query URL from stored params
   const savedProvince = typeof window !== "undefined" ? (localStorage.getItem("gaokao_province") || "") : "";
@@ -216,7 +219,7 @@ export default function DashboardPage() {
             <>
               <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>先解锁，再重查</div>
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>
-                解锁后可查看完整冷门分析 · 就业薪资 · 填报策略，并在2026年7月31日前无限次重查
+                解锁后可查看完整冷门分析 · 就业薪资 · 填报策略，并在2026年9月1日前无限次重查
               </div>
               <button
                 onClick={() => router.push("/?unlock=1")}
@@ -225,21 +228,93 @@ export default function DashboardPage() {
                   background: "var(--color-accent)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600,
                 }}
               >
-                解锁完整报告 ¥1.99 →
+                解锁完整报告 ¥39 起 →
               </button>
             </>
           )}
         </div>
 
-        {/* ── 推荐返佣 ── 暂时隐藏 ── */}
-        {/* {user?.referral_code && (
+        {/* ── 填报季会员入口（未开通时展示） ── */}
+        {user.subscription_type !== "season_2026" && !isExpired && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(0,56,179,0.06) 0%, rgba(0,56,179,0.02) 100%)",
+            border: "1.5px solid rgba(0,56,179,0.18)",
+            borderRadius: 16, padding: "18px 20px", marginBottom: 16,
+          }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+              <div style={{ fontSize: 14, fontWeight: 700, color: "var(--color-navy)" }}>2026 填报季会员</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: "var(--color-navy)" }}>¥99</div>
+            </div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 12 }}>
+              即日起至 2026年9月1日 · 无限次查询 · 位次微调随时重查 · 志愿表收藏与对比
+            </div>
+            <button
+              onClick={() => setShowPayModal(true)}
+              style={{
+                width: "100%", padding: "11px", borderRadius: 10, fontSize: 14,
+                background: "var(--color-navy)", color: "#fff",
+                border: "none", cursor: "pointer", fontWeight: 700,
+              }}
+            >
+              {user.is_paid ? "升级季会员 →" : "开通季会员 →"}
+            </button>
+          </div>
+        )}
+
+        {/* ── 推荐返佣 ── */}
+        {user.referral_code && (
           <div style={{
             background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
             borderRadius: 16, padding: "18px 20px", marginBottom: 16,
           }}>
-            ...
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>邀请好友 · 你们都省钱</div>
+            <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
+              朋友通过你的链接付费后，<strong style={{ color: "var(--color-accent)" }}>你自动获得3天免费</strong>——在最关键的高考季，白送一次重查机会。
+            </div>
+
+            {/* Progress bar to next milestone */}
+            {(() => {
+              const MILESTONE = 4;
+              const milestoneGot = (user.referral_reward_days ?? 0) >= 30;
+              const pct = Math.min((referralCount / MILESTONE) * 100, 100);
+              return (
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 5 }}>
+                    <span>已邀请 <strong style={{ color: "var(--color-text-primary)" }}>{referralCount}</strong> 人付费</span>
+                    <span style={{ color: "var(--color-accent)", fontWeight: 600 }}>
+                      {milestoneGot ? "✓ 已获得额外30天奖励" : `再邀 ${MILESTONE - referralCount} 人 → 额外+30天`}
+                    </span>
+                  </div>
+                  <div style={{ height: 5, background: "var(--color-separator)", borderRadius: 99, overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: "var(--color-accent)", borderRadius: 99, transition: "width 0.5s" }} />
+                  </div>
+                  {rewardDays > 0 && (
+                    <div style={{ fontSize: 11, color: "#34C759", marginTop: 5, fontWeight: 500 }}>
+                      ✓ 已累计获得 {rewardDays} 天奖励
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
+            <button
+              onClick={() => {
+                const link = `https://www.theyuanxi.cn/?ref=${user.referral_code}`;
+                const text = `高考志愿填报神器！输入位次自动算出每所学校录取概率，冷门宝藏院校一键找到，比找机构便宜太多了。用我的专属链接还有优惠 👉 ${link}`;
+                try { navigator.clipboard.writeText(text); } catch {}
+                setRefCopied(true);
+                setTimeout(() => setRefCopied(false), 2500);
+              }}
+              style={{
+                width: "100%", padding: "11px", borderRadius: 10, fontSize: 13,
+                background: refCopied ? "#34C759" : "#07C160", color: "#fff",
+                border: "none", cursor: "pointer", fontWeight: 600, transition: "background 0.2s",
+              }}
+            >
+              {refCopied ? "✓ 已复制，发给朋友即可" : "复制专属邀请链接"}
+            </button>
           </div>
-        )} */}
+        )}
 
         {/* ── 已购报告历史 ── */}
         {paidOrders.length > 0 && (
@@ -339,6 +414,13 @@ export default function DashboardPage() {
         </button>
 
       </div>
+
+      {showPayModal && (
+        <PayModal
+          onClose={() => setShowPayModal(false)}
+          defaultProductType="season_2026"
+        />
+      )}
     </main>
   );
 }

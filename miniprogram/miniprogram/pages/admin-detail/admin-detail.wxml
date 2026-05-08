@@ -1,0 +1,377 @@
+<!-- pages/admin-detail/admin-detail.wxml — 家庭档案详情 -->
+<view class="root">
+
+  <!-- 加载 -->
+  <view class="loading-page" wx:if="{{loading}}">
+    <view class="loading-ring"></view>
+    <text class="loading-text">加载档案中…</text>
+  </view>
+
+  <block wx:if="{{!loading && assessment}}">
+
+    <!-- ══ 档案头部 Hero ══ -->
+    <view class="hero">
+      <view class="hero-row">
+        <view class="hero-avatar">
+          <text class="hero-initial">{{assessment.childName[0] || '子'}}</text>
+        </view>
+        <view class="hero-info">
+          <view class="hero-name-row">
+            <text class="hero-name">{{assessment.childName}}</text>
+            <view class="stage-pill" bindtap="toggleStageMenu"
+              style="background:{{stageColorMap[assessment.adminStage]}}20;border-color:{{stageColorMap[assessment.adminStage]}}50;">
+              <text style="color:{{stageColorMap[assessment.adminStage]}}">{{stageLabelMap[assessment.adminStage] || '新线索'}}</text>
+              <text class="stage-arrow" style="color:{{stageColorMap[assessment.adminStage]}}">▾</text>
+            </view>
+          </view>
+          <text class="hero-meta">{{stageMap[assessment.schoolStage] || '—'}} · {{assessment.childAge || '—'}}岁 · {{schoolTypeMap[assessment.schoolType] || '—'}}</text>
+        </view>
+        <view class="copy-btn" bindtap="copyInfo">复制</view>
+      </view>
+
+      <!-- 核心数字 -->
+      <view class="hero-scores">
+        <view class="hero-score-item">
+          <text class="h-score-num" style="color:{{assessment.overallColor || '#fff'}}">{{assessment.overallScore}}</text>
+          <text class="h-score-label">综合适配</text>
+        </view>
+        <view class="h-divider"></view>
+        <view class="hero-score-item">
+          <text class="h-score-icon">{{pathIconMap[assessment.primaryPath] || '🎯'}}</text>
+          <text class="h-score-label">{{assessment.primaryPathLabel}}</text>
+        </view>
+        <view class="h-divider"></view>
+        <view class="hero-score-item">
+          <text class="h-score-num {{assessment.behavior.ctaTapped ? 'green' : 'dim'}}">{{assessment.behavior.ctaTapped ? '有' : '无'}}</text>
+          <text class="h-score-label">咨询意向</text>
+        </view>
+      </view>
+
+      <!-- 行为标签 -->
+      <view class="hero-behavior">
+        <view class="bh-tag {{assessment.hasParentAnswers ? 'on' : 'off'}}">
+          <text>{{assessment.hasParentAnswers ? '✓' : '✗'}} 家长问卷</text>
+        </view>
+        <view class="bh-tag {{assessment.hasAiInsight ? 'on' : 'off'}}">
+          <text>{{assessment.hasAiInsight ? '✓' : '✗'}} AI分析</text>
+        </view>
+        <view class="bh-tag {{assessment.behavior.shareGenerated ? 'on' : 'off'}}">
+          <text>{{assessment.behavior.shareGenerated ? '✓' : '✗'}} 生成了分享卡</text>
+        </view>
+        <view class="bh-tag {{assessment.behavior.aiChatStarted ? 'on' : 'off'}}">
+          <text>{{assessment.behavior.aiChatStarted ? '✓' : '✗'}} 追问了袁希</text>
+        </view>
+      </view>
+
+      <!-- 行为深度信号 -->
+      <view class="hero-signals" wx:if="{{assessment.behavior}}">
+        <!-- 意向评级 -->
+        <view class="signal-pill intent-pill">
+          <text class="sp-label">意向</text>
+          <text class="sp-val sp-stars">{{intentStars}}</text>
+        </view>
+        <!-- 访问次数 -->
+        <view class="signal-pill visit-pill" wx:if="{{(assessment.behavior.visitCount || 1) >= 2}}">
+          <text class="sp-icon">{{(assessment.behavior.visitCount || 1) >= 3 ? '🔥' : '👀'}}</text>
+          <text class="sp-val">复访{{assessment.behavior.visitCount}}次</text>
+        </view>
+        <!-- 阅读深度 -->
+        <view class="signal-pill read-pill" wx:if="{{assessment.behavior.readTier && assessment.behavior.readTier !== 'shallow'}}">
+          <text class="sp-icon">📖</text>
+          <text class="sp-val">{{readTierLabelMap[assessment.behavior.readTier] || assessment.behavior.readTier}}</text>
+          <text class="sp-sub"> · {{assessment.behavior.maxReadDuration || 0}}秒</text>
+        </view>
+        <!-- 浅读也显示 -->
+        <view class="signal-pill read-pill dim" wx:elif="{{assessment.behavior.readTier === 'shallow'}}">
+          <text class="sp-icon">📄</text>
+          <text class="sp-val">浅读</text>
+          <text class="sp-sub"> · {{assessment.behavior.maxReadDuration || 0}}秒</text>
+        </view>
+        <!-- 问卷放弃警告 -->
+        <view class="signal-pill warn-pill" wx:if="{{assessment.behavior.parentAbandonedAt !== undefined && !assessment.hasParentAnswers}}">
+          <text class="sp-icon">⚠️</text>
+          <text class="sp-val">中途放弃</text>
+          <text class="sp-sub"> · {{assessment.behavior.parentAbandonedAtLabel || ''}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 阶段切换菜单 -->
+    <view class="stage-menu-mask" wx:if="{{showStageMenu}}" bindtap="toggleStageMenu">
+      <view class="stage-menu" catchtap="">
+        <text class="stage-menu-title">更改跟进阶段</text>
+        <view wx:for="{{stageOptions}}" wx:key="key"
+          class="stage-opt {{assessment.adminStage === item.key ? 'active' : ''}}"
+          bindtap="setStage" data-key="{{item.key}}"
+          style="{{assessment.adminStage === item.key ? 'background:'+item.color+'15;' : ''}}"
+        >
+          <text style="color:{{item.color}}">{{item.label}}</text>
+          <text class="opt-check" wx:if="{{assessment.adminStage === item.key}}">✓</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ Block 1: 孩子能力画像 ══ -->
+    <view class="section-card">
+      <text class="section-title">孩子能力画像</text>
+
+      <!-- 基本能力标签 -->
+      <view class="info-chips">
+        <view class="info-chip" wx:if="{{assessment.englishLevel}}">
+          <text class="chip-icon">🗣️</text>
+          <text class="chip-label">英语</text>
+          <text class="chip-val">{{engMap[assessment.englishLevel]}}</text>
+        </view>
+        <view class="info-chip" wx:if="{{assessment.academicTier}}">
+          <text class="chip-icon">📊</text>
+          <text class="chip-label">学业</text>
+          <text class="chip-val">{{acadMap[assessment.academicTier]}}</text>
+        </view>
+        <view class="info-chip" wx:if="{{assessment.mindsetLabel}}">
+          <text class="chip-icon">🧠</text>
+          <text class="chip-label">思维</text>
+          <text class="chip-val">{{assessment.mindsetLabel}}（{{assessment.mindsetScore}}/5）</text>
+        </view>
+      </view>
+
+      <!-- 多元智能前3 -->
+      <text class="sub-label">优势智能（前3）</text>
+      <view class="mi-row-list">
+        <view class="mi-admin-item" wx:for="{{assessment.topIntelligences}}" wx:key="key">
+          <view class="mi-rank-badge">{{index + 1}}</view>
+          <view class="mi-info">
+            <text class="mi-name-admin">{{item.label}}</text>
+            <view class="mi-bar-bg-admin">
+              <view class="mi-bar-fill-admin" style="width:{{item.pct}}%"></view>
+            </view>
+          </view>
+          <text class="mi-score-admin">{{item.score}}/5</text>
+        </view>
+      </view>
+
+      <!-- 思维模式描述 -->
+      <view class="mindset-note" wx:if="{{assessment.mindsetDesc}}">
+        <text class="mindset-note-icon">💡</text>
+        <text class="mindset-note-text">{{assessment.mindsetDesc}}</text>
+      </view>
+    </view>
+
+    <!-- ══ Block 2: 4维度适配评分 ══ -->
+    <view class="section-card">
+      <text class="section-title">适配度四维评分</text>
+      <view class="dim-list-admin">
+        <view class="dim-row-admin" wx:for="{{assessment.dimensions}}" wx:key="id">
+          <view class="dim-left">
+            <text class="dim-icon-admin">{{item.icon}}</text>
+            <view class="dim-body">
+              <view class="dim-name-row">
+                <text class="dim-name-admin">{{item.label}}</text>
+                <view class="dim-level-tag-admin" style="background:{{item.levelColor}}15;">
+                  <text style="color:{{item.levelColor}}">{{item.levelLabel}}</text>
+                </view>
+              </view>
+              <text class="dim-evidence-admin">{{item.evidence}}</text>
+            </view>
+          </view>
+          <text class="dim-score-admin" style="color:{{item.levelColor}}">{{item.score}}</text>
+        </view>
+      </view>
+
+      <!-- 路径建议 -->
+      <view class="path-block" wx:if="{{assessment.primaryPathLabel}}">
+        <text class="sub-label">建议路径</text>
+        <view class="path-main-row">
+          <text class="path-main-icon-admin">{{pathIconMap[assessment.primaryPath] || '🎯'}}</text>
+          <text class="path-main-label-admin">{{assessment.primaryPathLabel}}</text>
+          <view class="confidence-tag-admin">
+            <text>{{assessment.pathConfidence === 'high' ? '高置信' : assessment.pathConfidence === 'medium' ? '中置信' : '建议深度咨询'}}</text>
+          </view>
+        </view>
+        <!-- 支撑理由 -->
+        <view class="rationale-list-admin" wx:if="{{assessment.pathRationale.length}}">
+          <view class="rat-item" wx:for="{{assessment.pathRationale}}" wx:key="index">
+            <text class="rat-dot">·</text>
+            <text class="rat-text">{{item}}</text>
+          </view>
+        </view>
+        <!-- 风险 -->
+        <view class="risk-list-admin" wx:if="{{assessment.pathRisks.length}}">
+          <text class="risk-header">⚠️ 风险提示</text>
+          <view class="risk-item-admin" wx:for="{{assessment.pathRisks}}" wx:key="index">
+            <text class="risk-text-admin">{{item}}</text>
+          </view>
+        </view>
+        <text class="alt-path-admin" wx:if="{{assessment.altPath}}">备选路径：{{assessment.altPath}}</text>
+      </view>
+    </view>
+
+    <!-- ══ Block 3: AI深度家庭洞察 ══ -->
+    <view class="section-card ai-section" wx:if="{{assessment.aiInsight}}">
+      <view class="ai-section-header">
+        <text class="section-title">袁希AI深度洞察</text>
+        <view class="ai-label-badge"><text>DeepSeek</text></view>
+      </view>
+
+      <!-- 袁希视角 -->
+      <view class="yuanxi-card-admin">
+        <text class="yuanxi-icon-admin">✦</text>
+        <text class="yuanxi-text-admin">{{assessment.aiInsight.yuanxiPerspective}}</text>
+      </view>
+
+      <!-- 标签行 -->
+      <view class="ai-tags-grid">
+        <view class="ai-tag-admin" wx:if="{{assessment.aiInsight.parentingStyle}}">
+          <text class="ata-label">教养风格</text>
+          <text class="ata-val">{{assessment.aiInsight.parentingStyle}}</text>
+        </view>
+        <view class="ai-tag-admin" wx:if="{{assessment.aiInsight.commQuality}}">
+          <text class="ata-label">亲子沟通</text>
+          <text class="ata-val">{{assessment.aiInsight.commQuality}}</text>
+        </view>
+        <view class="ai-tag-admin" wx:if="{{assessment.aiInsight.valueConsensus}}">
+          <text class="ata-label">价值观</text>
+          <text class="ata-val">{{assessment.aiInsight.valueConsensus}}</text>
+        </view>
+      </view>
+
+      <!-- 最有价值的原文引用 -->
+      <view class="key-quote-block" wx:if="{{assessment.aiInsight.keyQuote}}">
+        <text class="kq-label">家长原话（最有代表性）</text>
+        <view class="kq-quote">
+          <text class="kq-mark">"</text>
+          <text class="kq-text">{{assessment.aiInsight.keyQuote}}</text>
+        </view>
+      </view>
+
+      <!-- 优势 & 风险 -->
+      <view class="signal-pair">
+        <view class="signal-box strength" wx:if="{{assessment.aiInsight.strengthSignal}}">
+          <text class="sb-icon">💎</text>
+          <view class="sb-body">
+            <text class="sb-title">家庭优势</text>
+            <text class="sb-text">{{assessment.aiInsight.strengthSignal}}</text>
+          </view>
+        </view>
+        <view class="signal-box risk-box" wx:if="{{assessment.aiInsight.riskSignal}}">
+          <text class="sb-icon">⚡</text>
+          <view class="sb-body">
+            <text class="sb-title">风险信号</text>
+            <text class="sb-text">{{assessment.aiInsight.riskSignal}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 认知盲区（咨询切入点） -->
+      <view class="blindspot-box-admin" wx:if="{{assessment.aiInsight.blindspot}}">
+        <view class="bb-header">
+          <text class="bb-icon">🔍</text>
+          <text class="bb-title">认知盲区 · 咨询切入点</text>
+        </view>
+        <text class="bb-text">{{assessment.aiInsight.blindspot}}</text>
+      </view>
+    </view>
+
+    <!-- ══ Block 4: 家庭画像（关键词分析）══ -->
+    <view class="section-card">
+      <text class="section-title">家庭画像</text>
+      <view class="family-grid">
+        <view class="fg-item" wx:if="{{assessment.parentingLabel}}">
+          <text class="fg-label">教养方式</text>
+          <text class="fg-val">{{assessment.parentingLabel}}</text>
+        </view>
+        <view class="fg-item" wx:if="{{assessment.commLabel}}">
+          <text class="fg-label">沟通质量</text>
+          <text class="fg-val">{{assessment.commLabel}}</text>
+        </view>
+        <view class="fg-item" wx:if="{{assessment.valueConsensus}}">
+          <text class="fg-label">价值观一致</text>
+          <text class="fg-val">{{consensusLabelMap[assessment.valueConsensus] || assessment.valueConsensus}}</text>
+        </view>
+        <view class="fg-item" wx:if="{{assessment.engagementLabel}}">
+          <text class="fg-label">参与深度</text>
+          <text class="fg-val">{{assessment.engagementLabel}}</text>
+        </view>
+      </view>
+      <!-- 教养风格说明 -->
+      <view class="parenting-note" wx:if="{{assessment.parentingNote}}">
+        <text>{{assessment.parentingNote}}</text>
+      </view>
+      <!-- 关键原文引用（来自keyQuotes） -->
+      <view wx:if="{{assessment.keyQuotes}}">
+        <view class="quote-item" wx:if="{{assessment.keyQuotes.childPassion}}">
+          <text class="qi-label">孩子的热情方向</text>
+          <text class="qi-text">"{{assessment.keyQuotes.childPassion}}"</text>
+        </view>
+        <view class="quote-item" wx:if="{{assessment.keyQuotes.idealPerson}}">
+          <text class="qi-label">家长心目中的理想孩子</text>
+          <text class="qi-text">"{{assessment.keyQuotes.idealPerson}}"</text>
+        </view>
+        <view class="quote-item" wx:if="{{assessment.keyQuotes.hopeFromAssessment}}">
+          <text class="qi-label">家长对评估的期望</text>
+          <text class="qi-text">"{{assessment.keyQuotes.hopeFromAssessment}}"</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ Block 5: 三个行动建议 ══ -->
+    <view class="section-card" wx:if="{{assessment.actions.length}}">
+      <text class="section-title">系统推荐的三个行动</text>
+      <view class="action-list-admin">
+        <view class="action-item-admin" wx:for="{{assessment.actions}}" wx:key="priority">
+          <view class="action-num-col-admin">
+            <view class="action-circle-admin">
+              <text class="action-icon-admin">{{item.icon}}</text>
+            </view>
+          </view>
+          <view class="action-body-admin">
+            <text class="action-timeframe-admin">{{item.timeframe}}</text>
+            <text class="action-title-admin">{{item.title}}</text>
+            <text class="action-desc-admin">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ Block 6: 家长问卷原文 ══ -->
+    <view class="section-card" wx:if="{{assessment.hasParentAnswers && assessment.parentAnswers}}">
+      <view class="qa-header" bindtap="toggleAnswers">
+        <text class="section-title">家长问卷原文（{{assessment.parentAnswerCount}}道有效回答）</text>
+        <text class="qa-arrow">{{expandedAnswers ? '▲' : '▼'}}</text>
+      </view>
+      <view wx:if="{{expandedAnswers}}">
+        <view class="qa-item"
+          wx:for="{{assessment.parentAnswers}}"
+          wx:for-key="key"
+          wx:if="{{item && item.length > 3}}"
+          wx:key="*this"
+        >
+          <text class="qa-q">{{parentQKeys[key] || key}}</text>
+          <text class="qa-a">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ Block 7: 袁希备注 ══ -->
+    <view class="section-card note-card">
+      <view class="note-header">
+        <text class="section-title">我的备注</text>
+        <text class="edit-btn" bindtap="toggleEditNote">{{editingNote ? '取消' : '编辑'}}</text>
+      </view>
+      <view wx:if="{{!editingNote}}">
+        <text class="note-display" wx:if="{{assessment.adminNote}}">{{assessment.adminNote}}</text>
+        <text class="note-empty" wx:else>点击"编辑"添加备注…</text>
+      </view>
+      <view wx:else>
+        <textarea
+          class="note-textarea"
+          placeholder="记录咨询要点、跟进情况、成交信息…"
+          value="{{noteInput}}"
+          bindinput="onNoteInput"
+          auto-height maxlength="500"
+        ></textarea>
+        <button class="save-note-btn" bindtap="saveNote">保存备注</button>
+      </view>
+    </view>
+
+  </block>
+</view>

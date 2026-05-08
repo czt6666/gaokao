@@ -1,0 +1,76 @@
+<!-- pages/profile/profile.wxml -->
+<!-- 用户画像问卷 — 年级 / 预算 / 方向 -->
+
+<view class="page-wrap">
+
+  <!-- 顶部说明 -->
+  <view class="hero">
+    <text class="hero-icon">🎓</text>
+    <text class="hero-title">{{isFirstTime ? '完善孩子的学习档案' : '更新档案信息'}}</text>
+    <text class="hero-sub">帮助我们为你提供更精准的选校建议</text>
+  </view>
+
+  <!-- Q1: 年级 -->
+  <view class="q-block">
+    <view class="q-label">
+      <text class="q-num">01</text>
+      <text class="q-text">孩子目前几年级？</text>
+    </view>
+    <view class="chip-grid">
+      <view
+        wx:for="{{gradeOptions}}"
+        wx:key="value"
+        class="chip {{selectedGrade === item.value ? 'chip-active' : ''}}"
+        bindtap="selectGrade"
+        data-value="{{item.value}}"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <!-- Q2: 预算 -->
+  <view class="q-block">
+    <view class="q-label">
+      <text class="q-num">02</text>
+      <text class="q-text">留学大致预算（年学费+生活费）？</text>
+    </view>
+    <view class="chip-grid">
+      <view
+        wx:for="{{budgetOptions}}"
+        wx:key="value"
+        class="chip {{selectedBudget === item.value ? 'chip-active' : ''}}"
+        bindtap="selectBudget"
+        data-value="{{item.value}}"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <!-- Q3: 方向 -->
+  <view class="q-block">
+    <view class="q-label">
+      <text class="q-num">03</text>
+      <text class="q-text">孩子最感兴趣的方向？</text>
+    </view>
+    <view class="chip-grid">
+      <view
+        wx:for="{{interestOptions}}"
+        wx:key="value"
+        class="chip {{selectedInterest === item.value ? 'chip-active' : ''}}"
+        bindtap="selectInterest"
+        data-value="{{item.value}}"
+      >{{item.label}}</view>
+    </view>
+  </view>
+
+  <!-- 底部操作区 -->
+  <view class="footer">
+    <view
+      class="submit-btn {{canSubmit ? '' : 'submit-btn-dim'}} {{submitting ? 'submit-btn-loading' : ''}}"
+      bindtap="submit"
+    >
+      <text wx:if="{{!submitting}}">保存档案</text>
+      <text wx:else>保存中…</text>
+    </view>
+    <view class="skip-btn" bindtap="skip">暂时跳过</view>
+  </view>
+
+</view>

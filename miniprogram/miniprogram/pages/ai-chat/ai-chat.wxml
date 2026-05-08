@@ -1,0 +1,202 @@
+<!-- pages/ai-chat/ai-chat.wxml — 战略成长™ · 袁希 AI对话 -->
+<view class="chat-page">
+
+  <!-- ── Consult 模式：顾问标识条 ── -->
+  <view wx:if="{{consultMode}}" class="followup-context-bar consult-bar">
+    <text class="fcb-icon">✦</text>
+    <view class="fcb-text">
+      <text class="fcb-title">袁希 · 多元智能分析</text>
+      <text class="fcb-sub">{{consultSchoolName ? ('正在分析：' + consultSchoolName) : '20年教育经验驱动'}}</text>
+    </view>
+    <navigator open-type="navigateBack" class="fcb-back">返回</navigator>
+  </view>
+
+  <!-- ── Followup 模式：报告上下文标识条（替换进度条）── -->
+  <view wx:elif="{{followupMode}}" class="followup-context-bar">
+    <text class="fcb-icon">✦</text>
+    <view class="fcb-text">
+      <text class="fcb-title">针对《{{reportContext.childName || '孩子'}}的诊断报告》</text>
+      <text class="fcb-sub">路径：{{reportContext.educationPath}} · 顶级智能：{{reportContext.topMI[0]}}</text>
+    </view>
+    <navigator url="/pages/result/result" open-type="navigateBack" class="fcb-back">回报告</navigator>
+  </view>
+
+  <!-- ── 正常问卷模式：顶部极简进度条 ── -->
+  <view wx:else class="progress-bar-wrap">
+    <view class="progress-track">
+      <view class="progress-fill" style="width: {{progress}}%"></view>
+    </view>
+    <view class="stage-pill">{{stageLabel || '正在了解你的孩子'}}</view>
+  </view>
+
+  <!-- ── AI 生成内容声明（微信审核合规） ── -->
+  <view class="ai-disclosure-bar">
+    <text class="ai-disclosure-text">本对话内容由 AI 生成，仅供参考</text>
+  </view>
+
+  <!-- ── 对话区域 ── -->
+  <scroll-view class="chat-scroll" scroll-y enhanced show-scrollbar="{{false}}" scroll-into-view="{{scrollIntoView}}">
+    <view class="chat-inner">
+
+      <view wx:for="{{messages}}" wx:key="ts" class="msg-row {{item.role === 'user' ? 'row-right' : 'row-left'}}">
+
+        <!-- AI头像：金色✦符号 -->
+        <view class="ai-avatar" wx:if="{{item.role === 'ai'}}">
+          <text class="avatar-symbol">✦</text>
+        </view>
+
+        <!-- 气泡 + 功能卡片纵向堆叠 -->
+        <view class="bubble-stack {{item.role === 'user' ? 'bubble-stack-right' : ''}}">
+          <!-- 点击 AI 气泡可跳过流式动画（skipStream 内部判断是否正在流式） -->
+          <view
+            class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-ai'}}"
+            bindtap="skipStream"
+          >
+            <text class="bubble-text" wx:if="{{item.text}}">{{item.text}}{{item.isStreaming && !item.questionText ? '▋' : ''}}</text>
+            <!-- 问题高亮块：最后一句问题单独突出显示 -->
+            <view wx:if="{{item.role === 'ai' && item.questionText}}" class="question-highlight">
+              <text class="question-highlight-text">{{item.questionText}}{{item.isStreaming ? '▋' : ''}}</text>
+            </view>
+          </view>
+
+          <!-- 功能推荐卡片（仅AI消息可能携带）-->
+          <view wx:if="{{item.role === 'ai' && item.featureCards && item.featureCards.length > 0}}" class="feature-cards-wrap">
+            <view
+              wx:for="{{item.featureCards}}"
+              wx:for-item="card"
+              wx:key="page"
+              class="feature-card"
+              bindtap="onFeatureCardTap"
+              data-page="{{card.page}}"
+            >
+              <text class="fc-icon">{{card.icon}}</text>
+              <view class="fc-body">
+                <view class="fc-title">{{card.title}}</view>
+                <view class="fc-desc">{{card.desc}}</view>
+              </view>
+              <text class="fc-arrow">›</text>
+            </view>
+          </view>
+
+        </view>
+
+        <!-- 用户无头像（极简模式）-->
+      </view>
+
+      <!-- AI打字中（普通对话状态）-->
+      <view class="msg-row row-left" wx:if="{{isTyping && !isAnalyzing}}">
+        <view class="ai-avatar"><text class="avatar-symbol">✦</text></view>
+        <view class="bubble bubble-ai typing-bubble">
+          <text class="typing-label">{{quickThinkText || '袁希 思考中'}}</text>
+          <view class="typing-dots">
+            <view class="dot dot1"></view>
+            <view class="dot dot2"></view>
+            <view class="dot dot3"></view>
+          </view>
+        </view>
+      </view>
+
+      <!-- AI深度分析中：富状态思考卡片 -->
+      <view class="analysis-card" wx:if="{{isAnalyzing}}">
+        <!-- 头部：头像 + 状态文字 -->
+        <view class="ac-header">
+          <view class="ac-avatar-wrap">
+            <view class="ac-avatar-pulse"></view>
+            <view class="ac-avatar">
+              <text class="ac-avatar-char">袁</text>
+            </view>
+          </view>
+          <view class="ac-header-info">
+            <text class="ac-title">AI 深度分析中</text>
+            <text class="ac-subtitle">{{thinkingText}}</text>
+          </view>
+        </view>
+
+        <!-- 进度条（shimmer动画） -->
+        <view class="ac-shimmer-wrap">
+          <view class="ac-shimmer-bar"></view>
+        </view>
+
+        <!-- 四步进度指示器 -->
+        <view class="ac-steps-grid">
+          <view class="ac-step {{thinkingStep >= 0 ? 'ac-step-done' : 'ac-step-pending'}}">
+            <text class="ac-step-icon">{{thinkingStep >= 0 ? '✓' : '○'}}</text>
+            <text class="ac-step-label">多元智能解析</text>
+          </view>
+          <view class="ac-step {{thinkingStep >= 1 ? 'ac-step-done' : 'ac-step-pending'}}">
+            <text class="ac-step-icon">{{thinkingStep >= 1 ? '✓' : '○'}}</text>
+            <text class="ac-step-label">思维模式评估</text>
+          </view>
+          <view class="ac-step {{thinkingStep >= 3 ? 'ac-step-done' : 'ac-step-pending'}}">
+            <text class="ac-step-icon">{{thinkingStep >= 3 ? '✓' : '○'}}</text>
+            <text class="ac-step-label">路径匹配运算</text>
+          </view>
+          <view class="ac-step {{thinkingStep >= 5 ? 'ac-step-done' : 'ac-step-pending'}}">
+            <text class="ac-step-icon">{{thinkingStep >= 5 ? '✓' : '○'}}</text>
+            <text class="ac-step-label">报告整合生成</text>
+          </view>
+        </view>
+
+        <text class="ac-footer">多元智能 · 成长型思维</text>
+      </view>
+
+      <view id="chat-bottom" style="height:32rpx"></view>
+    </view>
+  </scroll-view>
+
+  <!-- ── 快捷选项：全宽纵向选项块 ── -->
+  <view class="options-bar" wx:if="{{options.length > 0 && (!isComplete || followupMode || consultMode)}}">
+    <view class="options-inner">
+      <view
+        class="option-tile"
+        wx:for="{{options}}"
+        wx:key="*this"
+        bindtap="selectOption"
+        data-text="{{item}}"
+      >{{item}}</view>
+    </view>
+  </view>
+
+  <!-- ── 输入栏（问卷期间：isComplete前显示；followup模式：始终显示）── -->
+  <view class="input-bar" wx:if="{{!isComplete || followupMode || consultMode}}">
+
+    <!-- 语音按钮：始终显示，任何题目都可以语音输入 -->
+    <view
+      class="voice-btn {{isRecording ? 'voice-recording' : ''}} {{voiceTranscribing ? 'voice-transcribing' : ''}}"
+      bindtap="toggleRecord"
+    >
+      <!-- 录音中：脉冲动画；仅最后8秒显示倒计时数字 -->
+      <view wx:if="{{isRecording && !voiceWarn}}" class="voice-pulse-ring"></view>
+      <text wx:if="{{isRecording && voiceWarn}}" class="voice-countdown-text">{{voiceCountdown}}</text>
+      <!-- 识别中：旋转圆圈 -->
+      <view wx:if="{{voiceTranscribing}}" class="voice-spinner"></view>
+      <!-- 默认：麦克风图标 -->
+      <image wx:if="{{!isRecording && !voiceTranscribing}}"
+        src="/images/icon-mic.png"
+        class="voice-icon-img"
+        mode="aspectFit"
+      />
+    </view>
+
+    <textarea
+      class="text-input text-input-with-voice"
+      value="{{inputText}}"
+      placeholder="{{voiceTranscribing ? '识别中…' : '说话或文字回答…'}}"
+      placeholder-style="color: #AEAEB2; font-size: 26rpx; font-weight: 400; line-height: 1.5;"
+      bindinput="onInputChange"
+      adjust-position="{{true}}"
+      auto-height
+      maxlength="500"
+      show-confirm-bar="{{false}}"
+      disabled="{{voiceTranscribing}}"
+    />
+
+    <view class="send-btn {{inputText ? 'send-active' : ''}}" bindtap="sendText">
+      <text class="send-icon">↑</text>
+    </view>
+  </view>
+
+  <!-- 底部安全区 -->
+  <view style="height: env(safe-area-inset-bottom)"></view>
+
+</view>

@@ -1,0 +1,59 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/gaokao/gaokao",
+    "pages/gaokao-results/gaokao-results",
+    "pages/gaokao-form/gaokao-form",
+    "pages/schools/schools",
+    "pages/growth/growth",
+    "pages/consult/consult",
+    "pages/school-detail/school-detail",
+    "pages/admin/admin",
+    "pages/admin-detail/admin-detail",
+    "pages/booking/booking",
+    "pages/profile/profile",
+    "pages/gaokao-feedback/gaokao-feedback",
+    "pages/feedback/feedback",
+    "pages/my-reports/my-reports",
+    "pages/result/result",
+    "pages/questionnaire/questionnaire",
+    "pages/study-abroad-report/study-abroad-report",
+    "pages/career-vision/career-vision",
+    "pages/printview/printview"
+  ],
+  "tabBar": {
+    "color": "#8E8E93",
+    "selectedColor": "#5B4FCF",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "images/tab-home.png",
+        "selectedIconPath": "images/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/gaokao/gaokao",
+        "text": "志愿",
+        "iconPath": "images/tab-growth.png",
+        "selectedIconPath": "images/tab-growth-active.png"
+      },
+      {
+        "pagePath": "pages/my-reports/my-reports",
+        "text": "我的报告",
+        "iconPath": "images/tab-school.png",
+        "selectedIconPath": "images/tab-school-active.png"
+      }
+    ]
+  },
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "艺圆智探",
+    "navigationBarTextStyle": "black"
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

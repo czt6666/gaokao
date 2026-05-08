@@ -1,0 +1,9 @@
+{
+  "name": "getGaokaoAdmin",
+  "version": "1.0.0",
+  "description": "艺圆智探 · 高考运营后台数据读取云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1387,10 +1387,16 @@ function ResultsContent() {
           <div style={{ textAlign: "center", padding: "64px 0" }}>
             <div style={{ fontSize: 36, fontWeight: 700, color: "var(--color-border-light)", marginBottom: 16 }}>—</div>
             <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 8 }}>
-              {province}数据建设中
+              {cMajor
+                ? "未找到匹配的结果，请输入正确的专业名称"
+                : cCity || cNature || cTier
+                  ? "未找到匹配的结果，请扩大筛选范围"
+                  : `${province}数据建设中`}
             </div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
-              当前已覆盖北京、广东、河南、山东、江苏、浙江录取数据（2017–2025）。建议先切换以上省份体验完整功能。
+              {cMajor || cCity || cNature || cTier
+                ? "您可以返回首页重新查询，或清除筛选条件后重试。"
+                : "当前已覆盖北京、广东、河南、山东、江苏、浙江录取数据（2017–2025）。建议先切换以上省份体验完整功能。"}
             </div>
             <button onClick={() => router.push("/")} className="btn-primary">返回首页</button>
           </div>

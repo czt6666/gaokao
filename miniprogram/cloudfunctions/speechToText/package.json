@@ -1,0 +1,10 @@
+{
+  "name": "speechToText",
+  "version": "1.0.0",
+  "description": "袁希™ 语音转文字 — 腾讯云ASR 一句话识别",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3",
+    "tencentcloud-sdk-nodejs-asr": "^4.0.0"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "adminAnalytics",
+  "version": "1.0.0",
+  "description": "袁希™ 智能问卷自学习分析引擎",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

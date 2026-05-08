@@ -1,0 +1,1288 @@
+<!-- pages/school-detail/school-detail.wxml -->
+<view class="page-container" wx:if="{{school}}">
+
+  <!-- ── 头部 ── -->
+  <view class="school-header">
+    <view class="header-top">
+      <view class="rank-block" wx:if="{{school.qsRank}}">
+        <text class="rank-label">QS</text>
+        <text class="rank-num">{{school.qsRank}}</text>
+      </view>
+      <view class="name-block">
+        <text class="school-name">{{school.name}}</text>
+        <text class="school-name-en">{{school.nameEn}}</text>
+      </view>
+      <!-- Phase 1-D: 收藏按钮 -->
+      <view class="header-fav-btn" bindtap="toggleDetailFav">
+        <text class="header-fav-icon">{{isFaved ? '⭐' : '☆'}}</text>
+      </view>
+    </view>
+
+    <view class="header-meta">
+      <text class="location">📍 {{school.country}} · {{school.city}}</text>
+      <view class="type-badge">
+        {{school.type === 'university' ? '大学' : '高中'}}
+      </view>
+    </view>
+
+    <!-- 匹配标签 -->
+    <view class="fit-badge-row" wx:if="{{hasAssessment && fitBadge}}">
+      <view class="fit-badge" style="background: {{fitBadge.bg}}; color: {{fitBadge.color}}">
+        ✦ {{fitBadge.label}} · 匹配度 {{matchScore}}分
+      </view>
+    </view>
+  </view>
+
+  <!-- ── 核心数据栏 ── -->
+  <view class="stats-row section">
+    <view class="stat-item">
+      <text class="stat-value" style="color: {{difficultyInfo.color}}">{{difficultyInfo.label}}</text>
+      <text class="stat-label">录取难度</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value">{{school.scholarshipAvailable ? '有' : '无'}}</text>
+      <text class="stat-label">奖学金</text>
+    </view>
+    <view class="stat-divider"></view>
+    <view class="stat-item">
+      <text class="stat-value tuition-val">{{tuitionText}}</text>
+      <text class="stat-label">年学费参考</text>
+    </view>
+  </view>
+
+  <!-- ── 官网 ── -->
+  <view class="section website-section" wx:if="{{website}}" bindtap="openWebsite">
+    <text class="website-icon">🌐</text>
+    <text class="website-url">{{website}}</text>
+    <text class="website-copy">点击复制</text>
+  </view>
+
+  <!-- ══ 中国高校联系方式（Apify 实时数据）══ -->
+  <view class="cn-contact-section" wx:if="{{cnContactLoading || cnContactInfo}}">
+    <view class="cn-contact-header">
+      <text class="cn-contact-title">📋 招生联系方式</text>
+      <view class="cn-live-badge" wx:if="{{!cnContactLoading}}">🟢 实时</view>
+      <view class="cn-live-badge loading" wx:elif="{{cnContactLoading}}">加载中…</view>
+    </view>
+    <block wx:if="{{cnContactInfo}}">
+      <view class="cn-contact-row" wx:if="{{cnContactInfo.address}}">
+        <text class="cn-contact-icon">📍</text>
+        <view class="cn-contact-content">
+          <text class="cn-contact-label">校区地址</text>
+          <text class="cn-contact-value">{{cnContactInfo.address}}</text>
+        </view>
+      </view>
+      <view class="cn-contact-row" wx:if="{{cnContactInfo.phone}}">
+        <text class="cn-contact-icon">📞</text>
+        <view class="cn-contact-content">
+          <text class="cn-contact-label">招生电话</text>
+          <text class="cn-contact-value">{{cnContactInfo.phone}}</text>
+        </view>
+      </view>
+      <view class="cn-contact-row" wx:if="{{cnContactInfo.email}}">
+        <text class="cn-contact-icon">✉️</text>
+        <view class="cn-contact-content">
+          <text class="cn-contact-label">招生邮箱</text>
+          <text class="cn-contact-value">{{cnContactInfo.email}}</text>
+        </view>
+      </view>
+      <view class="cn-contact-row cn-gaokao-link" wx:if="{{cnContactInfo.gaokaoLink}}"
+            bindtap="openWebsite" data-url="{{cnContactInfo.gaokaoLink}}">
+        <text class="cn-contact-icon">🎓</text>
+        <view class="cn-contact-content">
+          <text class="cn-contact-label">掌上高考主页</text>
+          <text class="cn-contact-value link-text">点击复制链接</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- ══ 高考分数线（近四年各省投档线 + 2026预判）══ -->
+  <view class="gaokao-section" wx:if="{{showGaokao}}">
+    <view class="gaokao-header">
+      <text class="gaokao-title">📈 高考投档线参考</text>
+      <text class="gaokao-subtitle">2022-2025年历史数据 + 2026预判</text>
+    </view>
+
+    <!-- 省份切换 -->
+    <scroll-view class="province-scroll" scroll-x="true" enhanced="true" show-scrollbar="false">
+      <view class="province-tabs">
+        <view wx:for="{{gaokaoProvinces}}" wx:key="*this"
+          class="province-tab {{selectedProvince === item ? 'active' : ''}}"
+          bindtap="onProvinceSelect" data-province="{{item}}">{{item}}</view>
+      </view>
+    </scroll-view>
+
+    <!-- 2026年预判卡片 -->
+    <view class="pred-2026-block" wx:if="{{show2026}}">
+      <view class="pred-2026-header">
+        <text class="pred-2026-badge">2026预判</text>
+        <text class="pred-2026-hint">· 仅供参考，以实际录取为准</text>
+      </view>
+      <view class="pred-2026-cards">
+        <view wx:for="{{gaokao2026}}" wx:key="type" wx:for-item="p" class="pred-2026-card">
+          <text class="pred-card-type">{{p.type === '物理类' ? '物理类' : p.type === '历史类' ? '历史类' : p.type}}</text>
+          <text class="pred-card-score">{{p.predicted}}分</text>
+          <text class="pred-card-range">区间：{{p.low}}–{{p.high}}分</text>
+          <text class="pred-card-trend {{p.trend}}">{{p.trendLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 历史分数线表格 -->
+    <view class="score-table" wx:if="{{gaokaoScores.length > 0}}">
+      <view class="score-row header-row">
+        <text class="score-cell year-col">年份</text>
+        <text class="score-cell type-col">科类</text>
+        <text class="score-cell score-col">投档线</text>
+        <text class="score-cell rank-col">省内位次</text>
+      </view>
+      <view wx:for="{{gaokaoScores}}" wx:key="{{item.year}}_{{item.type}}"
+        wx:for-item="row" wx:for-index="idx"
+        class="score-row {{idx % 2 === 0 ? 'row-even' : 'row-odd'}} {{row.year === 2025 ? 'row-2025' : ''}}">
+        <text class="score-cell year-col">{{row.year}}{{row.year === 2025 ? '✓' : ''}}</text>
+        <text class="score-cell type-col">{{row.type === '物理类' ? '物理' : row.type === '历史类' ? '历史' : row.type}}</text>
+        <text class="score-cell score-col highlight-score">{{row.score}}分</text>
+        <text class="score-cell rank-col">第{{row.rank}}名</text>
+      </view>
+    </view>
+    <view class="score-empty" wx:else><text>暂无{{selectedProvince}}数据</text></view>
+    <view class="gaokao-disclaimer"><text>⚠️ 2025年数据部分为趋势估算，以各省考试院官方公告为准</text></view>
+  </view>
+
+  <!-- ══ 招生政策：转专业 · 大类招生 · 强基计划 · 保研率 ══ -->
+  <view class="policy-section" wx:if="{{schoolPolicy}}">
+    <view class="policy-header">
+      <text class="policy-title">🎓 招生政策一览</text>
+      <text class="policy-disclaimer">以官方当年招生简章为准</text>
+    </view>
+
+    <!-- 转专业政策 -->
+    <view class="policy-card" wx:if="{{schoolPolicy.majorTransfer}}">
+      <view class="policy-card-head">
+        <text class="policy-card-icon">🔄</text>
+        <text class="policy-card-name">转专业政策</text>
+        <text class="policy-badge transfer-{{schoolPolicy.majorTransfer.difficulty}}">
+          {{schoolPolicy.majorTransfer.label}}
+        </text>
+      </view>
+      <text class="policy-card-body">{{schoolPolicy.majorTransfer.details}}</text>
+      <view class="policy-tip" wx:if="{{schoolPolicy.majorTransfer.tips}}">
+        <text class="policy-tip-icon">💡</text>
+        <text class="policy-tip-text">{{schoolPolicy.majorTransfer.tips}}</text>
+      </view>
+    </view>
+
+    <!-- 大类招生 -->
+    <view class="policy-card" wx:if="{{schoolPolicy.broadAdmission}}">
+      <view class="policy-card-head">
+        <text class="policy-card-icon">📚</text>
+        <text class="policy-card-name">大类招生</text>
+        <text class="policy-badge broad-{{schoolPolicy.broadAdmission.type}}">
+          {{schoolPolicy.broadAdmission.label}}
+        </text>
+      </view>
+      <text class="policy-card-body">{{schoolPolicy.broadAdmission.details}}</text>
+      <view class="policy-split-timing" wx:if="{{schoolPolicy.broadAdmission.splitTiming}}">
+        <text class="timing-icon">⏰</text>
+        <text class="timing-text">专业分流：{{schoolPolicy.broadAdmission.splitTiming}}</text>
+      </view>
+    </view>
+
+    <!-- 强基计划 -->
+    <view class="policy-card" wx:if="{{schoolPolicy.qiangji}}">
+      <view class="policy-card-head">
+        <text class="policy-card-icon">⚡</text>
+        <text class="policy-card-name">强基计划</text>
+        <text class="policy-badge qiangji-{{schoolPolicy.qiangji.available ? 'yes' : 'no'}}">
+          {{schoolPolicy.qiangji.available ? '✓ 已列入试点' : '未列入试点'}}
+        </text>
+      </view>
+      <view wx:if="{{schoolPolicy.qiangji.available}}">
+        <view class="qiangji-majors">
+          <view wx:for="{{schoolPolicy.qiangji.majors}}" wx:key="*this" class="qiangji-major-tag">
+            {{item}}
+          </view>
+        </view>
+        <text class="policy-card-body">{{schoolPolicy.qiangji.note}}</text>
+        <view class="qiangji-ref-score" wx:if="{{schoolPolicy.qiangji.refScore2025}}">
+          <text class="ref-score-label">{{schoolPolicy.qiangji.refScore2025.label}}（参考）</text>
+          <view class="ref-score-row" wx:if="{{schoolPolicy.qiangji.refScore2025['广东']}}">
+            <text class="ref-score-province">广东</text>
+            <text class="ref-score-val">约{{schoolPolicy.qiangji.refScore2025['广东']}}分</text>
+          </view>
+          <view class="ref-score-row" wx:if="{{schoolPolicy.qiangji.refScore2025['四川']}}">
+            <text class="ref-score-province">四川</text>
+            <text class="ref-score-val">约{{schoolPolicy.qiangji.refScore2025['四川']}}分</text>
+          </view>
+          <view class="ref-score-row" wx:if="{{schoolPolicy.qiangji.refScore2025['湖南']}}">
+            <text class="ref-score-province">湖南</text>
+            <text class="ref-score-val">约{{schoolPolicy.qiangji.refScore2025['湖南']}}分</text>
+          </view>
+          <view class="ref-score-row" wx:if="{{schoolPolicy.qiangji.refScore2025['江苏']}}">
+            <text class="ref-score-province">江苏</text>
+            <text class="ref-score-val">约{{schoolPolicy.qiangji.refScore2025['江苏']}}分</text>
+          </view>
+        </view>
+      </view>
+      <text wx:else class="policy-card-body">{{schoolPolicy.qiangji.note}}</text>
+    </view>
+
+    <!-- 保研/深造率 -->
+    <view class="policy-card" wx:if="{{schoolPolicy.postgrad}}">
+      <view class="policy-card-head">
+        <text class="policy-card-icon">🎯</text>
+        <text class="policy-card-name">深造率（{{schoolPolicy.postgrad.year}}届）</text>
+      </view>
+      <view class="postgrad-stats">
+        <view class="postgrad-stat">
+          <text class="postgrad-num">{{schoolPolicy._baoyenPct}}</text>
+          <text class="postgrad-label">保研率</text>
+        </view>
+        <view class="postgrad-divider"></view>
+        <view class="postgrad-stat">
+          <text class="postgrad-num">{{schoolPolicy._totalPct}}</text>
+          <text class="postgrad-label">总深造率</text>
+        </view>
+        <view class="postgrad-divider" wx:if="{{schoolPolicy._abroadPct}}"></view>
+        <view class="postgrad-stat" wx:if="{{schoolPolicy._abroadPct}}">
+          <text class="postgrad-num">{{schoolPolicy._abroadPct}}</text>
+          <text class="postgrad-label">出国深造</text>
+        </view>
+      </view>
+      <text class="policy-card-body">{{schoolPolicy.postgrad.note}}</text>
+    </view>
+
+  </view>
+
+  <!-- ══ College Scorecard 实时官方数据 ══ -->
+  <view class="live-data-section" wx:if="{{isUSSchool && (liveDataLoading || liveData)}}">\
+
+    <!-- 标题行 -->
+    <view class="ld-header">
+      <text class="ld-header-title">📊 美国教育部官方数据</text>
+      <view class="live-badge">
+        <text wx:if="{{liveDataLoading}}">加载中…</text>
+        <text wx:else>🟢 实时</text>
+      </view>
+    </view>
+
+    <!-- 加载骨架 -->
+    <view class="live-skeleton" wx:if="{{liveDataLoading}}">
+      <view class="skeleton-row"></view>
+      <view class="skeleton-row short"></view>
+      <view class="skeleton-row"></view>
+    </view>
+
+    <!-- ── 五个分组 ── -->
+    <block wx:elif="{{liveData}}">
+
+      <!-- 1. 录取竞争力 -->
+      <view class="ld-group">
+        <text class="ld-group-title">录取竞争力</text>
+        <view class="ld-row">
+          <view class="ld-item">
+            <text class="ld-val ld-val-admission">{{liveData.admissionRate}}</text>
+            <text class="ld-label">录取率</text>
+          </view>
+          <view class="ld-item">
+            <text class="ld-val">{{liveData.satAverage}}</text>
+            <text class="ld-label">SAT 均分</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.actMidpoint}}">
+            <text class="ld-val">{{liveData.actMidpoint}}</text>
+            <text class="ld-label">ACT 中位数</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 2b. SAT/ACT 区间补充 -->
+      <view class="ld-group" wx:if="{{liveData.satRange || liveData.actRange}}">
+        <text class="ld-group-title">成绩区间（25th–75th 百分位）</text>
+        <view class="ld-row">
+          <view class="ld-item" wx:if="{{liveData.satRange}}">
+            <text class="ld-val ld-val-range">{{liveData.satRange}}</text>
+            <text class="ld-label">SAT 区间</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.actRange}}">
+            <text class="ld-val ld-val-range">{{liveData.actRange}}</text>
+            <text class="ld-label">ACT 区间</text>
+          </view>
+        </view>
+        <view class="ld-note">
+          <text class="ld-note-icon">💡</text>
+          <text class="ld-note-text">区间代表50%录取学生的成绩范围，参考价值远高于均分</text>
+        </view>
+      </view>
+
+      <!-- 3. 留学费用（扩充） -->
+      <view class="ld-group">
+        <text class="ld-group-title">留学费用</text>
+
+        <!-- 费用三栏：学费 / 生活费 / 年总计 -->
+        <view class="ld-cost-table" wx:if="{{liveData.costAttend}}">
+          <view class="ld-cost-col">
+            <text class="ld-cost-val ld-val-tuition">{{liveData.tuitionDisplay}}</text>
+            <text class="ld-cost-sub">{{liveData.tuitionCNY}}</text>
+            <text class="ld-cost-label">学费（非州内）</text>
+          </view>
+          <text class="ld-cost-plus">+</text>
+          <view class="ld-cost-col">
+            <text class="ld-cost-val">{{liveData.livingCost || '约$18,000/年'}}</text>
+            <text class="ld-cost-sub">{{liveData.livingCostCNY || '约¥130w/年'}}</text>
+            <text class="ld-cost-label">住宿餐饮生活</text>
+          </view>
+          <text class="ld-cost-plus">=</text>
+          <view class="ld-cost-col ld-cost-col-total">
+            <text class="ld-cost-val ld-cost-total-val">{{liveData.costAttend}}</text>
+            <text class="ld-cost-sub">{{liveData.costAttendCNY}}</text>
+            <text class="ld-cost-label">年真实总花费</text>
+          </view>
+        </view>
+
+        <!-- 无 costAttend 数据时降级显示 -->
+        <view class="ld-row" wx:if="{{!liveData.costAttend}}">
+          <view class="ld-item">
+            <text class="ld-val ld-val-tuition">{{liveData.tuitionDisplay}}</text>
+            <text class="ld-label">年学费（非州内）</text>
+          </view>
+          <view class="ld-item">
+            <text class="ld-val ld-val-cny">{{liveData.tuitionCNY}}</text>
+            <text class="ld-label">约合人民币</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.tuitionInState}}">
+            <text class="ld-val">{{liveData.tuitionInState}}</text>
+            <text class="ld-label">年学费（州内）</text>
+          </view>
+        </view>
+
+        <!-- 州内学费（仅在有 costAttend 时也显示） -->
+        <view class="ld-instate-tip" wx:if="{{liveData.tuitionInState && liveData.costAttend}}">
+          <text class="ld-note-icon">🏛️</text>
+          <text class="ld-note-text">州内生学费：{{liveData.tuitionInState}}（中国留学生不适用，仅供参考）</text>
+        </view>
+
+        <!-- 助学金净费用 -->
+        <view class="ld-note" wx:if="{{liveData.avgNetPrice}}">
+          <text class="ld-note-icon">💡</text>
+          <text class="ld-note-text">实际净费用（扣除所有助学金后的平均支出）：{{liveData.avgNetPrice}}</text>
+        </view>
+
+        <view class="ld-note ld-note-source">
+          <text class="ld-note-icon">📊</text>
+          <text class="ld-note-text">数据来源：美国教育部 College Scorecard 官方数据库</text>
+        </view>
+      </view>
+
+      <!-- 4. 毕业与就业（扩充） -->
+      <view class="ld-group">
+        <text class="ld-group-title">毕业与就业</text>
+        <view class="ld-row">
+          <view class="ld-item">
+            <text class="ld-val">{{liveData.graduationRate}}</text>
+            <text class="ld-label">4年毕业率</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.medianEarnings6yr}}">
+            <text class="ld-val">{{liveData.medianEarnings6yr}}</text>
+            <text class="ld-label">毕业6年收入</text>
+          </view>
+          <view class="ld-item">
+            <text class="ld-val ld-val-earn">{{liveData.medianEarnings}}</text>
+            <text class="ld-label">毕业10年收入</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.medianDebt}}">
+            <text class="ld-val">{{liveData.medianDebt}}</text>
+            <text class="ld-label">毕业债务中位数</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 5. 学校规模与构成（扩充） -->
+      <view class="ld-group">
+        <text class="ld-group-title">学校规模与构成</text>
+        <view class="ld-row">
+          <view class="ld-item">
+            <text class="ld-val">{{liveData.studentSize}}</text>
+            <text class="ld-label">在读人数</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.retentionRate}}">
+            <text class="ld-val ld-val-earn">{{liveData.retentionRate}}</text>
+            <text class="ld-label">大一留校率</text>
+          </view>
+          <view class="ld-item">
+            <text class="ld-val">{{liveData.ownership}}</text>
+            <text class="ld-label">学校性质</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.genderRatio}}">
+            <text class="ld-val ld-val-gender">{{liveData.genderRatio}}</text>
+            <text class="ld-label">男女比例</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.intlShare}}">
+            <text class="ld-val">{{liveData.intlShare}}</text>
+            <text class="ld-label">国际生比例</text>
+          </view>
+          <view class="ld-item" wx:if="{{liveData.firstGenShare}}">
+            <text class="ld-val">{{liveData.firstGenShare}}</text>
+            <text class="ld-label">第一代大学生</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 6. 专业分布 -->
+      <view class="ld-group" wx:if="{{liveData.progMap && liveData.progMap.length > 0}}">
+        <text class="ld-group-title">主要专业方向分布</text>
+        <view class="ld-prog-list">
+          <view class="ld-prog-item" wx:for="{{liveData.progMap}}" wx:key="label">
+            <view class="ld-prog-bar-wrap">
+              <view class="ld-prog-bar" style="width:{{item.val > 50 ? 50 : item.val}}%"></view>
+            </view>
+            <text class="ld-prog-label">{{item.label}}</text>
+            <text class="ld-prog-val">{{item.val}}%</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 7. 学生族裔构成 -->
+      <view class="ld-group" wx:if="{{liveData.raceMap && liveData.raceMap.length > 0}}">
+        <text class="ld-group-title">学生族裔构成</text>
+        <view class="ld-race-list">
+          <view class="ld-race-item" wx:for="{{liveData.raceMap}}" wx:key="label">
+            <text class="ld-race-label">{{item.label}}</text>
+            <view class="ld-race-bar-wrap">
+              <view class="ld-race-bar" style="width:{{item.val > 100 ? 100 : item.val}}%; background:{{item.color}}"></view>
+            </view>
+            <text class="ld-race-val">{{item.val}}%</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 8. 联邦助学金 -->
+      <view class="ld-group ld-group-aid" wx:if="{{liveData.pellGrantRate}}">
+        <text class="ld-group-title">联邦助学金</text>
+        <view class="ld-aid-row">
+          <text class="ld-aid-pct">{{liveData.pellGrantRate}}</text>
+          <text class="ld-aid-desc">的在读学生获得 Pell Grant，反映本校对中低收入家庭的支持力度</text>
+        </view>
+      </view>
+
+      <!-- 数据来源声明 -->
+      <view class="ld-source-bar">
+        <text class="ld-source-icon">🏛️</text>
+        <text class="ld-source-text">数据来源：美国联邦教育部 · College Scorecard · {{liveData.dataFreshness}} · 非中介整理</text>
+      </view>
+
+    </block>
+  </view>
+
+  <!-- ══ Phase 1-B: 中国学生视角 ══ -->
+  <view class="cn-student-section" wx:if="{{isUSSchool && (stemOptBadge || applyPortalLabel || chineseStudentNote || careerHighlights.length > 0 || fourYearCostFmt)}}">
+
+    <view class="cn-student-header">
+      <text class="cn-student-title">🇨🇳 中国学生关键信息</text>
+      <text class="cn-student-sub">留学真实成本 · 签证政策 · 就业出路</text>
+    </view>
+
+    <!-- STEM OPT 工签延签 -->
+    <view class="cn-info-card cn-info-stem" wx:if="{{stemOptBadge}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">🎓</text>
+        <view>
+          <text class="cn-info-title">STEM OPT · 可申请3年工签延签</text>
+          <text class="cn-info-body">理工专业毕业生可在标准1年OPT到期后，额外申请24个月延签，合计3年留美工作资格，大幅提升抽到H1B的机会。</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 申请平台 -->
+    <view class="cn-info-card" wx:if="{{applyPortalLabel}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">📝</text>
+        <view>
+          <text class="cn-info-title">申请平台：{{applyPortalLabel}}</text>
+          <text class="cn-info-body" wx:if="{{applyPortalLabel === 'Common App'}}">通过 Common App 提交，可一次申请多所学校，建议提前准备文书。</text>
+          <text class="cn-info-body" wx:elif="{{applyPortalLabel === 'UC系统申请'}}">加州大学系统独立申请平台，11月1日截止，注意 Personal Insight Questions。</text>
+          <text class="cn-info-body" wx:else>该校使用独立申请系统，请直接访问官网提交。</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 4年总花费 -->
+    <view class="cn-info-card cn-info-cost4yr" wx:if="{{fourYearCostFmt}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">💰</text>
+        <view>
+          <text class="cn-info-title">{{fourYearCostFmt}}</text>
+          <text class="cn-info-body">含学费+住宿+餐饮+生活开支（基于美国教育部官方 Cost of Attendance 数据 ×4年）</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 中国学生社区备注 -->
+    <view class="cn-info-card" wx:if="{{chineseStudentNote}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">🌏</text>
+        <view>
+          <text class="cn-info-title">中国学生背景</text>
+          <text class="cn-info-body">{{chineseStudentNote}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 申请截止日期（Phase 3）-->
+    <view class="cn-info-card cn-info-deadline" wx:if="{{deadlines}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">📅</text>
+        <view>
+          <text class="cn-info-title">申请截止日期</text>
+          <text class="cn-info-body">{{deadlines.deadlineSummary}}</text>
+        </view>
+      </view>
+      <view class="deadline-extra-row">
+        <view class="deadline-chip {{deadlines.merit ? 'chip-green' : 'chip-gray'}}">
+          {{deadlines.meritLabel}}
+        </view>
+        <view class="deadline-chip {{deadlines.intlAid ? 'chip-blue' : 'chip-gray'}}">
+          {{deadlines.intlAidLabel}}
+        </view>
+      </view>
+    </view>
+
+    <!-- 职业发展方向 -->
+    <view class="cn-info-card" wx:if="{{careerHighlights.length > 0}}">
+      <view class="cn-info-head">
+        <text class="cn-info-icon">💼</text>
+        <view>
+          <text class="cn-info-title">就业去向参考</text>
+        </view>
+      </view>
+      <view class="cn-career-tags">
+        <view class="cn-career-tag" wx:for="{{careerHighlights}}" wx:for-item="career" wx:key="*this">
+          {{career}}
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- ══ P5 专业上下文（来自职业愿景路径）══ -->
+  <view class="program-ctx-section"
+    wx:if="{{programContext && programContext.clusterLabel}}">
+
+    <view class="program-ctx-header">
+      <text class="program-ctx-icon">🧭</text>
+      <view class="program-ctx-title-col">
+        <text class="program-ctx-title">「{{programContext.clusterLabel}}」方向数据</text>
+        <text class="program-ctx-sub">该学校在此专业方向的具体表现</text>
+      </view>
+    </view>
+
+    <view class="program-ctx-grid">
+      <!-- 毕业2年薪资 -->
+      <view class="program-ctx-item" wx:if="{{programContext.earnFmt}}">
+        <text class="pci-value">{{programContext.earnFmt}}</text>
+        <text class="pci-label">毕业2年中位薪资</text>
+        <view class="pci-vs" wx:if="{{programContext.earnVsAvg}}">
+          <text class="pci-vs-text pci-vs-{{programContext.earnVsAvg === '高于均值' ? 'high' : programContext.earnVsAvg === '低于均值' ? 'low' : 'mid'}}">
+            {{programContext.earnVsAvg}}
+          </text>
+        </view>
+      </view>
+      <!-- 年毕业人数 -->
+      <view class="program-ctx-item" wx:if="{{programContext.countFmt}}">
+        <text class="pci-value">{{programContext.countFmt}}</text>
+        <text class="pci-label">该专业年毕业规模</text>
+      </view>
+      <!-- 学校平均 -->
+      <view class="program-ctx-item" wx:if="{{programContext.avgEarnFmt}}">
+        <text class="pci-value pci-value-gray">{{programContext.avgEarnFmt}}</text>
+        <text class="pci-label">学校全专业均值</text>
+      </view>
+      <!-- 项目排名层级 -->
+      <view class="program-ctx-item" wx:if="{{programContext.tier}}">
+        <text class="pci-value pci-tier-{{programContext.tier}}">T{{programContext.tier}}</text>
+        <text class="pci-label">{{programContext.tierLabel}}</text>
+      </view>
+    </view>
+
+    <text class="program-ctx-note">数据来源：College Scorecard · 仅供参考，以学校官方为准</text>
+  </view>
+
+  <!-- ══ Phase 1-C: 快速适配度检测 ══ -->
+  <view class="fit-check-section" wx:if="{{isUSSchool}}">
+
+    <view class="fit-check-header">
+      <text class="fit-check-title">⚡ 快速适配检测</text>
+      <text class="fit-check-sub">2步了解录取可能性 · 无需完整评估</text>
+    </view>
+
+    <!-- SAT 选择 -->
+    <view class="fit-row">
+      <text class="fit-row-label">你的 SAT 分数</text>
+      <scroll-view scroll-x class="fit-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="fit-band-row">
+          <view
+            class="fit-band-chip {{fitCheck.satBand === item.value ? 'fit-chip-active' : ''}}"
+            wx:for="{{satBands}}" wx:key="value"
+            data-value="{{item.value}}" bindtap="onFitSatBand">
+            {{item.label}}
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- GPA 选择 -->
+    <view class="fit-row">
+      <text class="fit-row-label">你的 GPA</text>
+      <scroll-view scroll-x class="fit-scroll" enhanced show-scrollbar="{{false}}">
+        <view class="fit-band-row">
+          <view
+            class="fit-band-chip {{fitCheck.gpaBand === item.value ? 'fit-chip-active' : ''}}"
+            wx:for="{{gpaBands}}" wx:key="value"
+            data-value="{{item.value}}" bindtap="onFitGpaBand">
+            {{item.label}}
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 结果 -->
+    <view class="fit-result" wx:if="{{fitCheck.result}}"
+      style="background:{{fitCheck.result.bg}}; border-color:{{fitCheck.result.color}}20">
+      <view class="fit-result-top">
+        <text class="fit-result-tier" style="color:{{fitCheck.result.color}}">{{fitCheck.result.label}}</text>
+        <text class="ai-gen-tag">AI 生成</text>
+      </view>
+      <text class="fit-result-reason">{{fitCheck.result.reason}}</text>
+      <view class="fit-result-cta" wx:if="{{fitCheck.result.tier === 'longshot' || fitCheck.result.tier === 'reach'}}"
+        bindtap="goAssessment">
+        <text class="fit-cta-text">做完整评估 · 获取个性化方案 →</text>
+      </view>
+    </view>
+
+    <!-- 尚未选择提示 -->
+    <view class="fit-hint" wx:if="{{!fitCheck.result}}">
+      <text class="fit-hint-text">选择 SAT 和 GPA 范围即可查看结果</text>
+    </view>
+
+  </view>
+
+  <!-- ══ Phase 2: 选校报告入口 ══ -->
+  <view class="report-cta-banner" wx:if="{{isUSSchool}}" bindtap="goReport">
+    <view class="report-cta-left">
+      <text class="report-cta-icon">📋</text>
+      <view>
+        <text class="report-cta-title">生成选校分析报告</text>
+        <text class="report-cta-sub">5所学校对比 · 4年CNY花费 · 申请时间轴</text>
+      </view>
+    </view>
+    <view class="report-cta-price">
+      <text class="report-cta-price-label">¥199</text>
+      <text class="report-cta-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- ══ 第二层：留学生支持与社区资源 ══ -->
+  <view class="res-section" wx:if="{{resources}}">
+    <view class="res-header">
+      <text class="res-header-title">🧭 留学生支持与社区资源</text>
+      <text class="res-header-sub">袁希精选整理 · 真实经验 · 非广告</text>
+    </view>
+
+    <!-- 华人学生学者联合会 -->
+    <view class="res-card res-card-cssa" wx:if="{{resources.cssaName}}">
+      <view class="res-card-head">
+        <text class="res-card-icon">🇨🇳</text>
+        <view>
+          <text class="res-card-title">{{resources.cssaName}}</text>
+          <text class="res-card-sub">校内华人学生学者官方组织</text>
+        </view>
+      </view>
+      <view class="res-cssa-url" wx:if="{{resources.cssaUrl}}" bindtap="copyCssaUrl" data-url="{{resources.cssaUrl}}">
+        <text class="res-url-text">🌐 {{resources.cssaUrl}}</text>
+        <text class="res-url-copy">点击复制</text>
+      </view>
+    </view>
+
+    <!-- 雇主评价 -->
+    <view class="res-card" wx:if="{{resources.employerNote}}">
+      <view class="res-card-head">
+        <text class="res-card-icon">🏢</text>
+        <text class="res-card-title">雇主评价与就业生态</text>
+      </view>
+      <text class="res-card-body">{{resources.employerNote}}</text>
+    </view>
+
+    <!-- 不为人知的机会 -->
+    <view class="res-card res-card-opps" wx:if="{{resources.hiddenOpps && resources.hiddenOpps.length > 0}}">
+      <view class="res-card-head">
+        <text class="res-card-icon">💎</text>
+        <text class="res-card-title">不为人知的机会</text>
+      </view>
+      <view class="res-opp-item" wx:for="{{resources.hiddenOpps}}" wx:key="*this">
+        <text class="res-opp-dot">›</text>
+        <text class="res-opp-text">{{item}}</text>
+      </view>
+    </view>
+
+    <!-- 当地华人社区 -->
+    <view class="res-card" wx:if="{{resources.chinaComm}}">
+      <view class="res-card-head">
+        <text class="res-card-icon">🏮</text>
+        <text class="res-card-title">当地华人社区</text>
+      </view>
+      <text class="res-card-body">{{resources.chinaComm}}</text>
+    </view>
+
+    <!-- 校友建议 -->
+    <view class="res-card res-card-tip" wx:if="{{resources.alumniTip}}">
+      <view class="res-card-head">
+        <text class="res-card-icon">💬</text>
+        <text class="res-card-title">过来人的建议</text>
+      </view>
+      <text class="res-card-body res-card-tip-text">{{resources.alumniTip}}</text>
+    </view>
+
+    <!-- 暂无资源提示 -->
+  </view>
+
+  <!-- 无资源时显示建设中 -->
+  <view class="res-section res-building" wx:elif="{{isUSSchool}}">
+    <text class="res-building-icon">🔧</text>
+    <text class="res-building-title">留学生资源正在收录中</text>
+    <text class="res-building-sub">我们正在整理这所学校的华人社区、隐藏机会和过来人经验，敬请期待</text>
+  </view>
+
+  <!-- ── 简介 ── -->
+  <view class="section">
+    <text class="section-title">学校简介</text>
+    <text class="intro-text">{{school.intro}}</text>
+  </view>
+
+  <!-- ── 核心标签 ── -->
+  <view class="section" wx:if="{{school.tags && school.tags.length > 0}}">
+    <text class="section-title">核心标签</text>
+    <view class="tags-wrap">
+      <view class="tag tag-blue" wx:for="{{school.tags}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- ── 强势专业 / 课程体系 ── -->
+  <view class="section" wx:if="{{school.majors && school.majors.length > 0}}">
+    <text class="section-title">{{school.type === 'university' ? '强势专业' : '课程体系'}}</text>
+    <view class="majors-grid">
+      <view class="major-chip" wx:for="{{school.majors}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- ── 为孩子专属推荐的专业方向（有诊断数据时显示）── -->
+  <view class="section personalized-majors-section" wx:if="{{hasAssessment && personalizedMajors.length > 0}}">
+    <text class="section-title">🎯 为你孩子推荐的专业方向</text>
+    <text class="personalized-sub">基于孩子的强势智能：<text wx:for="{{topMINames}}" wx:key="*this" class="mi-inline">{{item}}{{index < topMINames.length - 1 ? ' · ' : ''}}</text></text>
+    <view class="majors-grid" style="margin-top: 16rpx;">
+      <view class="major-chip major-chip-highlight" wx:for="{{personalizedMajors}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- ── 多元智能匹配 ── -->
+  <view class="section" wx:if="{{miStrengthNames.length > 0}}">
+    <text class="section-title">🧠 适合的智能类型</text>
+    <text class="mi-subtitle">具备以下智能优势的孩子在此校更易发光</text>
+    <view class="mi-chips">
+      <view class="mi-chip" wx:for="{{miStrengthNames}}" wx:key="*this">{{item}}</view>
+    </view>
+  </view>
+
+  <!-- ── 名人校友 ── -->
+  <view class="section" wx:if="{{notableAlumni.length > 0}}">
+    <text class="section-title">🏆 知名校友</text>
+    <view class="alumni-list">
+      <view class="alumni-item" wx:for="{{notableAlumni}}" wx:key="name">
+        <view class="alumni-avatar">{{item.name[0]}}</view>
+        <view class="alumni-info">
+          <text class="alumni-name">{{item.name}}</text>
+          <text class="alumni-title">{{item.title}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ── 校友网络 ── -->
+  <view class="section" wx:if="{{alumniNetwork}}">
+    <text class="section-title">🤝 校友网络</text>
+    <text class="intro-text">{{alumniNetwork}}</text>
+  </view>
+
+  <!-- ── 校友感言 ── -->
+  <view class="section alumni-quote-section" wx:if="{{alumniQuote}}">
+    <text class="quote-mark">"</text>
+    <text class="quote-text">{{alumniQuote}}</text>
+    <text class="quote-mark-end">"</text>
+  </view>
+
+  <!-- ── 申请参考（大学·美国/海外）── -->
+  <view class="section" wx:if="{{school.type === 'university' && school.region !== 'cn' && (school.satRange || school.toeflMin || school.ieltMin)}}">
+    <text class="section-title">📋 申请参考数据</text>
+    <view class="req-row" wx:if="{{school.satRange}}">
+      <text class="req-label">SAT区间</text>
+      <text class="req-value">{{school.satRange}}</text>
+    </view>
+    <view class="req-row" wx:if="{{school.toeflMin}}">
+      <text class="req-label">TOEFL最低</text>
+      <text class="req-value">{{school.toeflMin}}分</text>
+    </view>
+    <view class="req-row" wx:if="{{school.ieltMin}}">
+      <text class="req-label">IELTS最低</text>
+      <text class="req-value">{{school.ieltMin}}分</text>
+    </view>
+  </view>
+
+  <!-- ══════════════════════════════════════════════════════════
+       🇨🇳 中国大学富数据板块（_cnEnriched = true 时显示）
+  ══════════════════════════════════════════════════════════ -->
+  <block wx:if="{{school.region === 'cn' && school._cnEnriched}}">
+
+    <!-- ① 录取参考（高考版 College Scorecard）-->
+    <view class="section cn-section">
+      <text class="section-title">📋 录取参考数据</text>
+      <view class="cn-difficulty-row">
+        <text class="cn-diff-label">录取难度</text>
+        <text class="cn-diff-badge cn-diff-{{school.admissionDifficulty}}">{{school.difficultyLabel}}</text>
+        <text class="cn-diff-sub">{{school.difficultySub}}</text>
+      </view>
+      <view class="cn-note-card" wx:if="{{school.admissionNote}}">
+        <text class="cn-note-icon">📌</text>
+        <text class="cn-note-text">{{school.admissionNote}}</text>
+      </view>
+      <!-- 高考分数参考表 -->
+      <view class="cn-gaokao-section" wx:if="{{school.gaokaoRef}}">
+        <text class="cn-gaokao-title">高考分数参考（近三年均值，仅供参考）</text>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['全国卷理']}}">
+          <text class="cn-gaokao-province">全国卷·理科</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['全国卷理']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['全国卷文']}}">
+          <text class="cn-gaokao-province">全国卷·文科</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['全国卷文']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['北京']}}">
+          <text class="cn-gaokao-province">北京</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['北京']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['上海']}}">
+          <text class="cn-gaokao-province">上海</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['上海']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['广东']}}">
+          <text class="cn-gaokao-province">广东</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['广东']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['浙江']}}">
+          <text class="cn-gaokao-province">浙江</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['浙江']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['湖南']}}">
+          <text class="cn-gaokao-province">湖南</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['湖南']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.gaokaoRef['四川']}}">
+          <text class="cn-gaokao-province">四川</text>
+          <text class="cn-gaokao-score">{{school.gaokaoRef['四川']}}</text>
+        </view>
+        <view class="cn-gaokao-row" wx:if="{{school.rankThreshold && school.rankThreshold['全国理']}}">
+          <text class="cn-gaokao-province">💡 全国位次（理）</text>
+          <text class="cn-gaokao-score cn-gaokao-rank">{{school.rankThreshold['全国理']}}</text>
+        </view>
+        <text class="cn-gaokao-disclaimer">以当年省招办公告为准，此处仅作参考</text>
+      </view>
+    </view>
+
+    <!-- ② 费用（对标 College Scorecard 的 Cost of Attendance）-->
+    <view class="section cn-section">
+      <text class="section-title">💰 就读费用（年均，CNY）</text>
+      <view class="cn-cost-grid">
+        <view class="cn-cost-item">
+          <text class="cn-cost-val">¥{{school.tuitionAvg}}</text>
+          <text class="cn-cost-label">学费/年</text>
+        </view>
+        <view class="cn-cost-item">
+          <text class="cn-cost-val">¥{{school.dormCostAnnual}}</text>
+          <text class="cn-cost-label">住宿费/年</text>
+        </view>
+        <view class="cn-cost-item cn-cost-item-total">
+          <text class="cn-cost-val cn-cost-total-val">{{school.totalCostFmt}}</text>
+          <text class="cn-cost-label">综合年费用</text>
+        </view>
+      </view>
+      <view class="cn-note-card cn-note-green" wx:if="{{school.totalCostNote}}">
+        <text class="cn-note-icon">💡</text>
+        <text class="cn-note-text">{{school.totalCostNote}}</text>
+      </view>
+      <view class="cn-note-card" wx:if="{{school.scholarshipNote}}">
+        <text class="cn-note-icon">🎖</text>
+        <text class="cn-note-text">{{school.scholarshipNote}}</text>
+      </view>
+    </view>
+
+    <!-- ③ 毕业去向（对标 College Scorecard 的 Outcomes）-->
+    <view class="section cn-section">
+      <text class="section-title">🎓 毕业去向（{{school.gradYear}}届）</text>
+      <view class="cn-outcome-row">
+        <view class="cn-outcome-item">
+          <text class="cn-outcome-val cn-val-green">{{school.gradSchoolRateTotal}}%</text>
+          <text class="cn-outcome-label">深造率</text>
+          <text class="cn-outcome-sub">国内+海外</text>
+        </view>
+        <view class="cn-outcome-item">
+          <text class="cn-outcome-val cn-val-blue">{{school.gradSchoolRateDomestic}}%</text>
+          <text class="cn-outcome-label">国内读研</text>
+        </view>
+        <view class="cn-outcome-item">
+          <text class="cn-outcome-val cn-val-purple">{{school.overseasRate}}%</text>
+          <text class="cn-outcome-label">出国深造</text>
+        </view>
+        <view class="cn-outcome-item">
+          <text class="cn-outcome-val cn-val-orange">{{school.directWorkRate}}%</text>
+          <text class="cn-outcome-label">直接就业</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ④ 薪资数据（对标 College Scorecard 的 Earnings）-->
+    <view class="section cn-section">
+      <text class="section-title">💵 薪资数据</text>
+      <view class="cn-salary-row">
+        <view class="cn-salary-item">
+          <text class="cn-salary-val">{{school.salaryFmt}}</text>
+          <text class="cn-salary-label">应届月薪均值</text>
+        </view>
+        <view class="cn-salary-sep" />
+        <view class="cn-salary-item" wx:if="{{school.medianSalary3yr}}">
+          <text class="cn-salary-val">¥{{school.medianSalary3yr}}+</text>
+          <text class="cn-salary-label">3年后月薪中位</text>
+        </view>
+        <view class="cn-salary-sep" wx:if="{{school.medianSalary5yr}}" />
+        <view class="cn-salary-item" wx:if="{{school.medianSalary5yr}}">
+          <text class="cn-salary-val">¥{{school.medianSalary5yr}}+</text>
+          <text class="cn-salary-label">5年后月薪中位</text>
+        </view>
+      </view>
+      <view class="cn-note-card" wx:if="{{school.salaryNote}}">
+        <text class="cn-note-icon">📊</text>
+        <text class="cn-note-text">{{school.salaryNote}}</text>
+      </view>
+    </view>
+
+    <!-- ⑤ 就业行业分布 -->
+    <view class="section cn-section" wx:if="{{school.topEmployers && school.topEmployers.length > 0}}">
+      <text class="section-title">🏢 主要就业去向</text>
+      <view class="cn-employer-row">
+        <view class="cn-employer-chip"
+          wx:for="{{school.topEmployers}}" wx:key="*this">{{item}}</view>
+      </view>
+      <view class="cn-industry-row" wx:if="{{school.topIndustries}}">
+        <text class="cn-industry-label">主要行业：</text>
+        <text class="cn-industry-text">{{school.topIndustries.join(' · ')}}</text>
+      </view>
+      <view class="cn-city-row" wx:if="{{school.topCities}}">
+        <text class="cn-city-label">主要城市：</text>
+        <text class="cn-city-text">{{school.topCities.join(' / ')}}</text>
+      </view>
+    </view>
+
+    <!-- ⑥ 第二层：实战资源（对标美国大学 resources 区块）-->
+    <view class="cn-res-section" wx:if="{{school.resources}}">
+      <view class="cn-res-header">
+        <text class="cn-res-title">🧭 报考实战指南</text>
+        <text class="cn-res-sub">招生官视角 · 过来人经验 · 隐藏机会</text>
+      </view>
+
+      <view class="cn-res-card cn-res-admission" wx:if="{{school.resources.admissionTip}}">
+        <view class="cn-res-head">
+          <text class="cn-res-icon">📝</text>
+          <text class="cn-res-card-title">报考要点</text>
+        </view>
+        <text class="cn-res-body">{{school.resources.admissionTip}}</text>
+      </view>
+
+      <view class="cn-res-card cn-res-career" wx:if="{{school.resources.careerNote}}">
+        <view class="cn-res-head">
+          <text class="cn-res-icon">💼</text>
+          <text class="cn-res-card-title">就业竞争情报</text>
+        </view>
+        <text class="cn-res-body">{{school.resources.careerNote}}</text>
+      </view>
+
+      <view class="cn-res-card cn-res-opps" wx:if="{{school.resources.hiddenOpps && school.resources.hiddenOpps.length > 0}}">
+        <view class="cn-res-head">
+          <text class="cn-res-icon">💎</text>
+          <text class="cn-res-card-title">不为人知的机会</text>
+        </view>
+        <view class="cn-opp-list">
+          <view class="cn-opp-item"
+            wx:for="{{school.resources.hiddenOpps}}" wx:key="*this">
+            <text class="cn-opp-dot">›</text>
+            <text class="cn-opp-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="cn-res-card cn-res-alumni" wx:if="{{school.resources.alumniTip}}">
+        <view class="cn-res-head">
+          <text class="cn-res-icon">💬</text>
+          <text class="cn-res-card-title">过来人建议</text>
+        </view>
+        <text class="cn-res-body">{{school.resources.alumniTip}}</text>
+      </view>
+
+      <view class="cn-res-card cn-res-competition" wx:if="{{school.resources.competitionNote}}">
+        <view class="cn-res-head">
+          <text class="cn-res-icon">⚔️</text>
+          <text class="cn-res-card-title">VS 择校对比</text>
+        </view>
+        <text class="cn-res-body">{{school.resources.competitionNote}}</text>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- ── 申请参考（大学·美国/海外）原有位置保留 ── -->
+  <!-- ── 课程体系（高中）── -->
+  <view class="section" wx:if="{{school.type === 'highschool' && school.curriculum}}">
+    <text class="section-title">📚 课程体系</text>
+    <view class="curriculum-badge">{{school.curriculum}}</view>
+  </view>
+
+  <!-- ══════════════════════════════════════════════════════════
+       🎓 寄宿高中详情（isBoardingSchool）
+  ══════════════════════════════════════════════════════════ -->
+  <block wx:if="{{isBoardingSchool && boardingData}}">
+
+    <!-- ① 适合谁 + 融合度（顺义妈妈 first-priority card） -->
+    <view class="bd-fitfor-card">
+      <view class="bd-fitfor-top">
+        <text class="bd-fitfor-icon">🎯</text>
+        <text class="bd-fitfor-title">这所学校适合谁？</text>
+      </view>
+      <text class="bd-fitfor-body">{{boardingData.fitFor}}</text>
+      <!-- 融合度 -->
+      <view class="bd-integration-row" wx:if="{{boardingData.integrationLevel}}">
+        <text class="bd-integration-label">融合度</text>
+        <view class="bd-integration-dots">
+          <view class="bd-dot {{boardingData.integrationLevel >= 1 ? 'bd-dot-on' : ''}}" />
+          <view class="bd-dot {{boardingData.integrationLevel >= 2 ? 'bd-dot-on' : ''}}" />
+          <view class="bd-dot {{boardingData.integrationLevel >= 3 ? 'bd-dot-on' : ''}}" />
+          <view class="bd-dot {{boardingData.integrationLevel >= 4 ? 'bd-dot-on' : ''}}" />
+          <view class="bd-dot {{boardingData.integrationLevel >= 5 ? 'bd-dot-on' : ''}}" />
+        </view>
+        <text class="bd-integration-badge">{{boardingData.integrationLabel}}</text>
+        <text class="bd-integration-hint">（1=华人多 · 5=完全融合）</text>
+      </view>
+    </view>
+
+    <!-- ② 申请要求（海淀妈妈 first-priority card） -->
+    <view class="bd-section bd-admission-section">
+      <text class="bd-section-title">📝 申请要求</text>
+      <view class="bd-adm-grid">
+        <view class="bd-adm-item" wx:if="{{boardingData.ssat}}">
+          <text class="bd-adm-label">SSAT 参考分</text>
+          <text class="bd-adm-val">{{boardingData.ssat}}</text>
+        </view>
+        <view class="bd-adm-item" wx:if="{{boardingData.toeflMin}}">
+          <text class="bd-adm-label">TOEFL 最低分</text>
+          <text class="bd-adm-val">{{boardingData.toeflMin}}</text>
+        </view>
+        <view class="bd-adm-item" wx:if="{{boardingData.appDeadline}}">
+          <text class="bd-adm-label">申请截止</text>
+          <text class="bd-adm-val">{{boardingData.appDeadline}}</text>
+        </view>
+        <view class="bd-adm-item" wx:if="{{boardingData.acceptRate}}">
+          <text class="bd-adm-label">录取率</text>
+          <text class="bd-adm-val bd-adm-val-red">{{boardingData.acceptRate}}%</text>
+        </view>
+      </view>
+      <!-- 中国学生申请 tip -->
+      <view class="bd-tip-card" wx:if="{{boardingData.chineseApplicantTip}}">
+        <view class="bd-tip-head">
+          <text class="bd-tip-icon">🇨🇳</text>
+          <text class="bd-tip-title">中国学生申请贴士</text>
+        </view>
+        <text class="bd-tip-body">{{boardingData.chineseApplicantTip}}</text>
+      </view>
+    </view>
+
+    <!-- ③ 核心数据大卡 -->
+    <view class="bd-section">
+      <text class="bd-section-title">📊 核心数据</text>
+
+      <!-- 第1行：学费 + 规模 -->
+      <view class="bd-row">
+        <view class="bd-item bd-item-orange">
+          <text class="bd-val">{{boardingData.tuitionFmt}}</text>
+          <text class="bd-label">年学费（寄宿）</text>
+        </view>
+        <view class="bd-item bd-item-green">
+          <text class="bd-val">{{boardingData.aidPct}}%</text>
+          <text class="bd-label">获助学金</text>
+        </view>
+      </view>
+      <!-- 学费人民币 -->
+      <view class="bd-cny-row">
+        <text class="bd-cny-text">{{boardingData.tuitionCNY}}</text>
+      </view>
+
+      <!-- 第2行：规模 + 国际生 -->
+      <view class="bd-row">
+        <view class="bd-item">
+          <text class="bd-val">{{boardingData.enrollment}}</text>
+          <text class="bd-label">在读人数</text>
+        </view>
+        <view class="bd-item bd-item-purple">
+          <text class="bd-val">{{boardingData.intlPct}}%</text>
+          <text class="bd-label">国际生比例</text>
+        </view>
+        <view class="bd-item">
+          <text class="bd-val">{{boardingData.grades}}</text>
+          <text class="bd-label">年级范围</text>
+        </view>
+      </view>
+
+      <!-- SAT/ACT -->
+      <view class="bd-row" wx:if="{{boardingData.satAvg || boardingData.actAvg}}">
+        <view class="bd-item" wx:if="{{boardingData.satAvg}}">
+          <text class="bd-val">{{boardingData.satAvg}}</text>
+          <text class="bd-label">SAT 均分</text>
+        </view>
+        <view class="bd-item" wx:if="{{boardingData.actAvg}}">
+          <text class="bd-val">{{boardingData.actAvg}}</text>
+          <text class="bd-label">ACT 均分</text>
+        </view>
+      </view>
+
+      <!-- 助学金说明 -->
+      <view class="bd-note" wx:if="{{boardingData.aidNote}}">
+        <text class="bd-note-icon">💡</text>
+        <text class="bd-note-text">{{boardingData.aidNote}}</text>
+      </view>
+    </view>
+
+    <!-- ④ 中国学生支持与社区资源（移至前排） -->
+    <view class="bd-res-section" wx:if="{{boardingData.resources}}">
+      <view class="bd-res-header">
+        <text class="bd-res-title">🧭 中国学生支持与社区资源</text>
+        <text class="bd-res-sub">来自留学生和校友的第一手信息</text>
+      </view>
+
+      <!-- 中国学生说明 -->
+      <view class="bd-res-card bd-res-card-cn" wx:if="{{boardingData.resources.chineseNote}}">
+        <view class="bd-res-card-head">
+          <text class="bd-res-card-icon">🇨🇳</text>
+          <text class="bd-res-card-title">中国学生现状</text>
+        </view>
+        <text class="bd-res-card-body">{{boardingData.resources.chineseNote}}</text>
+      </view>
+
+      <!-- 隐藏机会 -->
+      <view class="bd-res-card bd-res-card-opps" wx:if="{{boardingData.resources.hiddenOpps && boardingData.resources.hiddenOpps.length > 0}}">
+        <view class="bd-res-card-head">
+          <text class="bd-res-card-icon">💎</text>
+          <text class="bd-res-card-title">不为人知的机会</text>
+        </view>
+        <view class="bd-opp-list">
+          <view class="bd-opp-item"
+            wx:for="{{boardingData.resources.hiddenOpps}}" wx:key="*this">
+            <text class="bd-opp-dot">›</text>
+            <text class="bd-opp-text">{{item}}</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 当地华人社区 -->
+      <view class="bd-res-card bd-res-card-china" wx:if="{{boardingData.resources.chinaComm}}">
+        <view class="bd-res-card-head">
+          <text class="bd-res-card-icon">🏮</text>
+          <text class="bd-res-card-title">当地华人社区</text>
+        </view>
+        <text class="bd-res-card-body">{{boardingData.resources.chinaComm}}</text>
+      </view>
+
+      <!-- 过来人建议 -->
+      <view class="bd-res-card bd-res-card-tip" wx:if="{{boardingData.resources.alumniTip}}">
+        <view class="bd-res-card-head">
+          <text class="bd-res-card-icon">💬</text>
+          <text class="bd-res-card-title">过来人的建议</text>
+        </view>
+        <text class="bd-res-card-body bd-res-tip-text">{{boardingData.resources.alumniTip}}</text>
+      </view>
+
+      <!-- 雇主评价 -->
+      <view class="bd-res-card bd-res-card-emp" wx:if="{{boardingData.resources.employerNote}}">
+        <view class="bd-res-card-head">
+          <text class="bd-res-card-icon">🏢</text>
+          <text class="bd-res-card-title">雇主与社会评价</text>
+        </view>
+        <text class="bd-res-card-body">{{boardingData.resources.employerNote}}</text>
+      </view>
+
+    </view>
+
+    <!-- ⑤ AP/课程说明 -->
+    <view class="bd-section" wx:if="{{boardingData.apNote}}">
+      <text class="bd-section-title">📖 课程特色</text>
+      <view class="bd-note-card">
+        <text class="bd-note-card-text">{{boardingData.apNote}}</text>
+      </view>
+    </view>
+
+    <!-- ⑥ 大学升学去向 -->
+    <view class="bd-section" wx:if="{{boardingData.topColleges && boardingData.topColleges.length > 0}}">
+      <text class="bd-section-title">🎓 主要升学去向</text>
+      <view class="bd-college-list">
+        <view class="bd-college-chip"
+          wx:for="{{boardingData.topColleges}}" wx:key="*this">
+          {{item}}
+        </view>
+      </view>
+      <text class="bd-college-note">（近三年主要升学方向，供参考）</text>
+    </view>
+
+    <!-- ⑦ 知名校友 -->
+    <view class="bd-section" wx:if="{{boardingData.notableAlumni && boardingData.notableAlumni.length > 0}}">
+      <text class="bd-section-title">🌟 知名校友</text>
+      <view class="bd-alumni-list">
+        <view class="bd-alumni-item"
+          wx:for="{{boardingData.notableAlumni}}" wx:key="*this">
+          <text class="bd-alumni-dot">●</text>
+          <text class="bd-alumni-name">{{item}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 官网入口 -->
+    <view class="bd-website-row" wx:if="{{boardingData.website}}" bindtap="openWebsite"
+      data-url="{{boardingData.website}}">
+      <text class="bd-website-icon">🌐</text>
+      <text class="bd-website-url">{{boardingData.website}}</text>
+      <text class="bd-website-copy">点击复制</text>
+    </view>
+
+  </block>
+
+  <!-- ── 无报告提示 ── -->
+  <view class="no-assessment-tip section" wx:if="{{!hasAssessment}}">
+    <text class="tip-title">💡 想知道这所学校适不适合你的孩子？</text>
+    <text class="tip-desc">完成成长诊断后，我们会为每所学校计算个性化匹配度，并给出专属专业推荐。</text>
+    <button class="btn-primary" bindtap="goAssessment" style="margin-top: 24rpx;">开始免费诊断</button>
+  </view>
+
+  <!-- 底部留白，防止内容被固定栏遮挡 -->
+  <view style="height: 180rpx;"></view>
+
+  <!-- ── 底部按钮 ── -->
+  <view class="bottom-bar">
+    <button class="btn-outline" bindtap="goBack">返回列表</button>
+    <!-- 预约深度咨询（已隐藏：AI对话页面下线） -->
+    <!-- <button class="btn-primary" bindtap="contactConsultant">预约深度咨询</button> -->
+  </view>
+
+</view>

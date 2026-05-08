@@ -1,0 +1,9 @@
+{
+  "name": "onetCIPMatch",
+  "version": "1.0.0",
+  "description": "袁希™ · O*NET 职业-专业映射云函数 — RIASEC → CIP → College Scorecard",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,336 @@
+<!-- pages/schools/schools.wxml -->
+<!-- 美国大学数据库 · 浏览 & 搜索 -->
+<view class="page-container">
+
+  <!-- ══ 顶部搜索栏 ══ -->
+  <view class="search-header">
+    <view class="search-wrap">
+      <text class="search-icon-s">🔍</text>
+      <input
+        class="search-input"
+        placeholder="搜索大学名称、城市、州缩写…"
+        placeholder-class="search-ph"
+        value="{{searchKeyword}}"
+        focus="{{searchFocus}}"
+        bindinput="onSearch"
+        bindconfirm="onSearchConfirm"
+        confirm-type="search"
+      />
+      <view class="search-clear" wx:if="{{searchKeyword}}" bindtap="clearSearch">✕</view>
+    </view>
+  </view>
+
+  <!-- ══ 活跃筛选条（有筛选时显示） ══ -->
+  <view class="active-filter-bar" wx:if="{{activeFilterLabel}}">
+    <text class="af-icon">🔖</text>
+    <text class="af-label">{{activeFilterLabel}}</text>
+    <view class="af-clear" bindtap="clearAllFilters">✕ 清除</view>
+  </view>
+
+  <!-- ══ 筛选器行 ══ -->
+  <view class="filter-row">
+    <scroll-view scroll-x enhanced show-scrollbar="{{false}}" class="filter-scroll">
+      <view class="filter-chips">
+
+        <!-- 录取难度 -->
+        <view
+          class="fchip {{usFilter_adm !== 'all' ? 'fchip-active' : ''}}"
+          bindtap="showAdmPicker"
+        >
+          <text>{{admFilterLabel}}</text>
+          <text class="fchip-arrow">▾</text>
+        </view>
+
+        <!-- 学校类型 -->
+        <view
+          class="fchip {{usFilter_type !== 'all' ? 'fchip-active' : ''}}"
+          bindtap="showTypePicker"
+        >
+          <text>{{typeFilterLabel}}</text>
+          <text class="fchip-arrow">▾</text>
+        </view>
+
+        <!-- 按州 -->
+        <view
+          class="fchip {{filterState ? 'fchip-active' : ''}}"
+          bindtap="showStatePicker"
+        >
+          <text>{{filterState || '按州'}}</text>
+          <text class="fchip-arrow">▾</text>
+        </view>
+
+        <!-- 排序 -->
+        <view
+          class="fchip"
+          bindtap="showSortPicker"
+        >
+          <text>{{sortLabel}}</text>
+          <text class="fchip-arrow">▾</text>
+        </view>
+
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- ══ Picker: 录取难度 ══ -->
+  <view class="picker-sheet {{showAdmSheet ? 'visible' : ''}}" bindtap="closeAllPickers">
+    <view class="picker-panel" catchtap="noop">
+      <view class="picker-title">录取难度</view>
+      <view
+        class="picker-option {{usFilter_adm === item.value ? 'selected' : ''}}"
+        wx:for="{{usAdmFilters}}"
+        wx:key="value"
+        bindtap="setAdmFilter"
+        data-value="{{item.value}}"
+        data-label="{{item.label}}"
+      >
+        {{item.label}}
+        <text wx:if="{{usFilter_adm === item.value}}" class="picker-check">✓</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ Picker: 学校类型 ══ -->
+  <view class="picker-sheet {{showTypeSheet ? 'visible' : ''}}" bindtap="closeAllPickers">
+    <view class="picker-panel" catchtap="noop">
+      <view class="picker-title">学校类型</view>
+      <view
+        class="picker-option {{usFilter_type === item.value ? 'selected' : ''}}"
+        wx:for="{{usTypeFilters}}"
+        wx:key="value"
+        bindtap="setTypeFilter"
+        data-value="{{item.value}}"
+        data-label="{{item.label}}"
+      >
+        {{item.label}}
+        <text wx:if="{{usFilter_type === item.value}}" class="picker-check">✓</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ Picker: 按州 ══ -->
+  <view class="picker-sheet {{showStateSheet ? 'visible' : ''}}" bindtap="closeAllPickers">
+    <view class="picker-panel state-panel" catchtap="noop">
+      <view class="picker-title">按州筛选</view>
+      <view class="state-grid">
+        <view
+          class="state-option {{filterState === item.abbr ? 'selected' : ''}}"
+          wx:for="{{stateList}}"
+          wx:key="abbr"
+          bindtap="setStateFilter"
+          data-abbr="{{item.abbr}}"
+        >
+          <text class="so-abbr">{{item.abbr}}</text>
+          <text class="so-name">{{item.name}}</text>
+        </view>
+      </view>
+      <view class="picker-option" bindtap="clearStateFilter" style="text-align:center;color:#FF3B30;">
+        清除州筛选
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ Picker: 排序 ══ -->
+  <view class="picker-sheet {{showSortSheet ? 'visible' : ''}}" bindtap="closeAllPickers">
+    <view class="picker-panel" catchtap="noop">
+      <view class="picker-title">排序方式</view>
+      <view
+        class="picker-option {{usSort === item.value ? 'selected' : ''}}"
+        wx:for="{{usSortOptions}}"
+        wx:key="value"
+        bindtap="setSortOption"
+        data-value="{{item.value}}"
+        data-label="{{item.label}}"
+      >
+        {{item.label}}
+        <text wx:if="{{usSort === item.value}}" class="picker-check">✓</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ 学校列表区 ══ -->
+  <scroll-view class="school-list" scroll-y enhanced>
+
+    <!-- 数据加载中 -->
+    <view class="loading-state" wx:if="{{usApiLoading && usApiFilteredSchools.length === 0}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在加载美国大学数据…</text>
+    </view>
+
+    <!-- 加载失败 -->
+    <view class="error-state" wx:elif="{{usApiError && !usApiLoading}}">
+      <text class="error-icon">⚠️</text>
+      <text class="error-text">数据加载失败</text>
+      <view class="retry-btn" bindtap="retryUsApi">重试</view>
+    </view>
+
+    <!-- 结果头部 -->
+    <view class="result-header" wx:elif="{{usApiFilteredSchools.length > 0 || expandResults.length > 0}}">
+      <text class="result-count">
+        {{expandDone ? expandResults.length : usApiFilteredSchools.length}} 所院校
+        {{expandDone ? '' : '（精选）'}}
+      </text>
+      <text class="result-time" wx:if="{{usApiLoadTime}}">{{usApiLoadTime}}</text>
+    </view>
+
+    <!-- Top 精选学校列表 -->
+    <block wx:if="{{!expandDone}}">
+      <view
+        class="school-card"
+        wx:for="{{usApiFilteredSchools}}"
+        wx:key="unitId"
+        bindtap="viewSchool"
+        data-id="{{item.unitId}}"
+        data-source="api"
+      >
+        <!-- 学校名 + 难度标签 + 收藏 -->
+        <view class="sc-top">
+          <view class="sc-name-row">
+            <text class="sc-name">{{item.name}}</text>
+          </view>
+          <view style="display:flex;align-items:center;gap:10rpx;">
+            <view class="sc-diff-tag" style="background:{{item.difficultyBg}};color:{{item.difficultyColor}};">
+              {{item.difficultyTag}}
+            </view>
+            <view class="sc-fav-btn" catchtap="toggleFav" data-unitid="{{item.unitId}}">
+              <text>{{item.isFav ? '♥' : '♡'}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 地点 + 类型 -->
+        <view class="sc-meta-row">
+          <text class="sc-loc">📍 {{item.city}}{{item.state ? ', ' + item.state : ''}}</text>
+          <text class="sc-sep">·</text>
+          <text class="sc-type">{{item.ownershipShort || item.ownership}}</text>
+        </view>
+
+        <!-- 关键数据行 -->
+        <view class="sc-stats-row">
+          <view class="sc-stat" wx:if="{{item.admissionDisplay}}">
+            <text class="sc-stat-label">录取率</text>
+            <text class="sc-stat-value">{{item.admissionDisplay}}</text>
+          </view>
+          <view class="sc-stat" wx:if="{{item.tuitionDisplay}}">
+            <text class="sc-stat-label">学费</text>
+            <text class="sc-stat-value">{{item.tuitionDisplay}}</text>
+          </view>
+          <view class="sc-stat" wx:if="{{item.satAverage}}">
+            <text class="sc-stat-label">SAT</text>
+            <text class="sc-stat-value">{{item.satAverage}}</text>
+          </view>
+          <view class="sc-stat" wx:if="{{item.gradRateFmt}}">
+            <text class="sc-stat-label">毕业率</text>
+            <text class="sc-stat-value">{{item.gradRateFmt}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 扩展搜索结果 -->
+    <block wx:if="{{expandDone}}">
+      <view
+        class="school-card"
+        wx:for="{{expandResults}}"
+        wx:key="unitId"
+        bindtap="viewSchool"
+        data-id="{{item.unitId}}"
+        data-source="api"
+      >
+        <view class="sc-top">
+          <view class="sc-name-row">
+            <text class="sc-name">{{item.name}}</text>
+          </view>
+          <view style="display:flex;align-items:center;gap:10rpx;">
+            <view class="sc-diff-tag" style="background:{{item.difficultyBg}};color:{{item.difficultyColor}};">
+              {{item.difficultyTag}}
+            </view>
+            <view class="sc-fav-btn" catchtap="toggleFav" data-unitid="{{item.unitId}}">
+              <text>{{item.isFav ? '♥' : '♡'}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="sc-meta-row">
+          <text class="sc-loc">📍 {{item.city}}{{item.state ? ', ' + item.state : ''}}</text>
+          <text class="sc-sep">·</text>
+          <text class="sc-type">{{item.ownershipShort || item.ownership}}</text>
+        </view>
+        <view class="sc-stats-row">
+          <view class="sc-stat" wx:if="{{item.admissionDisplay}}">
+            <text class="sc-stat-label">录取率</text>
+            <text class="sc-stat-value">{{item.admissionDisplay}}</text>
+          </view>
+          <view class="sc-stat" wx:if="{{item.tuitionDisplay}}">
+            <text class="sc-stat-label">学费</text>
+            <text class="sc-stat-value">{{item.tuitionDisplay}}</text>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <!-- 加载更多提示 -->
+    <view class="load-more-area" wx:if="{{usApiLoaded && !expandDone && usApiFilteredSchools.length > 0}}">
+      <view class="load-more-btn {{expandLoading ? 'loading' : ''}}" bindtap="expandSearch">
+        <text wx:if="{{!expandLoading}}">搜索全部 6,400+ 所美国大学 ↓</text>
+        <text wx:else>正在搜索…</text>
+      </view>
+      <text class="load-more-hint">输入关键词可精准查找</text>
+    </view>
+
+    <!-- 扩展搜索加载中 -->
+    <view class="loading-state" wx:if="{{expandLoading}}">
+      <view class="loading-spinner"></view>
+      <text class="loading-text">正在搜索全部数据库…</text>
+    </view>
+
+    <!-- 空结果 -->
+    <view class="empty-state" wx:if="{{!usApiLoading && !expandLoading && usApiFilteredSchools.length === 0 && expandResults.length === 0 && !usApiError && usApiLoaded}}">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-title">没有找到匹配的学校</text>
+      <text class="empty-sub">尝试修改筛选条件或搜索词</text>
+      <view class="empty-reset" bindtap="clearAllFilters">重置筛选</view>
+    </view>
+
+    <view style="height:40rpx;"></view>
+  </scroll-view>
+
+  <!-- ══ 登录引导弹窗 ══ -->
+  <view class="login-mask {{showLoginModal ? 'visible' : ''}}" bindtap="closeLoginModal">
+    <view class="login-sheet" catchtap="noop">
+
+      <view class="ls-header">
+        <text class="ls-title">登录解锁收藏</text>
+        <text class="ls-close" bindtap="closeLoginModal">✕</text>
+      </view>
+
+      <view class="ls-benefits">
+        <view class="ls-benefit-item">
+          <text class="ls-b-icon">🔖</text>
+          <text class="ls-b-text">永久保存收藏的大学</text>
+        </view>
+        <view class="ls-benefit-item">
+          <text class="ls-b-icon">📊</text>
+          <text class="ls-b-text">获取个性化选校推荐</text>
+        </view>
+        <view class="ls-benefit-item">
+          <text class="ls-b-icon">🔔</text>
+          <text class="ls-b-text">录取季重要信息提醒</text>
+        </view>
+      </view>
+
+      <button
+        class="ls-phone-btn {{loginLoading ? 'loading' : ''}}"
+        open-type="getPhoneNumber"
+        bindgetphonenumber="onGetPhoneNumber"
+        disabled="{{loginLoading}}"
+      >
+        <text wx:if="{{!loginLoading}}">📱 微信一键登录</text>
+        <text wx:else>获取中…</text>
+      </button>
+
+      <text class="ls-privacy">手机号仅用于服务通知，不会泄露给第三方</text>
+      <view class="ls-skip" bindtap="skipLogin">先浏览，暂不登录</view>
+    </view>
+  </view>
+
+</view>

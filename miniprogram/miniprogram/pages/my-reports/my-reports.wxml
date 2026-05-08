@@ -1,0 +1,79 @@
+<!-- pages/my-reports/my-reports.wxml -->
+<!-- 我的报告 — 历史付费查询记录 -->
+
+<view class="page">
+
+  <!-- 加载中 -->
+  <view wx:if="{{loading}}" class="loading-wrap">
+    <view class="loading-spinner"></view>
+    <text class="loading-text">加载中…</text>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:elif="{{empty}}" class="empty-wrap">
+    <text class="empty-icon">📋</text>
+    <text class="empty-title">还没有报告</text>
+    <text class="empty-sub">支付¥1.99解锁完整报告后，\n报告会自动保存到这里</text>
+    <view class="go-query-btn" bindtap="goBack">去查询</view>
+  </view>
+
+  <!-- 报告列表 -->
+  <view wx:else class="report-list">
+    <view class="list-header">
+      <text class="list-title">我的报告</text>
+      <text class="list-sub">共 {{reports.length}} 份，点击可重新查看或下载PDF</text>
+    </view>
+
+    <view wx:for="{{reports}}" wx:key="_id" class="report-card">
+      <!-- 报告头部信息 -->
+      <view class="report-head">
+        <view class="report-meta">
+          <text class="report-province">{{item.province}}</text>
+          <text class="report-sep">·</text>
+          <text class="report-rank">位次 {{item.rank}}</text>
+          <text wx:if="{{item.subject && item.subject !== '不限'}}" class="report-subject">· {{item.subject}}</text>
+        </view>
+        <text class="report-date">{{item.dateStr}}</text>
+      </view>
+
+      <!-- 筛选条件标签 -->
+      <view class="constraint-tags" wx:if="{{item.constraints && (item.constraints.c_major || item.constraints.c_city || item.constraints.c_nature || item.constraints.c_tier)}}">
+        <text class="ct-tag" wx:if="{{item.constraints.c_major}}">专业：{{item.constraints.c_major}}</text>
+        <text class="ct-tag" wx:if="{{item.constraints.c_city}}">城市：{{item.constraints.c_city}}</text>
+        <text class="ct-tag" wx:if="{{item.constraints.c_nature}}">性质：{{item.constraints.c_nature}}</text>
+        <text class="ct-tag" wx:if="{{item.constraints.c_tier}}">档次：{{item.constraints.c_tier}}</text>
+      </view>
+
+      <!-- 院校数量概览 -->
+      <view class="report-stats">
+        <view class="report-stat">
+          <text class="rs-num">{{item.surgeCount}}</text>
+          <text class="rs-label">冲</text>
+        </view>
+        <view class="report-stat">
+          <text class="rs-num">{{item.stableCount}}</text>
+          <text class="rs-label">稳</text>
+        </view>
+        <view class="report-stat">
+          <text class="rs-num">{{item.safeCount}}</text>
+          <text class="rs-label">保</text>
+        </view>
+        <view class="report-stat">
+          <text class="rs-num">{{item.gemsCount}}</text>
+          <text class="rs-label">冷门好校</text>
+        </view>
+        <view class="report-stat total-stat">
+          <text class="rs-num">{{item.totalMatched}}</text>
+          <text class="rs-label">总计</text>
+        </view>
+      </view>
+
+      <!-- 操作按钮 -->
+      <view class="report-actions">
+        <view class="ra-btn ra-view" bindtap="viewReport" data-idx="{{index}}">查看详情</view>
+        <view class="ra-btn ra-pdf" bindtap="downloadPDF" data-idx="{{index}}">📄 下载PDF</view>
+      </view>
+    </view>
+  </view>
+
+</view>

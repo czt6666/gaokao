@@ -1,0 +1,704 @@
+<!-- pages/admin/admin.wxml — 袁希™ 线索管理后台 -->
+<view class="root">
+
+  <!-- ══════════════ 锁定状态：密码验证 ══════════════ -->
+  <view class="lock-page" wx:if="{{authState !== 'unlocked'}}">
+    <view class="lock-hero">
+      <text class="lock-icon">🔐</text>
+      <text class="lock-title">袁希™ 管理后台</text>
+      <text class="lock-sub">仅袁希本人可访问</text>
+    </view>
+    <view class="lock-form">
+      <input
+        class="code-input"
+        type="text"
+        password="{{true}}"
+        placeholder="请输入访问密码"
+        value="{{codeInput}}"
+        bindinput="onCodeInput"
+        bindconfirm="verifyCode"
+      />
+      <text class="auth-error" wx:if="{{authError}}">{{authError}}</text>
+      <button
+        class="verify-btn {{authState === 'verifying' ? 'verifying' : ''}}"
+        bindtap="verifyCode"
+        disabled="{{authState === 'verifying'}}"
+      >{{authState === 'verifying' ? '验证中…' : '进入后台'}}</button>
+    </view>
+  </view>
+
+  <!-- ══════════════ 已解锁：主界面 ══════════════ -->
+  <block wx:if="{{authState === 'unlocked'}}">
+
+    <!-- ── Tab 导航栏 ── -->
+    <view class="tab-bar">
+      <view
+        class="tab-item {{activeTab === 'leads' ? 'active' : ''}}"
+        bindtap="switchTab" data-tab="leads"
+        hover-class="tab-item-hover"
+      >线索管理</view>
+      <view
+        class="tab-item {{activeTab === 'intelligence' ? 'active' : ''}}"
+        bindtap="switchTab" data-tab="intelligence"
+        hover-class="tab-item-hover"
+      >🧬 智能实验室</view>
+      <view
+        class="tab-item {{activeTab === 'gaokao' ? 'active' : ''}}"
+        bindtap="switchTab" data-tab="gaokao"
+        hover-class="tab-item-hover"
+      >🎓 高考运营</view>
+    </view>
+
+    <!-- ══════════════ 线索管理 Tab ══════════════ -->
+    <block wx:if="{{activeTab === 'leads'}}">
+
+    <!-- ── 顶部数据仪表盘 ── -->
+    <view class="dashboard">
+      <view class="dash-header">
+        <text class="dash-title">线索总览</text>
+        <text class="logout-btn" bindtap="logout">退出</text>
+      </view>
+
+      <!-- 核心指标 -->
+      <view class="metrics-grid" wx:if="{{stats}}">
+        <view class="metric-card primary">
+          <text class="metric-num">{{stats.total}}</text>
+          <text class="metric-label">总评估数</text>
+        </view>
+        <view class="metric-card">
+          <text class="metric-num accent">{{stats.thisWeek}}</text>
+          <text class="metric-label">本周新增</text>
+        </view>
+        <view class="metric-card">
+          <text class="metric-num green">{{stats.highFit}}</text>
+          <text class="metric-label">高适配度</text>
+        </view>
+        <view class="metric-card">
+          <text class="metric-num purple">{{stats.ctaTapped}}</text>
+          <text class="metric-label">点击咨询 {{stats.ctaRate}}%</text>
+        </view>
+        <view class="metric-card">
+          <text class="metric-num amber">{{stats.hasParent}}</text>
+          <text class="metric-label">家长问卷 {{stats.parentRate}}%</text>
+        </view>
+        <view class="metric-card alert">
+          <text class="metric-num red">{{stats.unread}}</text>
+          <text class="metric-label">未读</text>
+        </view>
+      </view>
+
+      <!-- 路径分布 -->
+      <view class="path-dist" wx:if="{{stats}}">
+        <text class="dist-title">路径分布</text>
+        <view class="dist-row">
+          <view class="dist-item"><text class="dist-icon">✈️</text><text class="dist-val">{{stats.pathCounts.abroad_high || 0}}</text><text class="dist-lbl">高中出国</text></view>
+          <view class="dist-item"><text class="dist-icon">🌏</text><text class="dist-val">{{stats.pathCounts.abroad_uni || 0}}</text><text class="dist-lbl">大学出国</text></view>
+          <view class="dist-item"><text class="dist-icon">🔄</text><text class="dist-val">{{stats.pathCounts.hybrid || 0}}</text><text class="dist-lbl">混合路线</text></view>
+          <view class="dist-item"><text class="dist-icon">📚</text><text class="dist-val">{{stats.pathCounts.gaokao || 0}}</text><text class="dist-lbl">国内高考</text></view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 过滤器 ── -->
+    <scroll-view class="filter-scroll" scroll-x enable-flex>
+      <view class="filter-bar">
+        <view
+          wx:for="{{filterOptions}}" wx:key="key"
+          class="filter-chip {{activeFilter === item.key ? 'active' : ''}}"
+          bindtap="switchFilter" data-key="{{item.key}}"
+          hover-class="filter-chip-hover"
+          hover-stay-time="150"
+        >{{item.label}}</view>
+      </view>
+    </scroll-view>
+
+    <!-- ── 线索列表 ── -->
+    <view class="lead-list">
+      <text class="list-count" wx:if="{{total > 0}}">共 {{total}} 条记录</text>
+
+      <!-- 空状态 -->
+      <view class="empty-state" wx:if="{{!listLoading && list.length === 0}}">
+        <text class="empty-icon">📭</text>
+        <text class="empty-text">暂无数据</text>
+      </view>
+
+      <!-- 线索卡片 -->
+      <view
+        class="lead-card {{item.isRead ? '' : 'unread'}}"
+        wx:for="{{list}}" wx:key="_id"
+        bindtap="goDetail" data-id="{{item._id}}"
+      >
+        <!-- 卡片头部 -->
+        <view class="card-head">
+          <view class="child-avatar">
+            <text class="child-initial">{{item.initial}}</text>
+          </view>
+          <view class="card-head-info">
+            <view class="card-name-row">
+              <text class="child-name">{{item.childName}}</text>
+              <view class="unread-dot" wx:if="{{!item.isRead}}"></view>
+            </view>
+            <text class="child-meta">{{item.schoolStageLabel}} · {{item.childAge || '—'}}岁 · {{item.timeStr}}</text>
+          </view>
+          <view class="stage-badge" style="background:{{item.stageColor}}15;border-color:{{item.stageColor}}40;">
+            <text style="color:{{item.stageColor}}">{{item.stageLabel}}</text>
+          </view>
+        </view>
+
+        <!-- 适配度 + 路径 -->
+        <view class="card-score-row">
+          <view class="score-block">
+            <text class="score-num" style="color:{{item.scoreColor}}">{{item.overallScore}}</text>
+            <text class="score-unit">分</text>
+          </view>
+          <view class="path-tag-sm">
+            <text class="path-icon-sm">{{item.primaryPath === 'abroad_high' ? '✈️' : item.primaryPath === 'abroad_uni' ? '🌏' : item.primaryPath === 'hybrid' ? '🔄' : '📚'}}</text>
+            <text class="path-label-sm">{{item.primaryPathLabel}}</text>
+          </view>
+          <view class="card-tags">
+            <view class="mini-tag blue" wx:if="{{item.behavior && item.behavior.ctaTapped}}"><text>咨询意向</text></view>
+            <view class="mini-tag green" wx:if="{{item.hasParentAnswers}}"><text>有问卷</text></view>
+            <view class="mini-tag purple" wx:if="{{item.hasAiInsight}}"><text>AI分析</text></view>
+          </view>
+        </view>
+
+        <!-- 行为信号条 -->
+        <view class="behavior-signal-row">
+          <view class="intent-stars">
+            <text class="intent-label">意向</text>
+            <text class="intent-val">{{item.intentStars}}</text>
+          </view>
+          <view class="bsig-item" wx:if="{{item.visitLabel}}">
+            <text class="bsig-icon">{{item.visitSignal}}</text>
+            <text class="bsig-text">{{item.visitLabel}}</text>
+          </view>
+          <view class="bsig-item" wx:if="{{item.readTierLabel}}">
+            <text class="bsig-icon">{{item.readTierIconDisplay}}</text>
+            <text class="bsig-text">{{item.readTierLabel}}</text>
+          </view>
+          <view class="bsig-item warn" wx:if="{{item.parentAbandoned}}">
+            <text class="bsig-icon">⚠️</text>
+            <text class="bsig-text">{{item.abandonLabel}}</text>
+          </view>
+        </view>
+
+        <!-- 能力标签 -->
+        <view class="card-ability-row" wx:if="{{item.englishLevel || item.academicTier || item.topIntelligences.length}}">
+          <view class="ability-chip" wx:if="{{item.englishLevel}}">
+            <text class="ability-icon">🗣️</text>
+            <text class="ability-val">英语·{{item.engLevelLabel}}</text>
+          </view>
+          <view class="ability-chip" wx:if="{{item.academicTier}}">
+            <text class="ability-icon">📊</text>
+            <text class="ability-val">学业·{{item.acadLabel}}</text>
+          </view>
+          <view class="ability-chip" wx:if="{{item.topIntelligences[0]}}">
+            <text class="ability-icon">✨</text>
+            <text class="ability-val">{{item.topIntelligences[0].label}}</text>
+          </view>
+        </view>
+
+        <!-- AI洞察摘要 -->
+        <view class="card-insight" wx:if="{{item.keyQuoteDisplay}}">
+          <text class="insight-quote">"{{item.keyQuoteDisplay}}"</text>
+        </view>
+        <view class="card-blindspot" wx:elif="{{item.quickInsight}}">
+          <text class="blindspot-icon-sm">🔍</text>
+          <text class="blindspot-text-sm">{{item.quickInsight}}</text>
+        </view>
+
+        <!-- 备注 -->
+        <view class="card-note" wx:if="{{item.adminNote}}">
+          <text class="note-icon">📝</text>
+          <text class="note-text">{{item.adminNote}}</text>
+        </view>
+
+        <!-- 箭头 -->
+        <view class="card-arrow">›</view>
+      </view>
+
+      <!-- 加载更多 -->
+      <view class="load-more" wx:if="{{listLoading}}">
+        <view class="loading-ring-sm"></view>
+        <text class="load-text">加载中…</text>
+      </view>
+      <view class="load-end" wx:elif="{{!hasMore && list.length > 0}}">
+        <text>— 已显示全部 {{total}} 条 —</text>
+      </view>
+    </view>
+
+    </block><!-- end leads tab -->
+
+    <!-- ══════════════ 智能实验室 Tab ══════════════ -->
+    <block wx:if="{{activeTab === 'intelligence'}}">
+    <view class="intel-root">
+
+      <!-- ── 加载中 ── -->
+      <view class="intel-loading" wx:if="{{intelligenceLoading}}">
+        <view class="loading-ring-sm"></view>
+        <text class="intel-load-text">灵魂分析引擎运行中…</text>
+      </view>
+
+      <!-- ── 暂无数据 ── -->
+      <view class="intel-empty" wx:elif="{{!intelligence}}">
+        <text class="intel-empty-icon">🧬</text>
+        <text class="intel-empty-title">智能实验室</text>
+        <text class="intel-empty-desc">随着用户使用积累，系统会自动分析问卷健康度、智能分布、并生成灵魂进化建议。</text>
+        <button class="intel-refresh-btn" bindtap="refreshIntelligence">开始分析</button>
+      </view>
+
+      <!-- ── 分析结果 ── -->
+      <block wx:elif="{{intelligence}}">
+
+        <!-- 灵魂健康得分 -->
+        <view class="intel-section soul-health-section">
+          <view class="soul-health-header">
+            <view class="soul-health-score-wrap">
+              <text class="soul-health-score" style="color:{{intelligence.soulHealthColor}}">{{intelligence.soulHealthScore}}</text>
+              <text class="soul-health-unit">分</text>
+            </view>
+            <view class="soul-health-right">
+              <text class="soul-health-label" style="color:{{intelligence.soulHealthColor}}">{{intelligence.soulHealthLabel}}</text>
+              <text class="soul-health-sub">问卷灵魂健康分 · 基于 {{intelligence.totalSessions}} 次评估</text>
+              <view class="soul-issues-row">
+                <view class="issue-tag critical" wx:if="{{intelligence.criticalIssues > 0}}">
+                  <text>⚠️ {{intelligence.criticalIssues}} 个严重问题</text>
+                </view>
+                <view class="issue-tag moderate" wx:if="{{intelligence.moderateIssues > 0}}">
+                  <text>🔶 {{intelligence.moderateIssues}} 个中度问题</text>
+                </view>
+                <view class="issue-tag good" wx:if="{{intelligence.criticalIssues === 0 && intelligence.moderateIssues === 0}}">
+                  <text>✅ 当前状态良好</text>
+                </view>
+              </view>
+            </view>
+          </view>
+          <view class="intel-meta-row">
+            <text class="intel-meta">完整完成率 {{intelligence.completionRate}}%</text>
+            <text class="intel-meta-sep">·</text>
+            <text class="intel-meta">高参与 {{intelligence.engagementDistribution.highPct}}%</text>
+            <text class="intel-meta-sep">·</text>
+            <text class="intel-meta">低参与 {{intelligence.engagementDistribution.lowPct}}%</text>
+          </view>
+          <button class="intel-refresh-btn-sm" bindtap="refreshIntelligence">刷新分析</button>
+        </view>
+
+        <!-- 进化建议（最优先展示） -->
+        <view class="intel-section" wx:if="{{intelligence.evolutionSuggestions.length > 0}}">
+          <text class="intel-section-title">🔬 灵魂进化建议</text>
+          <text class="intel-section-sub">按优先级排序，这些问题最影响数据质量</text>
+          <view
+            class="evolution-card {{item.urgency}}"
+            wx:for="{{intelligence.evolutionSuggestions}}"
+            wx:key="qId"
+          >
+            <view class="evo-header">
+              <view class="evo-urgency-dot {{item.urgency}}"></view>
+              <text class="evo-q-label">{{item.label}}</text>
+              <text class="evo-issue-tag">{{item.issueLabel}}</text>
+            </view>
+            <text class="evo-suggestion">{{item.suggestion}}</text>
+            <view class="evo-metrics-row">
+              <text class="evo-metric">质量均分 {{item.avgQuality}}/3</text>
+              <text class="evo-metric">追问率 {{item.probeRate}}%</text>
+              <text class="evo-metric">深度率 {{item.depthRate}}%</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 问题健康热图 -->
+        <view class="intel-section">
+          <text class="intel-section-title">📊 问题健康度</text>
+          <text class="intel-section-sub">点击任意问题查看详细数据</text>
+          <view
+            class="q-health-row"
+            wx:for="{{intelligence.questionHealth}}"
+            wx:key="qId"
+            bindtap="toggleQDetail"
+            data-qid="{{item.qId}}"
+          >
+            <view class="q-health-left">
+              <view class="q-health-level-dot" style="background:{{item.healthColor}}"></view>
+              <view class="q-health-info">
+                <text class="q-health-label">{{item.label}}</text>
+                <view class="q-health-bar-bg">
+                  <view class="q-health-bar-fill" style="width:{{item.avgQualityBar}}%;background:{{item.healthColor}}"></view>
+                </view>
+              </view>
+            </view>
+            <view class="q-health-right">
+              <text class="q-health-score" style="color:{{item.healthColor}}">{{item.healthLevel}}</text>
+              <text class="q-health-n">n={{item.total}}</text>
+            </view>
+          </view>
+
+          <!-- 展开的问题详情 -->
+          <view class="q-detail-panel" wx:if="{{expandedQId}}">
+            <block wx:for="{{intelligence.questionHealth}}" wx:key="qId">
+              <view wx:if="{{item.qId === expandedQId}}">
+                <text class="q-detail-title">{{item.label}}</text>
+                <view class="q-detail-grid">
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.avgQuality}}/3</text>
+                    <text class="q-detail-key">平均质量</text>
+                  </view>
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.probeRate}}%</text>
+                    <text class="q-detail-key">追问触发率</text>
+                  </view>
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.depthRate}}%</text>
+                    <text class="q-detail-key">深度回答率</text>
+                  </view>
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.shallowRate}}%</text>
+                    <text class="q-detail-key">浅/敷衍率</text>
+                  </view>
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.avgFirstLen}}字</text>
+                    <text class="q-detail-key">平均答案长度</text>
+                  </view>
+                  <view class="q-detail-cell">
+                    <text class="q-detail-val">{{item.probeSuccRate}}%</text>
+                    <text class="q-detail-key">追问成功率</text>
+                  </view>
+                </view>
+                <!-- 质量分布条 -->
+                <view class="q-dist-row">
+                  <view class="q-dist-item" style="flex:{{item.dist.q0 + 0.1}}">
+                    <text class="q-dist-val">{{item.dist.q0}}</text>
+                    <view class="q-dist-bar" style="background:#FF3B30"></view>
+                    <text class="q-dist-lbl">敷衍</text>
+                  </view>
+                  <view class="q-dist-item" style="flex:{{item.dist.q1 + 0.1}}">
+                    <text class="q-dist-val">{{item.dist.q1}}</text>
+                    <view class="q-dist-bar" style="background:#FF9F0A"></view>
+                    <text class="q-dist-lbl">简略</text>
+                  </view>
+                  <view class="q-dist-item" style="flex:{{item.dist.q2 + 0.1}}">
+                    <text class="q-dist-val">{{item.dist.q2}}</text>
+                    <view class="q-dist-bar" style="background:#FFD60A"></view>
+                    <text class="q-dist-lbl">基础</text>
+                  </view>
+                  <view class="q-dist-item" style="flex:{{item.dist.q3 + 0.1}}">
+                    <text class="q-dist-val">{{item.dist.q3}}</text>
+                    <view class="q-dist-bar" style="background:#34C759"></view>
+                    <text class="q-dist-lbl">深度</text>
+                  </view>
+                </view>
+                <text class="q-detail-suggestion" wx:if="{{item.suggestion}}">💡 {{item.suggestion}}</text>
+              </view>
+            </block>
+          </view>
+        </view>
+
+        <!-- 多元智能分布 -->
+        <view class="intel-section">
+          <text class="intel-section-title">🧠 多元智能分布</text>
+          <text class="intel-section-sub">用户群体中，各项智能的平均得分与主导占比</text>
+          <view
+            class="mi-dist-row"
+            wx:for="{{intelligence.miDistribution}}"
+            wx:key="key"
+          >
+            <text class="mi-dist-label">{{item.label}}</text>
+            <view class="mi-dist-bar-bg">
+              <view class="mi-dist-bar-fill" style="width:{{item.avgScoreBar}}%"></view>
+            </view>
+            <text class="mi-dist-score">{{item.avgScore}}</text>
+            <text class="mi-dist-top">{{item.topPct}}%主导</text>
+          </view>
+        </view>
+
+        <!-- 路径分布 -->
+        <view class="intel-section">
+          <text class="intel-section-title">🗺️ 教育路径偏好</text>
+          <view
+            class="path-intel-row"
+            wx:for="{{intelligence.pathDistribution}}"
+            wx:key="path"
+          >
+            <text class="path-intel-label">{{item.label}}</text>
+            <view class="path-intel-bar-bg">
+              <view class="path-intel-bar-fill" style="width:{{item.pct}}%"></view>
+            </view>
+            <text class="path-intel-pct">{{item.pct}}%</text>
+            <text class="path-intel-n">{{item.count}}人</text>
+          </view>
+        </view>
+
+        <!-- 综合分分布 -->
+        <view class="intel-section" wx:if="{{intelligence.scoreStats}}">
+          <text class="intel-section-title">📈 综合适配分分布</text>
+          <view class="score-stats-row">
+            <view class="score-stat-cell">
+              <text class="score-stat-val">{{intelligence.scoreStats.avg}}</text>
+              <text class="score-stat-key">平均分</text>
+            </view>
+            <view class="score-stat-cell">
+              <text class="score-stat-val">{{intelligence.scoreStats.min}}</text>
+              <text class="score-stat-key">最低分</text>
+            </view>
+            <view class="score-stat-cell">
+              <text class="score-stat-val">{{intelligence.scoreStats.max}}</text>
+              <text class="score-stat-key">最高分</text>
+            </view>
+          </view>
+          <view class="score-dist-row">
+            <view class="score-dist-cell" style="flex:{{intelligence.scoreStats.dist.under50 + 0.1}}">
+              <text class="score-dist-n">{{intelligence.scoreStats.dist.under50}}</text>
+              <view class="score-dist-bar" style="background:#FF3B30"></view>
+              <text class="score-dist-lbl">&lt;50</text>
+            </view>
+            <view class="score-dist-cell" style="flex:{{intelligence.scoreStats.dist.s50_65 + 0.1}}">
+              <text class="score-dist-n">{{intelligence.scoreStats.dist.s50_65}}</text>
+              <view class="score-dist-bar" style="background:#FF9F0A"></view>
+              <text class="score-dist-lbl">50-65</text>
+            </view>
+            <view class="score-dist-cell" style="flex:{{intelligence.scoreStats.dist.s65_80 + 0.1}}">
+              <text class="score-dist-n">{{intelligence.scoreStats.dist.s65_80}}</text>
+              <view class="score-dist-bar" style="background:#FFD60A"></view>
+              <text class="score-dist-lbl">65-80</text>
+            </view>
+            <view class="score-dist-cell" style="flex:{{intelligence.scoreStats.dist.over80 + 0.1}}">
+              <text class="score-dist-n">{{intelligence.scoreStats.dist.over80}}</text>
+              <view class="score-dist-bar" style="background:#34C759"></view>
+              <text class="score-dist-lbl">80+</text>
+            </view>
+          </view>
+        </view>
+
+        <view class="intel-footer">
+          <text class="intel-footer-text">分析时间：{{intelligence.analyzedAt}}</text>
+        </view>
+
+      </block><!-- end intelligence data -->
+    </view><!-- end intel-root -->
+    </block><!-- end intelligence tab -->
+
+  <!-- ══════════════ 高考运营 Tab ══════════════ -->
+  <block wx:if="{{activeTab === 'gaokao'}}">
+  <view class="gk-root">
+
+    <!-- ── 顶部统计仪表盘 ── -->
+    <view class="gk-dashboard" wx:if="{{gaokaoStats}}">
+      <view class="gk-metrics">
+        <view class="gk-metric">
+          <text class="gk-num">{{gaokaoStats.total}}</text>
+          <text class="gk-lbl">总查询</text>
+        </view>
+        <view class="gk-metric">
+          <text class="gk-num accent">{{gaokaoStats.thisWeek}}</text>
+          <text class="gk-lbl">本周</text>
+        </view>
+        <view class="gk-metric">
+          <text class="gk-num green">{{gaokaoStats.withPhone}}</text>
+          <text class="gk-lbl">留号 {{gaokaoStats.phoneRate}}%</text>
+        </view>
+        <view class="gk-metric">
+          <text class="gk-num amber">{{gaokaoStats.withSaves}}</text>
+          <text class="gk-lbl">有保存 {{gaokaoStats.saveRate}}%</text>
+        </view>
+        <view class="gk-metric alert" wx:if="{{gaokaoStats.openFeedback > 0}}">
+          <text class="gk-num red">{{gaokaoStats.openFeedback}}</text>
+          <text class="gk-lbl">待处理反馈</text>
+        </view>
+      </view>
+      <!-- 热门省份 -->
+      <view class="gk-provinces" wx:if="{{gaokaoStats.topProvinces.length > 0}}">
+        <text class="gk-provinces-title">热门省份</text>
+        <view class="gk-prov-row">
+          <view class="gk-prov-chip" wx:for="{{gaokaoStats.topProvinces}}" wx:key="province">
+            <text class="gk-prov-name">{{item.province}}</text>
+            <text class="gk-prov-n">{{item.count}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+    <view class="gk-dashboard-loading" wx:elif="{{gaokaoStatsLoading}}">
+      <view class="loading-ring-sm"></view>
+    </view>
+
+    <!-- ── Sub-tab ── -->
+    <view class="gk-subtab-bar">
+      <view
+        class="gk-subtab {{gaokaoSubTab === 'sessions' ? 'active' : ''}}"
+        bindtap="switchGaokaoSubTab" data-sub="sessions"
+      >用户列表 <text class="tab-count">{{gaokaoTotal}}</text></view>
+      <view
+        class="gk-subtab {{gaokaoSubTab === 'feedback' ? 'active' : ''}}"
+        bindtap="switchGaokaoSubTab" data-sub="feedback"
+      >反馈中心 <text wx:if="{{gaokaoStats && gaokaoStats.openFeedback > 0}}" class="tab-count-red">{{gaokaoStats.openFeedback}}</text></view>
+    </view>
+
+    <!-- ══ 用户列表 ══ -->
+    <block wx:if="{{gaokaoSubTab === 'sessions'}}">
+
+      <!-- 过滤 -->
+      <scroll-view class="filter-scroll" scroll-x enable-flex>
+        <view class="filter-bar">
+          <view class="filter-chip {{gaokaoFilter==='all'?'active':''}}"     bindtap="switchGaokaoFilter" data-key="all">全部</view>
+          <view class="filter-chip {{gaokaoFilter==='hasPhone'?'active':''}}" bindtap="switchGaokaoFilter" data-key="hasPhone">📞 已留号</view>
+          <view class="filter-chip {{gaokaoFilter==='hasSaves'?'active':''}}" bindtap="switchGaokaoFilter" data-key="hasSaves">📋 有保存</view>
+        </view>
+      </scroll-view>
+
+      <!-- 列表 -->
+      <view class="gk-session-list">
+        <text class="list-count" wx:if="{{gaokaoTotal > 0}}">共 {{gaokaoTotal}} 条查询记录</text>
+
+        <view class="gk-empty" wx:if="{{!gaokaoListLoading && gaokaoList.length === 0}}">
+          <text class="empty-icon">📭</text>
+          <text class="empty-text">暂无数据</text>
+        </view>
+
+        <view class="gk-session-card" wx:for="{{gaokaoList}}" wx:key="_id">
+          <!-- 头部：省份 + 位次 + 时间 -->
+          <view class="gk-card-head">
+            <view class="gk-card-head-left">
+              <view class="gk-province-tag">{{item.province}}</view>
+              <view class="gk-mode-tag {{item.mode==='score'?'mode-score':''}}">
+                {{item.mode==='score'?'分数模式':'位次模式'}}
+              </view>
+            </view>
+            <text class="gk-card-time">{{item._timeStr}}</text>
+          </view>
+
+          <!-- 位次 + 选科 -->
+          <view class="gk-rank-row">
+            <text class="gk-rank-num">{{item.rank}}</text>
+            <text class="gk-rank-unit">位</text>
+            <text class="gk-subject" wx:if="{{item.subject}}">· {{item.subject}}</text>
+          </view>
+
+          <!-- 结果分布 -->
+          <view class="gk-result-row" wx:if="{{item.resultCounts}}">
+            <view class="gk-result-chip surge">冲 {{item.resultCounts.surge || 0}}</view>
+            <view class="gk-result-chip stable">稳 {{item.resultCounts.stable || 0}}</view>
+            <view class="gk-result-chip safe">保 {{item.resultCounts.safe || 0}}</view>
+            <view class="gk-result-chip gems">💎 {{item.resultCounts.gems || 0}}</view>
+          </view>
+
+          <!-- 行为信号 -->
+          <view class="gk-signal-row">
+            <text class="gk-intent">{{item._intentStars}}</text>
+            <view class="gk-signal-chip" wx:if="{{item._savedCount > 0}}">
+              📋 保存{{item._savedCount}}所
+            </view>
+            <view class="gk-signal-chip gems-chip" wx:if="{{item._tabsViewed.indexOf('gems') !== -1}}">
+              💎 看过冷门校
+            </view>
+            <view class="gk-signal-chip ai-chip" wx:if="{{item.aiRequested}}">
+              🤖 请求AI
+            </view>
+            <view class="gk-signal-chip time-chip" wx:if="{{item._durationMin > 0}}">
+              ⏱ {{item._durationMin}}分钟
+            </view>
+          </view>
+
+          <!-- 已保存的学校（前2所） -->
+          <view wx:if="{{item.savedSchools && item.savedSchools.length > 0}}" class="gk-saved-schools">
+            <view class="gk-saved-item" wx:for="{{item.savedSchools}}" wx:key="school" wx:for-index="si" wx:if="{{si < 2}}">
+              <view class="gk-action-dot action-dot-{{item.action === '冲' ? 'rush' : item.action === '保' ? 'safe' : 'stable'}}"></view>
+              <text class="gk-saved-name">{{item.school}}</text>
+              <text class="gk-saved-major">{{item.major}}</text>
+            </view>
+            <text class="gk-saved-more" wx:if="{{item.savedSchools.length > 2}}">+{{item.savedSchools.length - 2}} 所</text>
+          </view>
+
+          <!-- 手机号标记 -->
+          <view class="gk-phone-row">
+            <view class="gk-phone-tag {{item.phone ? 'has-phone' : 'no-phone'}}">
+              {{item.phone ? '📞 ' + item.phone : '未留号'}}
+            </view>
+            <text class="gk-openid">{{item._openidShort}}</text>
+          </view>
+        </view>
+
+        <!-- 加载更多 -->
+        <view class="load-more" wx:if="{{gaokaoListLoading}}">
+          <view class="loading-ring-sm"></view>
+          <text class="load-text">加载中…</text>
+        </view>
+        <view class="load-end" wx:elif="{{!gaokaoHasMore && gaokaoList.length > 0}}">
+          <text>— 已显示全部 {{gaokaoTotal}} 条 —</text>
+        </view>
+        <view wx:if="{{!gaokaoListLoading && gaokaoHasMore && gaokaoList.length > 0}}"
+          class="load-more-btn" bindtap="_loadGaokaoSessions">
+          <text>加载更多</text>
+        </view>
+      </view>
+
+    </block><!-- end sessions -->
+
+    <!-- ══ 反馈中心 ══ -->
+    <block wx:if="{{gaokaoSubTab === 'feedback'}}">
+
+      <!-- 过滤 -->
+      <scroll-view class="filter-scroll" scroll-x enable-flex>
+        <view class="filter-bar">
+          <view class="filter-chip {{feedbackFilter==='all'?'active':''}}"      bindtap="switchFeedbackFilter" data-key="all">全部</view>
+          <view class="filter-chip {{feedbackFilter==='open'?'active':''}}"     bindtap="switchFeedbackFilter" data-key="open">待处理</view>
+          <view class="filter-chip {{feedbackFilter==='resolved'?'active':''}}" bindtap="switchFeedbackFilter" data-key="resolved">已解决</view>
+        </view>
+      </scroll-view>
+
+      <view class="gk-feedback-list">
+        <text class="list-count" wx:if="{{feedbackTotal > 0}}">共 {{feedbackTotal}} 条反馈</text>
+
+        <view class="gk-empty" wx:if="{{!feedbackLoading && feedbackList.length === 0}}">
+          <text class="empty-icon">📭</text>
+          <text class="empty-text">暂无反馈</text>
+        </view>
+
+        <view class="gk-feedback-card" wx:for="{{feedbackList}}" wx:key="_id">
+          <!-- 头部 -->
+          <view class="gk-fb-head">
+            <view class="gk-fb-type-tag" style="background:{{item._typeColor}}20;color:{{item._typeColor}}">
+              {{item._typeLabel}}
+            </view>
+            <text class="gk-fb-time">{{item._timeStr}}</text>
+            <view class="gk-fb-status {{item.status}}">
+              {{item.status === 'open' ? '待处理' : item.status === 'resolved' ? '已解决' : '不处理'}}
+            </view>
+          </view>
+
+          <!-- 涉及学校 -->
+          <view class="gk-fb-school" wx:if="{{item.targetSchool}}">
+            <text class="gk-fb-school-name">{{item.targetSchool}}</text>
+            <text class="gk-fb-major" wx:if="{{item.targetMajor}}"> · {{item.targetMajor}}</text>
+          </view>
+
+          <!-- 反馈正文 -->
+          <text class="gk-fb-desc">"{{item.description}}"</text>
+
+          <!-- 用户信息 -->
+          <view class="gk-fb-meta">
+            <text class="gk-fb-meta-text">{{item.userProvince}} · 位次 {{item.userRank || '未知'}}</text>
+          </view>
+
+          <!-- 解决按钮 -->
+          <view wx:if="{{item.status === 'open'}}"
+            class="gk-resolve-btn {{resolvingId === item._id ? 'resolving' : ''}}"
+            bindtap="resolveFeedback" data-id="{{item._id}}"
+          >
+            {{resolvingId === item._id ? '处理中…' : '✓ 标记已解决'}}
+          </view>
+        </view>
+
+        <view class="load-more" wx:if="{{feedbackLoading}}">
+          <view class="loading-ring-sm"></view>
+          <text class="load-text">加载中…</text>
+        </view>
+        <view class="load-end" wx:elif="{{!feedbackHasMore && feedbackList.length > 0}}">
+          <text>— 已显示全部 {{feedbackTotal}} 条 —</text>
+        </view>
+      </view>
+
+    </block><!-- end feedback -->
+
+  </view><!-- end gk-root -->
+  </block><!-- end gaokao tab -->
+
+</block>
+</view>

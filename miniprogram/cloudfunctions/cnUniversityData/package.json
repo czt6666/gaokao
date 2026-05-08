@@ -1,0 +1,9 @@
+{
+  "name": "cnUniversityData",
+  "version": "1.0.0",
+  "description": "战略成长™ 中国大学数据云函数 — Apify驱动的阳光高考数据采集与缓存",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

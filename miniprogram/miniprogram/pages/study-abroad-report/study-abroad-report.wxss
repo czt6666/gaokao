@@ -1,0 +1,688 @@
+/* pages/study-abroad-report/study-abroad-report.wxss — Phase 2 */
+
+.page-container {
+  background: #F5F5F7;
+  min-height: 100vh;
+  padding-bottom: 60rpx;
+  font-family: -apple-system, "SF Pro Display", "PingFang SC", sans-serif;
+}
+
+/* ── 顶部导航 ── */
+.report-nav {
+  display: flex;
+  align-items: center;
+  padding: 20rpx 24rpx 16rpx;
+  background: #1D1D1F;
+}
+
+.nav-back {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+
+.nav-back-icon {
+  font-size: 44rpx;
+  color: #0071E3;
+  font-weight: 300;
+  line-height: 1;
+  margin-top: -4rpx;
+}
+
+.nav-back-label {
+  font-size: 28rpx;
+  color: #0071E3;
+}
+
+.nav-title {
+  flex: 1;
+  text-align: center;
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.nav-price {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #FFD60A;
+  flex-shrink: 0;
+}
+
+/* ── 收藏提示 ── */
+.fav-summary {
+  background: #FFFFFF;
+  margin: 20rpx 24rpx 0;
+  padding: 20rpx 24rpx;
+  border-radius: 16rpx;
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+}
+
+.fav-summary-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+
+.fav-summary-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+.fav-summary-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #86868B;
+  margin-top: 6rpx;
+}
+
+.fav-empty {
+  background: #FFFFFF;
+  margin: 20rpx 24rpx 0;
+  padding: 32rpx 24rpx;
+  border-radius: 16rpx;
+  text-align: center;
+  border: 2rpx dashed rgba(0,0,0,0.12);
+}
+
+.fav-empty-icon { font-size: 48rpx; display: block; margin-bottom: 10rpx; }
+.fav-empty-title { display: block; font-size: 28rpx; font-weight: 600; color: #1D1D1F; }
+.fav-empty-sub { display: block; font-size: 24rpx; color: #0071E3; margin-top: 8rpx; }
+
+/* ── 信息输入卡片 ── */
+.input-card {
+  background: #FFFFFF;
+  margin: 16rpx 24rpx 0;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.input-card-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.input-card-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #86868B;
+  margin-bottom: 24rpx;
+}
+
+.input-group { margin-bottom: 22rpx; }
+.input-group:last-child { margin-bottom: 0; }
+
+.input-label {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #3C3C43;
+  margin-bottom: 10rpx;
+}
+
+.input-scroll { width: 100%; }
+
+.input-chips-row {
+  display: flex;
+  gap: 8rpx;
+  white-space: nowrap;
+}
+
+.input-chips-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.input-chip {
+  display: inline-flex;
+  padding: 10rpx 22rpx;
+  border-radius: 980rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #3C3C43;
+  background: #F5F5F7;
+  flex-shrink: 0;
+}
+
+.chip-active {
+  background: #1D1D1F;
+  color: #FFFFFF;
+}
+
+/* ── 报告内容预告 ── */
+.report-preview-card {
+  background: #FFFFFF;
+  margin: 16rpx 24rpx 0;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.preview-card-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 16rpx;
+}
+
+.preview-module {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  margin-bottom: 16rpx;
+}
+
+.preview-module:last-child { margin-bottom: 0; }
+
+.preview-icon { font-size: 32rpx; flex-shrink: 0; margin-top: 2rpx; }
+
+.preview-module-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+.preview-module-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #86868B;
+  margin-top: 3rpx;
+}
+
+/* ── 生成按钮 ── */
+.generate-btn {
+  margin: 20rpx 24rpx 0;
+  background: #1D1D1F;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  text-align: center;
+}
+
+.generate-btn:active { opacity: 0.80; }
+
+.generate-btn-text {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+/* ── 报告通用段落 ── */
+.report-section {
+  background: #FFFFFF;
+  margin: 20rpx 24rpx 0;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.report-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 20rpx;
+}
+
+.report-section-num {
+  width: 44rpx;
+  height: 44rpx;
+  border-radius: 12rpx;
+  background: #1D1D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.report-section-title {
+  flex: 1;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.report-section-count {
+  font-size: 22rpx;
+  color: #86868B;
+}
+
+.report-section-sub {
+  font-size: 20rpx;
+  color: #86868B;
+}
+
+/* ── M1: 个人画像网格 ── */
+.profile-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.profile-item {
+  flex: 0 0 calc(50% - 6rpx);
+  background: #F5F5F7;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  text-align: center;
+}
+
+.profile-val {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.profile-label {
+  display: block;
+  font-size: 20rpx;
+  color: #86868B;
+}
+
+/* ── M2: 学校对比行 ── */
+.school-compare-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(0,0,0,0.05);
+}
+
+.school-compare-row:last-child { border-bottom: none; }
+
+.compare-idx {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 8rpx;
+  background: #F5F5F7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #6E6E73;
+  flex-shrink: 0;
+}
+
+.compare-info { flex: 1; }
+
+.compare-name {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 3rpx;
+}
+
+.compare-qs { display: block; font-size: 20rpx; color: #86868B; }
+
+.compare-fit {
+  font-size: 22rpx;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.blurred { opacity: 0.25; filter: blur(3px); }
+
+/* ── 解锁卡片 ── */
+.unlock-card {
+  margin: 16rpx 24rpx 0;
+  background: linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%);
+  border-radius: 20rpx;
+  padding: 32rpx 24rpx;
+  overflow: hidden;
+}
+
+.unlock-content { margin-bottom: 24rpx; }
+
+.unlock-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 8rpx;
+}
+
+.unlock-desc {
+  display: block;
+  font-size: 24rpx;
+  color: rgba(255,255,255,0.6);
+  line-height: 1.5;
+  margin-bottom: 16rpx;
+}
+
+.unlock-modules {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+}
+
+.unlock-module {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.8);
+  background: rgba(255,255,255,0.1);
+  border-radius: 980rpx;
+  padding: 6rpx 16rpx;
+}
+
+.unlock-btn {
+  background: #FFD60A;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+}
+
+.unlock-btn:active { opacity: 0.85; }
+.unlock-btn.loading { background: rgba(255,214,10,0.5); }
+
+.unlock-btn-price {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+}
+
+.unlock-btn-label {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+/* ── STEP 3: 完整报告 ── */
+.report-header-bar {
+  background: #1D1D1F;
+  padding: 24rpx;
+  text-align: center;
+}
+
+.report-header-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.report-header-date {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.5);
+  margin-top: 4rpx;
+}
+
+/* 学校详细卡片 */
+.school-detail-card {
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.school-detail-card:last-child { margin-bottom: 0; }
+
+.sdc-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.sdc-idx {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: 10rpx;
+  background: #1D1D1F;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  flex-shrink: 0;
+}
+
+.sdc-name-col { flex: 1; }
+
+.sdc-name {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 3rpx;
+}
+
+.sdc-qs { display: block; font-size: 20rpx; color: #86868B; }
+
+.sdc-fit {
+  font-size: 22rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.sdc-ps {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+  margin-bottom: 12rpx;
+}
+
+.sdc-tags {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  margin-bottom: 10rpx;
+}
+
+.sdc-tag {
+  font-size: 20rpx;
+  font-weight: 500;
+  padding: 5rpx 14rpx;
+  border-radius: 980rpx;
+}
+
+.sdc-tag-apply { color: #0071E3; background: rgba(0,113,227,0.08); }
+.sdc-tag-stem  { color: #5856D6; background: rgba(88,86,214,0.08); }
+
+.sdc-careers {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-bottom: 8rpx;
+}
+
+.sdc-careers-label { font-size: 20rpx; color: #86868B; }
+
+.sdc-career-tag {
+  font-size: 20rpx;
+  color: #3C3C43;
+  background: rgba(0,0,0,0.05);
+  border-radius: 980rpx;
+  padding: 4rpx 12rpx;
+}
+
+.sdc-cn-note {
+  display: block;
+  font-size: 21rpx;
+  color: #86868B;
+  line-height: 1.5;
+  padding-top: 8rpx;
+  border-top: 1rpx solid rgba(0,0,0,0.06);
+}
+
+/* 时间轴 */
+.timeline-list {
+  padding: 0 8rpx;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 20rpx;
+}
+
+.timeline-item:last-child { margin-bottom: 0; }
+
+.timeline-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #0071E3;
+  flex-shrink: 0;
+  margin-top: 8rpx;
+}
+
+.timeline-content { flex: 1; }
+
+.timeline-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 4rpx;
+}
+
+.timeline-phase {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.timeline-date {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #0071E3;
+}
+
+.timeline-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  line-height: 1.5;
+}
+
+.timeline-note {
+  margin-top: 16rpx;
+  padding: 12rpx 16rpx;
+  background: rgba(255,149,0,0.08);
+  border-radius: 10rpx;
+}
+
+.timeline-note-text { font-size: 20rpx; color: #FF9500; }
+
+/* 底部 CTA */
+.report-footer {
+  margin: 24rpx 24rpx 0;
+}
+
+.footer-cta-row {
+  display: flex;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.footer-cta-btn {
+  flex: 1;
+  border-radius: 16rpx;
+  padding: 24rpx 16rpx;
+  text-align: center;
+}
+
+.footer-cta-btn:active { opacity: 0.80; }
+
+.footer-cta-btn.primary {
+  background: #1D1D1F;
+}
+
+.footer-cta-btn.secondary {
+  background: #FFFFFF;
+  border: 0.5rpx solid rgba(0,0,0,0.1);
+}
+
+.footer-cta-text {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+}
+
+.footer-cta-text-sec {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+.footer-disclaimer {
+  display: block;
+  text-align: center;
+  font-size: 20rpx;
+  color: #AEAEB2;
+  margin-top: 20rpx;
+  line-height: 1.5;
+  padding: 0 12rpx;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   P6 Career-First: M0 职业愿景锚点 + 新标签 + ROI
+   ══════════════════════════════════════════════════════════════════ */
+
+/* M0 section 特殊颜色 */
+.report-section-m0 { border-left: 4rpx solid #C4A35A; }
+.m0-num { font-size: 28rpx; }
+
+.m0-card {
+  margin: 0 32rpx 8rpx;
+  background: linear-gradient(135deg, #1D1D1F 0%, #2C2C2E 100%);
+  border-radius: 20rpx; padding: 28rpx;
+  border: 1rpx solid rgba(196,163,90,0.3);
+  display: flex; flex-direction: column; gap: 12rpx;
+}
+.m0-title-row { display: flex; flex-direction: row; align-items: center; gap: 12rpx; }
+.m0-icon { font-size: 40rpx; }
+.m0-label { font-size: 32rpx; font-weight: 800; color: #F5F5F7; letter-spacing: -0.01em; }
+.m0-tagline { font-size: 26rpx; color: rgba(245,245,247,0.65); line-height: 1.5; }
+.m0-tags-row { display: flex; flex-direction: row; gap: 10rpx; flex-wrap: wrap; }
+.m0-tag { border-radius: 12rpx; padding: 5rpx 16rpx; }
+.m0-tag text { font-size: 22rpx; font-weight: 600; }
+.m0-tag-stem { background: rgba(52,199,89,0.15); border: 1rpx solid rgba(52,199,89,0.3); }
+.m0-tag-stem text { color: #4CD964; }
+.m0-tag-stay { background: rgba(196,163,90,0.15); border: 1rpx solid rgba(196,163,90,0.3); }
+.m0-tag-stay text { color: #C4A35A; }
+.m0-path { font-size: 24rpx; color: rgba(245,245,247,0.5); line-height: 1.6; }
+.m0-btn {
+  background: rgba(196,163,90,0.15); border-radius: 12rpx;
+  padding: 14rpx 20rpx; align-self: flex-start;
+  border: 1rpx solid rgba(196,163,90,0.3);
+  margin-top: 4rpx;
+}
+.m0-btn-text { font-size: 24rpx; color: #C4A35A; font-weight: 600; }
+
+/* 专业层级 + ROI 标签 */
+.sdc-tag-tier { background: rgba(196,163,90,0.12); border: 1rpx solid rgba(196,163,90,0.3); color: #8B6914; }
+.sdc-tag-roi  { background: rgba(52,199,89,0.1);   border: 1rpx solid rgba(52,199,89,0.25); color: #1A8038; }
+
+/* P6 ROI 总结卡片 */
+.roi-summary-card {
+  margin: 0 32rpx 8rpx;
+  background: #F9F9FB; border-radius: 16rpx; padding: 28rpx;
+  border: 1rpx solid rgba(0,0,0,0.06);
+  display: flex; flex-direction: column; gap: 16rpx;
+}
+.roi-row { display: flex; flex-direction: row; justify-content: space-between; align-items: center; }
+.roi-label { font-size: 26rpx; color: #6E6E73; }
+.roi-value { font-size: 28rpx; font-weight: 700; color: #1D1D1F; }
+.roi-cost { color: #FF3B30; }
+.roi-earn { color: #34C759; }
+.roi-note { font-size: 22rpx; color: #AEAEB2; line-height: 1.6; }

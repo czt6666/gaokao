@@ -1,0 +1,9 @@
+{
+  "name": "updateAssessmentNote",
+  "version": "1.0.0",
+  "description": "袁希™ 管理员更新线索备注",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

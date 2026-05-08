@@ -1,0 +1,315 @@
+/* pages/gaokao-form/gaokao-form.wxss */
+/* 艺圆智探 · 志愿表 — 深色紫/海军蓝主题 */
+
+page {
+  background: #F0F1FA;
+  min-height: 100vh;
+}
+
+.page {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 60rpx;
+  min-height: 100vh;
+}
+
+/* ══════════════════════════════════════════════
+   头部
+══════════════════════════════════════════════ */
+.header {
+  background: linear-gradient(160deg, #1A2744 0%, #243560 100%);
+  padding: 36rpx 32rpx 28rpx;
+}
+
+.header-inner {
+  margin-bottom: 16rpx;
+}
+
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 8rpx;
+}
+
+.header-title {
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #FFFFFF;
+}
+
+.count-pill {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #C9922A;
+  background: rgba(201,146,42,0.18);
+  border: 0.5rpx solid rgba(201,146,42,0.35);
+  border-radius: 980rpx;
+  padding: 4rpx 16rpx;
+}
+
+.header-sub {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.50);
+}
+
+.header-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  background: rgba(255,255,255,0.08);
+  border-radius: 12rpx;
+  padding: 14rpx 18rpx;
+  border: 0.5rpx solid rgba(255,255,255,0.12);
+}
+
+.hint-icon { font-size: 26rpx; flex-shrink: 0; }
+
+.hint-text {
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.65);
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════
+   志愿列表
+══════════════════════════════════════════════ */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 16rpx 20rpx 0;
+}
+
+.item {
+  display: flex;
+  align-items: stretch;
+  gap: 16rpx;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 20rpx 16rpx 20rpx 18rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.07);
+  border: 0.5rpx solid rgba(0,0,0,0.05);
+}
+
+/* ── 序号列 ── */
+.item-rank-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8rpx;
+  flex-shrink: 0;
+  width: 40rpx;
+}
+
+.item-rank {
+  font-size: 28rpx;
+  font-weight: 800;
+  color: #1A2744;
+  line-height: 1;
+}
+
+.prob-bar-wrap {
+  flex: 1;
+  width: 8rpx;
+  background: #F0F1FA;
+  border-radius: 4rpx;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 60rpx;
+}
+
+.prob-bar-fill {
+  width: 100%;
+  border-radius: 4rpx;
+  min-height: 4rpx;
+  transition: height 0.3s ease;
+}
+
+/* ── 主信息 ── */
+.item-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+}
+
+.item-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+/* 冲稳保 badge */
+.action-badge {
+  font-size: 20rpx;
+  font-weight: 800;
+  border-radius: 8rpx;
+  padding: 3rpx 12rpx;
+  flex-shrink: 0;
+  letter-spacing: 0.5rpx;
+}
+
+.action-badge-rush {
+  color: #DC2626;
+  background: rgba(220,38,38,0.10);
+  border: 0.5rpx solid rgba(220,38,38,0.25);
+}
+
+.action-badge-stable {
+  color: #C9922A;
+  background: rgba(201,146,42,0.10);
+  border: 0.5rpx solid rgba(201,146,42,0.25);
+}
+
+.action-badge-safe {
+  color: #059669;
+  background: rgba(5,150,105,0.10);
+  border: 0.5rpx solid rgba(5,150,105,0.25);
+}
+
+.item-school {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1A1A2E;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-major {
+  font-size: 24rpx;
+  color: #5B4FCF;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.item-bottom-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8rpx;
+}
+
+.item-prob {
+  font-size: 22rpx;
+  font-weight: 600;
+}
+
+.item-date {
+  font-size: 20rpx;
+  color: #AEAEB2;
+}
+
+/* ── 操作按钮列 ── */
+.item-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+  flex-shrink: 0;
+  justify-content: center;
+}
+
+.action-btn {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: 10rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20rpx;
+  font-weight: 700;
+}
+
+.action-up {
+  background: rgba(91,79,207,0.08);
+  color: #5B4FCF;
+}
+
+.action-down {
+  background: rgba(91,79,207,0.08);
+  color: #5B4FCF;
+}
+
+.action-del {
+  background: rgba(220,38,38,0.08);
+  color: #DC2626;
+}
+
+.action-btn-disabled {
+  opacity: 0.28;
+}
+
+.action-btn:active { opacity: 0.65; }
+
+/* ══════════════════════════════════════════════
+   空状态
+══════════════════════════════════════════════ */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 100rpx 48rpx 60rpx;
+  gap: 16rpx;
+  flex: 1;
+}
+
+.empty-icon {
+  font-size: 96rpx;
+  line-height: 1;
+  margin-bottom: 8rpx;
+}
+
+.empty-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1A1A2E;
+}
+
+.empty-sub {
+  font-size: 26rpx;
+  color: #8E8E93;
+  text-align: center;
+  line-height: 1.7;
+  white-space: pre-wrap;
+}
+
+.empty-btn {
+  margin-top: 20rpx;
+  background: linear-gradient(135deg, #1A2744, #243560);
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 700;
+  padding: 22rpx 60rpx;
+  border-radius: 980rpx;
+  box-shadow: 0 4rpx 20rpx rgba(26,39,68,0.30);
+}
+
+.empty-btn:active { opacity: 0.88; }
+
+/* ══════════════════════════════════════════════
+   导出提示
+══════════════════════════════════════════════ */
+.export-footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10rpx;
+  padding: 28rpx 32rpx 0;
+}
+
+.export-icon { font-size: 26rpx; }
+
+.export-text {
+  font-size: 22rpx;
+  color: #AEAEB2;
+}

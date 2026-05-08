@@ -1,0 +1,9 @@
+{
+  "name": "saveAssessment",
+  "version": "1.0.0",
+  "description": "袁希™ 保存评估结果到云数据库",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1,0 +1,255 @@
+<!-- pages/gaokao/gaokao.wxml -->
+<!-- 艺圆智探 · 志愿查询页 — 水卢冷门高报引擎 -->
+
+<wxs module="util">
+module.exports = {
+  includes: function(arr, val) {
+    if (!arr || !arr.length) return false;
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] === val) return true;
+    }
+    return false;
+  }
+};
+</wxs>
+
+<view class="page">
+
+  <!-- 引擎品牌头部 -->
+  <view class="engine-header">
+    <view class="engine-header-inner">
+      <text class="engine-title">水卢冷门高报引擎</text>
+      <view class="engine-badge">2025数据</view>
+    </view>
+    <text class="engine-sub">教育部系统告诉你能去哪。我们告诉你——该去哪。</text>
+    <text class="engine-data-tip">230万条录取 × 就业薪资数据 · 覆盖31省</text>
+  </view>
+
+  <!-- 查询表单卡片 -->
+  <view class="form-card">
+
+    <!-- 模式切换 -->
+    <view class="mode-toggle">
+      <view
+        class="mode-btn {{mode==='score'?'mode-btn-active':''}}"
+        bindtap="setMode" data-mode="score"
+      >模考 · 分数</view>
+      <view
+        class="mode-btn {{mode==='rank'?'mode-btn-active':''}}"
+        bindtap="setMode" data-mode="rank"
+      >已出分 · 位次</view>
+    </view>
+    <text class="mode-hint">{{mode==='rank'?'高考出分后用位次查询，结果最精确':'输入模考分数，系统自动估算位次'}}</text>
+
+    <!-- 大数字输入 -->
+    <view class="input-section">
+      <text class="input-label">{{mode==='rank'?'全省排名位次':'模考成绩（分）'}}</text>
+      <view class="input-wrap">
+        <input
+          class="big-input"
+          type="number"
+          value="{{mode==='rank'?rankInput:scoreInput}}"
+          placeholder="{{mode==='rank'?'例如：28000':'例如：630'}}"
+          placeholder-class="big-input-ph"
+          bindinput="onInput"
+          adjust-position="{{false}}"
+        />
+      </view>
+    </view>
+
+    <!-- 省份 -->
+    <view class="picker-row">
+      <view class="picker-cell">
+        <text class="picker-label">省份</text>
+        <picker
+          mode="selector"
+          range="{{provinces}}"
+          value="{{provinceIdx}}"
+          bindchange="onProvinceChange"
+        >
+          <view class="picker-val">
+            <text>{{provinces[provinceIdx]}}</text>
+            <text class="picker-chevron">›</text>
+          </view>
+        </picker>
+        <text class="province-tip">{{provinceTip}}</text>
+      </view>
+    </view>
+
+    <!-- 选科：3+1+2 -->
+    <view class="subject-section" wx:if="{{examMode === '3+1+2'}}">
+      <text class="subject-label">首选（单选）</text>
+      <view class="subject-tags">
+        <view
+          wx:for="{{['物理','历史']}}"
+          wx:key="*this"
+          class="subject-tag {{first312 === item ? 'subject-tag-active' : ''}}"
+          bindtap="toggleFirst312"
+          data-value="{{item}}"
+        >{{item}}</view>
+      </view>
+
+      <text class="subject-label" style="margin-top:14rpx">再选（选2科）</text>
+      <view class="subject-tags">
+        <view
+          wx:for="{{['政治','地理','化学','生物']}}"
+          wx:key="*this"
+          class="subject-tag {{util.includes(second312, item) ? 'subject-tag-active' : ''}}"
+          bindtap="toggleSecond312"
+          data-value="{{item}}"
+        >{{item}}</view>
+      </view>
+      <text class="subject-hint" wx:if="{{subjectError}}">{{subjectError}}</text>
+    </view>
+
+    <!-- 选科：3+3 -->
+    <view class="subject-section" wx:if="{{examMode === '3+3'}}">
+      <text class="subject-label">选科（选3科）</text>
+      <view class="subject-tags">
+        <view
+          wx:for="{{['物理','化学','生物','政治','历史','地理']}}"
+          wx:key="*this"
+          class="subject-tag {{util.includes(subjects333, item) ? 'subject-tag-active' : ''}}"
+          bindtap="toggleSubject333"
+          data-value="{{item}}"
+        >{{item}}</view>
+      </view>
+      <text class="subject-hint" wx:if="{{subjectError}}">{{subjectError}}</text>
+    </view>
+
+    <!-- 选科：旧高考 -->
+    <view class="subject-section" wx:if="{{examMode === 'old'}}">
+      <text class="subject-label">科类（单选）</text>
+      <view class="subject-tags">
+        <view
+          wx:for="{{['理科','文科']}}"
+          wx:key="*this"
+          class="subject-tag {{oldSubject === item ? 'subject-tag-active' : ''}}"
+          bindtap="toggleOldSubject"
+          data-value="{{item}}"
+        >{{item}}</view>
+      </view>
+      <text class="subject-hint" wx:if="{{subjectError}}">{{subjectError}}</text>
+    </view>
+
+    <!-- 偏好约束 -->
+    <view class="constraint-section">
+      <!-- 收起状态 -->
+      <view wx:if="{{!constraintExpanded}}" class="constraint-toggle-btn" bindtap="toggleConstraintPanel">
+        <text class="constraint-toggle-text">+ 添加偏好约束</text>
+        <text wx:if="{{constraintMajor || constraintCities.length || constraintNature.length || constraintLevels.length}}" class="constraint-active-badge">（已选）</text>
+      </view>
+
+      <!-- 展开状态 -->
+      <view wx:if="{{constraintExpanded}}" class="constraint-panel">
+        <view class="constraint-panel-header">
+          <text class="constraint-panel-title">偏好约束</text>
+          <text class="constraint-panel-close" bindtap="toggleConstraintPanel">收起</text>
+        </view>
+
+        <!-- 感兴趣的专业 -->
+        <view class="constraint-group">
+          <text class="constraint-label">感兴趣的专业（空格分隔多个关键词）</text>
+          <view class="constraint-input-wrap">
+            <input
+              class="constraint-input"
+              value="{{constraintMajor}}"
+              placeholder="例如：计算机 人工智能"
+              placeholder-class="constraint-input-ph"
+              bindinput="onConstraintMajorInput"
+            />
+          </view>
+        </view>
+
+        <!-- 城市等级 -->
+        <view class="constraint-group">
+          <text class="constraint-label">城市等级</text>
+          <view class="subject-tags">
+            <view
+              wx:for="{{['一线城市','新一线','二线','三线']}}"
+              wx:key="*this"
+              class="subject-tag {{util.includes(constraintCities, item) ? 'subject-tag-active' : ''}}"
+              bindtap="toggleConstraint"
+              data-field="constraintCities"
+              data-value="{{item}}"
+            >{{item}}</view>
+          </view>
+        </view>
+
+        <!-- 办学性质 -->
+        <view class="constraint-group">
+          <text class="constraint-label">办学性质</text>
+          <view class="subject-tags">
+            <view
+              wx:for="{{['公办','民办']}}"
+              wx:key="*this"
+              class="subject-tag {{util.includes(constraintNature, item) ? 'subject-tag-active' : ''}}"
+              bindtap="toggleConstraint"
+              data-field="constraintNature"
+              data-value="{{item}}"
+            >{{item}}</view>
+          </view>
+        </view>
+
+        <!-- 院校档次 -->
+        <view class="constraint-group">
+          <text class="constraint-label">院校档次</text>
+          <view class="subject-tags">
+            <view
+              wx:for="{{['985','211','双一流','普通']}}"
+              wx:key="*this"
+              class="subject-tag {{util.includes(constraintLevels, item) ? 'subject-tag-active' : ''}}"
+              bindtap="toggleConstraint"
+              data-field="constraintLevels"
+              data-value="{{item}}"
+            >{{item}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 错误提示 -->
+    <view wx:if="{{gkError}}" class="error-msg">
+      <text class="error-icon">!</text>
+      <text class="error-text">{{gkError}}</text>
+      <text class="error-retry" bindtap="onSubmit">重试</text>
+    </view>
+
+    <!-- 查询按钮 -->
+    <view
+      class="submit-btn {{gkLoading?'submit-btn-loading':''}}"
+      bindtap="onSubmit"
+    >
+      <view wx:if="{{gkLoading}}" class="spinner"></view>
+      <text class="submit-btn-text">{{gkLoading?'分析中…':'立即查询'}}</text>
+    </view>
+
+    <text class="hint-text">免费查询 · 完整报告 ¥1.99 解锁</text>
+  </view>
+
+  <!-- 志愿表入口（有志愿时才显示） -->
+  <view wx:if="{{formCount > 0}}" class="separator">
+    <view class="sep-line"></view>
+    <text class="sep-text">我的志愿表</text>
+    <view class="sep-line"></view>
+  </view>
+
+  <view wx:if="{{formCount > 0}}" class="form-entry" bindtap="goToForm">
+    <view class="form-entry-left">
+      <text class="form-entry-icon">📋</text>
+      <view class="form-entry-info">
+        <text class="form-entry-title">我的志愿表</text>
+        <text class="form-entry-sub">
+          {{formCount > 0 ? '已保存 ' + formCount + ' 个志愿' : '暂无志愿，查询后可添加'}}
+        </text>
+      </view>
+    </view>
+    <text class="form-entry-arrow">›</text>
+  </view>
+
+  <!-- 问题反馈入口 -->
+  <view class="feedback-entry" bindtap="goFeedback">
+    <text class="feedback-text">遇到问题？给我们反馈</text>
+  </view>
+
+</view>

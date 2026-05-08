@@ -1,0 +1,497 @@
+/* app.wxss — 战略成长™ · Apple Design System */
+
+/* ══════════════════════════════════════════════
+   Design Tokens — Apple HIG 2024
+══════════════════════════════════════════════ */
+page {
+  /* Backgrounds */
+  --bg:          #FFFFFF;
+  --bg-2:        #F5F5F7;
+  --bg-3:        #FBFBFD;
+  --bg-overlay:  rgba(255,255,255,0.82);
+
+  /* Text */
+  --t1: #1D1D1F;
+  --t2: #6E6E73;
+  --t3: #86868B;
+  --t4: #AEAEB2;
+
+  /* Accent */
+  --blue:        #0071E3;
+  --blue-hover:  #0077ED;
+  --blue-bg:     rgba(0,113,227,0.08);
+  --blue-border: rgba(0,113,227,0.22);
+
+  /* System Colors */
+  --green:       #34C759;
+  --green-bg:    rgba(52,199,89,0.10);
+  --orange:      #FF9500;
+  --orange-bg:   rgba(255,149,0,0.10);
+  --red:         #FF3B30;
+  --red-bg:      rgba(255,59,48,0.10);
+  --teal:        #5AC8FA;
+
+  /* Borders & Dividers */
+  --border:      rgba(0,0,0,0.08);
+  --border-2:    rgba(0,0,0,0.14);
+  --divide:      rgba(0,0,0,0.06);
+
+  /* Shadows */
+  --shadow-xs:   0 1rpx 6rpx rgba(0,0,0,0.05);
+  --shadow-sm:   0 4rpx 16rpx rgba(0,0,0,0.07);
+  --shadow-md:   0 8rpx 40rpx rgba(0,0,0,0.10);
+  --shadow-lg:   0 20rpx 60rpx rgba(0,0,0,0.13);
+
+  /* Radius */
+  --r-sm:        12rpx;
+  --r-md:        20rpx;
+  --r-lg:        28rpx;
+  --r-xl:        40rpx;
+  --r-pill:      980rpx;
+
+  font-family: -apple-system, "SF Pro Display", "PingFang SC", "Helvetica Neue", sans-serif;
+  background: #F5F5F7;
+  color: #1D1D1F;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════
+   Global Reset
+══════════════════════════════════════════════ */
+button {
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  line-height: 1;
+  font-family: inherit;
+}
+button::after { border: none; }
+
+/* ══════════════════════════════════════════════
+   Buttons — Apple Style
+══════════════════════════════════════════════ */
+
+/* Primary — Apple Blue pill */
+.btn-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0071E3;
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 500;
+  letter-spacing: -0.3rpx;
+  padding: 24rpx 52rpx;
+  border-radius: 980rpx;
+  border: none;
+  box-shadow: 0 4rpx 16rpx rgba(0,113,227,0.28);
+}
+.btn-primary:active { opacity: 0.82; }
+
+/* Outline — white with blue border */
+.btn-outline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #FFFFFF;
+  color: #0071E3;
+  font-size: 28rpx;
+  font-weight: 500;
+  padding: 22rpx 52rpx;
+  border-radius: 980rpx;
+  border: 1.5rpx solid rgba(0,113,227,0.30);
+}
+.btn-outline:active { background: #F5F5F7; }
+
+/* Ghost — text + arrow */
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6rpx;
+  background: none;
+  color: #0071E3;
+  font-size: 28rpx;
+  font-weight: 500;
+  border: none;
+  padding: 8rpx 0;
+}
+
+/* Gray fill */
+.btn-gray {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.06);
+  color: #1D1D1F;
+  font-size: 26rpx;
+  font-weight: 500;
+  padding: 22rpx 44rpx;
+  border-radius: 980rpx;
+  border: none;
+}
+.btn-gray:active { background: rgba(0,0,0,0.10); }
+
+/* ══════════════════════════════════════════════
+   Cards
+══════════════════════════════════════════════ */
+
+/* Standard white card */
+.section {
+  background: #FFFFFF;
+  border-radius: 28rpx;
+  padding: 36rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0,0,0,0.07);
+}
+
+/* Frosted glass — Apple classic */
+.glass-card {
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(28rpx) saturate(1.8);
+  -webkit-backdrop-filter: blur(28rpx) saturate(1.8);
+  border: 0.5rpx solid rgba(255,255,255,0.72);
+  border-radius: 28rpx;
+  box-shadow: 0 8rpx 40rpx rgba(0,0,0,0.10);
+}
+
+/* Inner inset — gray bg inside white card */
+.inset-card {
+  background: #F5F5F7;
+  border-radius: 20rpx;
+  padding: 24rpx;
+}
+
+/* ══════════════════════════════════════════════
+   Tags
+══════════════════════════════════════════════ */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 5rpx 16rpx;
+  border-radius: 980rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+}
+
+.tag-blue   { background: rgba(0,113,227,0.08);   color: #0071E3; }
+.tag-green  { background: rgba(52,199,89,0.10);   color: #1A7F37; }
+.tag-orange { background: rgba(255,149,0,0.10);   color: #B85000; }
+.tag-red    { background: rgba(255,59,48,0.10);   color: #C0392B; }
+.tag-gray   { background: rgba(0,0,0,0.06);       color: #6E6E73; }
+.tag-purple { background: rgba(175,82,222,0.10);  color: #9B30D9; }
+.tag-teal   { background: rgba(90,200,250,0.12);  color: #0A7EB0; }
+
+/* ══════════════════════════════════════════════
+   List Row — Apple Settings style
+══════════════════════════════════════════════ */
+.list-row {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  padding: 26rpx 0;
+  border-bottom: 0.5rpx solid rgba(0,0,0,0.06);
+}
+.list-row:last-child { border-bottom: none; }
+
+.list-row-icon {
+  width: 60rpx; height: 60rpx;
+  border-radius: 14rpx;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30rpx;
+  flex-shrink: 0;
+}
+
+.list-row-content { flex: 1; }
+.list-row-title   { font-size: 28rpx; color: #1D1D1F; font-weight: 500; }
+.list-row-sub     { font-size: 22rpx; color: #86868B; margin-top: 3rpx; }
+.list-chevron     { font-size: 28rpx; color: #AEAEB2; font-weight: 300; }
+
+/* ══════════════════════════════════════════════
+   Progress Bar
+══════════════════════════════════════════════ */
+.bar-track {
+  height: 8rpx;
+  background: rgba(0,0,0,0.06);
+  border-radius: 4rpx;
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  border-radius: 4rpx;
+  background: #0071E3;
+  transition: width 0.5s ease;
+}
+
+/* ══════════════════════════════════════════════
+   Divider
+══════════════════════════════════════════════ */
+.divider {
+  height: 0.5rpx;
+  background: rgba(0,0,0,0.06);
+}
+
+/* ══════════════════════════════════════════════
+   Typography System — Apple / SF Pro Type Scale
+   每一个文字角色都有精确定义
+══════════════════════════════════════════════ */
+
+/*
+  ┌─────────────────────────────────────────────────────────────────┐
+  │  ROLE           SIZE    WT    TRACKING   LINE-H  USE            │
+  │  .t-display     80rpx   800   -2rpx      1.10   Hero数字/标题  │
+  │  .t-title-1     56rpx   700   -1.5rpx    1.12   一级章节标题   │
+  │  .t-title-2     44rpx   700   -0.8rpx    1.18   卡片大标       │
+  │  .t-title-3     34rpx   700   -0.3rpx    1.28   子标题         │
+  │  .t-headline    30rpx   700   -0.2rpx    1.35   列表标题       │
+  │  .t-body-l      32rpx   400    0         1.78   主要正文（大）  │
+  │  .t-body        28rpx   400    0         1.72   标准正文       │
+  │  .t-body-s      26rpx   400    0.1rpx    1.65   次要正文       │
+  │  .t-callout     28rpx   500    0         1.60   强调段落       │
+  │  .t-subhead     26rpx   600    0         1.45   小标/字段名    │
+  │  .t-caption-1   24rpx   400    0.2rpx    1.50   说明文字       │
+  │  .t-caption-2   22rpx   500    0.5rpx    1.45   时间/元信息    │
+  │  .t-label       20rpx   600    1rpx      1.40   标签/角标      │
+  │  .t-micro       18rpx   700    1.5rpx    1.35   极小标记       │
+  │                                                                  │
+  │  NUMBERS (等宽数字，报告专用)                                   │
+  │  .t-num-xl      88rpx   800   -3rpx      1      分数主数字     │
+  │  .t-num-l       64rpx   800   -2rpx      1      中等分数       │
+  │  .t-num-m       44rpx   800   -1rpx      1      小分数         │
+  │  .t-num-s       32rpx   800   -0.5rpx    1      百分比         │
+  └─────────────────────────────────────────────────────────────────┘
+*/
+
+/* ── Display — 英雄级别数字/标题 ──────────────────────── */
+.t-display {
+  font-size: 80rpx;
+  font-weight: 800;
+  letter-spacing: -2rpx;
+  line-height: 1.10;
+  color: #1D1D1F;
+}
+
+/* ── Title Levels ─────────────────────────────────────── */
+.t-title-1 {
+  font-size: 56rpx;
+  font-weight: 700;
+  letter-spacing: -1.5rpx;
+  line-height: 1.12;
+  color: #1D1D1F;
+}
+
+.t-title-2 {
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: -0.8rpx;
+  line-height: 1.18;
+  color: #1D1D1F;
+}
+
+.t-title-3 {
+  font-size: 34rpx;
+  font-weight: 700;
+  letter-spacing: -0.3rpx;
+  line-height: 1.28;
+  color: #1D1D1F;
+}
+
+/* ── Headline — 列表项标题、卡片主标 ─────────────────── */
+.t-headline {
+  font-size: 30rpx;
+  font-weight: 700;
+  letter-spacing: -0.2rpx;
+  line-height: 1.35;
+  color: #1D1D1F;
+}
+
+/* ── Body ─────────────────────────────────────────────── */
+/* 大号正文 — 对话气泡、核心说明 */
+.t-body-l {
+  font-size: 32rpx;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.78;
+  color: #1D1D1F;
+}
+
+/* 标准正文 — 报告段落、卡片内容 */
+.t-body {
+  font-size: 28rpx;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.72;
+  color: #1D1D1F;
+}
+
+/* 次要正文 — 补充说明 */
+.t-body-s {
+  font-size: 26rpx;
+  font-weight: 400;
+  letter-spacing: 0.1rpx;
+  line-height: 1.65;
+  color: #6E6E73;
+}
+
+/* 强调段落 — callout boxes */
+.t-callout {
+  font-size: 28rpx;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.60;
+  color: #1D1D1F;
+}
+
+/* ── Subheadline — 字段名、分组标签 ─────────────────── */
+.t-subhead {
+  font-size: 26rpx;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1.45;
+  color: #1D1D1F;
+}
+
+/* ── Captions ─────────────────────────────────────────── */
+/* 说明文字 */
+.t-caption-1 {
+  font-size: 24rpx;
+  font-weight: 400;
+  letter-spacing: 0.2rpx;
+  line-height: 1.50;
+  color: #6E6E73;
+}
+
+/* 时间戳、元信息 */
+.t-caption-2 {
+  font-size: 22rpx;
+  font-weight: 500;
+  letter-spacing: 0.5rpx;
+  line-height: 1.45;
+  color: #AEAEB2;
+}
+
+/* ── Label — 标签、角标（小、大写倾向）─────────────── */
+.t-label {
+  font-size: 20rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+  line-height: 1.40;
+  color: #6E6E73;
+}
+
+/* ── Micro — 极小角标、版权、水印 ───────────────────── */
+.t-micro {
+  font-size: 18rpx;
+  font-weight: 700;
+  letter-spacing: 1.5rpx;
+  line-height: 1.35;
+  color: #AEAEB2;
+}
+
+/* ── Numeric Display — 报告大数字（等宽字形）──────── */
+.t-num-xl {
+  font-size: 88rpx;
+  font-weight: 800;
+  letter-spacing: -3rpx;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+}
+
+.t-num-l {
+  font-size: 64rpx;
+  font-weight: 800;
+  letter-spacing: -2rpx;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-feature-settings: "tnum";
+  font-feature-settings: "tnum";
+}
+
+.t-num-m {
+  font-size: 44rpx;
+  font-weight: 800;
+  letter-spacing: -1rpx;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.t-num-s {
+  font-size: 32rpx;
+  font-weight: 700;
+  letter-spacing: -0.5rpx;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── Weight Modifiers ─────────────────────────────────── */
+.fw-400 { font-weight: 400; }
+.fw-500 { font-weight: 500; }
+.fw-600 { font-weight: 600; }
+.fw-700 { font-weight: 700; }
+.fw-800 { font-weight: 800; }
+
+/* ── Color Utilities ──────────────────────────────────── */
+.c-primary   { color: #1D1D1F; }
+.c-secondary { color: #6E6E73; }
+.c-tertiary  { color: #AEAEB2; }
+.c-blue      { color: #0071E3; }
+.c-green     { color: #34C759; }
+.c-red       { color: #FF3B30; }
+.c-orange    { color: #FF9500; }
+.c-white     { color: #FFFFFF; }
+
+/* ══════════════════════════════════════════════
+   Utilities
+══════════════════════════════════════════════ */
+.mt-8  { margin-top: 8rpx;  }
+.mt-16 { margin-top: 16rpx; }
+.mt-24 { margin-top: 24rpx; }
+.mt-32 { margin-top: 32rpx; }
+.mt-40 { margin-top: 40rpx; }
+
+.text-blue   { color: #0071E3; }
+.text-green  { color: #34C759; }
+.text-orange { color: #FF9500; }
+.text-red    { color: #FF3B30; }
+.text-gray   { color: #6E6E73; }
+
+.safe-bottom { height: calc(40rpx + env(safe-area-inset-bottom)); }
+
+/* ══════════════════════════════════════════════
+   AI 生成内容标识 — 微信审核合规（2025.9 起强制）
+══════════════════════════════════════════════ */
+.ai-gen-tag {
+  font-size: 20rpx;
+  color: #999;
+  background: #f5f5f5;
+  padding: 2rpx 12rpx;
+  border-radius: 4rpx;
+  margin-left: 8rpx;
+  vertical-align: middle;
+}
+.ai-disclosure-bar {
+  background: #f8f8f8;
+  text-align: center;
+  padding: 10rpx 0;
+  border-bottom: 1rpx solid #eee;
+}
+.ai-disclosure-text {
+  font-size: 22rpx;
+  color: #999;
+}
+.ai-gen-notice {
+  display: block;
+  text-align: center;
+  font-size: 22rpx;
+  color: #999;
+  padding: 12rpx 0;
+}
+.ai-disclaimer {
+  display: block;
+  font-size: 22rpx;
+  color: #999;
+  text-align: center;
+  padding: 16rpx 0;
+}

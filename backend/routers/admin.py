@@ -1025,6 +1025,7 @@ def list_feedbacks(
         "items": [
             {
                 "id": i.id,
+                "user_id": i.user_id,
                 "content": i.content,
                 "contact": i.contact,
                 "ip": i.ip,

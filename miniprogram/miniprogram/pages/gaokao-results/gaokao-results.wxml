@@ -1,0 +1,260 @@
+<!-- pages/gaokao-results/gaokao-results.wxml -->
+<!-- v3：支付倒计时 + 免费次数 + 裂变分享 -->
+
+<view class="page">
+
+  <!-- ── 顶部信息条 ── -->
+  <view class="info-bar">
+    <view class="info-item">
+      <text class="info-label">位次</text>
+      <text class="info-val">{{query.rank}}</text>
+    </view>
+    <view class="info-sep">·</view>
+    <view class="info-item">
+      <text class="info-label">省份</text>
+      <text class="info-val">{{query.province}}</text>
+    </view>
+    <view class="info-sep">·</view>
+    <view class="info-item">
+      <text class="info-label">共匹配</text>
+      <text class="info-val">{{totalCount}} 所</text>
+    </view>
+    <view wx:if="{{query.fromMock}}" class="mock-tag">模考估算</view>
+  </view>
+
+  <!-- 当前约束条件 -->
+  <view wx:if="{{constraintTags.length}}" class="constraint-bar">
+    <text class="constraint-bar-label">筛选条件</text>
+    <text wx:for="{{constraintTags}}" wx:key="label" class="constraint-bar-tag">{{item.label}}：{{item.value}}</text>
+  </view>
+
+  <!-- ── Tab 栏 ── -->
+  <view class="tab-bar">
+    <view class="tab-item {{activeTab==='gems'?'active':''}}"   bindtap="setTab" data-tab="gems">冷门好校 <text class="tab-count">{{gemsCount}}</text></view>
+    <view class="tab-item {{activeTab==='surge'?'active':''}}"  bindtap="setTab" data-tab="surge">冲 <text class="tab-count">{{surgeCount}}</text></view>
+    <view class="tab-item {{activeTab==='stable'?'active':''}}" bindtap="setTab" data-tab="stable">稳 <text class="tab-count">{{stableCount}}</text></view>
+    <view class="tab-item {{activeTab==='safe'?'active':''}}"   bindtap="setTab" data-tab="safe">保 <text class="tab-count">{{safeCount}}</text></view>
+  </view>
+
+  <!-- ── 付费解锁提示 ── -->
+  <view wx:if="{{!isPaid && showPayBanner}}" class="pay-banner">
+    <view class="pay-banner-left">
+      <text class="pay-banner-title">🔒 解锁完整报告</text>
+      <text class="pay-banner-desc">全部{{totalCount}}所院校 · 就业薪资 · 推荐理由 · 可保存PDF</text>
+    </view>
+    <view class="pay-banner-btns">
+      <!-- 有免费次数时显示免费解锁按钮 -->
+      <view wx:if="{{hasFreeCredit}}" class="free-unlock-btn" bindtap="onFreeUnlock">🎁 免费解锁</view>
+      <view class="pay-btn" bindtap="onPay">{{payBannerText || '¥1.99 解锁'}}</view>
+    </view>
+  </view>
+
+  <!-- 内容声明 -->
+  <text class="ai-gen-notice">推荐结果基于算法模型生成，仅供参考</text>
+
+  <!-- ── 学校列表 ── -->
+  <view class="school-list">
+    <block wx:for="{{currentList}}" wx:key="idx">
+
+      <!-- 锁定卡片（未付费时最多显示3张） -->
+      <view wx:if="{{item.locked && (isPaid || item._lockedIdx < 3)}}" class="school-card locked-card" bindtap="onPay">
+        <view class="locked-body">
+          <view class="locked-icon">🔒</view>
+          <view class="locked-info">
+            <text class="locked-name">{{item.school_name || '院校信息已锁定'}}</text>
+            <text class="locked-hint">付费¥1.99解锁，查看录取概率与推荐理由</text>
+          </view>
+          <view class="locked-unlock-btn">解锁</view>
+        </view>
+      </view>
+
+      <!-- 正常卡片 -->
+      <view wx:elif="{{!item.locked}}" class="school-card {{item.is_hidden_gem?'gem-card':''}} {{item.swarm_discovery?'swarm-card':''}}">
+
+        <!-- 智能精选标签 -->
+        <view wx:if="{{item.is_top_pick}}" class="top-pick-badge">⭐ 本档首选</view>
+
+        <!-- 精选理由（has headline） -->
+        <view wx:if="{{item.is_top_pick && item.top_pick_headline}}" class="top-pick-headline">
+          {{item.top_pick_headline}}
+        </view>
+
+        <!-- 卡片头部 -->
+        <view class="card-head">
+          <view class="card-head-left">
+            <text class="school-name">{{item.school_name}}</text>
+            <view class="badge-row">
+              <text wx:if="{{item.is_985==='是' || item.is_985==='1'}}" class="badge badge-985">985</text>
+              <text wx:elif="{{item.is_211==='是' || item.is_211==='1'}}" class="badge badge-211">211</text>
+              <text wx:else class="badge badge-plain">普通</text>
+              <text wx:if="{{item.city}}" class="badge badge-city">{{item.city}}</text>
+            </view>
+          </view>
+          <view class="prob-block">
+            <text class="prob-num" style="color:{{item._probColor}}">{{item._probText}}</text>
+            <text class="prob-label">录取概率</text>
+          </view>
+        </view>
+
+        <!-- 专业名 -->
+        <text class="major-name">{{item.major_name}}</text>
+
+        <!-- 概率条 -->
+        <view class="prob-bar-track">
+          <view class="prob-bar-fill" style="width:{{item._probPct}}%;background:{{item._barColor}}"></view>
+        </view>
+
+        <!-- 数据行 -->
+        <view class="data-row">
+          <view class="data-cell" wx:if="{{item.employment && item.employment.avg_salary}}">
+            <text class="data-val">¥{{item._salaryK}}k</text>
+            <text class="data-label">平均月薪</text>
+          </view>
+          <view class="data-cell" wx:if="{{item.avg_min_rank_3yr}}">
+            <text class="data-val">{{item.avg_min_rank_3yr}}</text>
+            <text class="data-label">近3年均值位次</text>
+          </view>
+          <view class="data-cell" wx:if="{{item.rank_diff}}">
+            <text class="data-val" style="color:{{item.rank_diff>0?'#059669':'#DC2626'}}">{{item.rank_diff>0?'+':''}}{{item.rank_diff}}</text>
+            <text class="data-label">位次差</text>
+          </view>
+        </view>
+
+        <!-- 推荐理由（付费后显示，默认可展开） -->
+        <view wx:if="{{item.reason}}" class="reason-block" bindtap="toggleReason" data-idx="{{index}}">
+          <text class="reason-text {{item._reasonExpanded ? 'reason-text-expanded' : ''}}">{{item.reason}}</text>
+          <view class="reason-expand-hint">
+            <text class="reason-expand-text">{{item._reasonExpanded ? '收起' : '展开'}}</text>
+          </view>
+        </view>
+
+        <!-- 机会信号 -->
+        <view wx:if="{{item.opportunity_signals && item.opportunity_signals.length > 0}}" class="opp-signals">
+          <text wx:for="{{item.opportunity_signals}}" wx:key="*this" class="opp-signal-tag">{{item}}</text>
+        </view>
+
+        <!-- 冷门好校标签 -->
+        <view wx:if="{{item.is_hidden_gem && item.top_gem}}" class="gem-block">
+          <text class="gem-label">💎 {{item.top_gem.gem_type_label}}</text>
+          <text class="gem-desc">{{item.top_gem.gem_description}}</text>
+        </view>
+
+        <!-- 大年小年 -->
+        <view wx:if="{{item.big_small_year && item.big_small_year.prediction}}" class="year-tag" style="color:{{item._yearColor}};background:{{item._yearBg}}">
+          {{item._yearIcon}} {{item.big_small_year.prediction}}
+        </view>
+
+        <!-- 操作按钮 -->
+        <view class="card-actions">
+          <view class="action-btn action-primary" bindtap="addToForm" data-idx="{{index}}">+ 加入志愿表</view>
+          <!-- HIDDEN: AI 分析按钮 -->
+          <!-- <view class="action-btn action-secondary" bindtap="goAiAnalysis" data-idx="{{index}}">AI 分析</view> -->
+        </view>
+
+      </view>
+    </block>
+
+    <!-- 锁定折叠提示（未付费且有3张以上锁定卡时显示） -->
+    <view wx:if="{{!isPaid && currentLockedCount > 3}}" class="locked-fold-tip" bindtap="onPay">
+      <text class="locked-fold-icon">🔒</text>
+      <text class="locked-fold-text">还有 {{currentLockedCount - 3}} 所院校未显示</text>
+      <text class="locked-fold-cta">¥1.99 解锁后查看全部</text>
+    </view>
+
+    <!-- 空状态 -->
+    <view wx:if="{{currentList.length===0}}" class="empty">
+      <text class="empty-icon">🔍</text>
+      <text class="empty-text">该分类暂无匹配结果</text>
+    </view>
+  </view>
+
+  <!-- 付费用户操作栏 -->
+  <view wx:if="{{isPaid}}" class="paid-actions">
+    <view class="paid-action-btn paid-pdf {{generatingPDF?'paid-pdf-loading':''}}" bindtap="downloadReport">
+      {{generatingPDF ? '生成中…' : '📄 保存完整PDF报告'}}
+    </view>
+  </view>
+
+  <!-- 裂变分享入口（付费后显示，好友付费后本人获得一次免费查询） -->
+  <view wx:if="{{isPaid && showShareAfterPay}}" class="share-unlock-banner" bindtap="onShareUnlock">
+    <view class="sub-banner-left">
+      <text class="sub-banner-title">🎁 分享给好友</text>
+      <text class="sub-banner-desc">好友首次付费后，你下次查询免费</text>
+    </view>
+    <view class="sub-banner-arrow">›</view>
+  </view>
+
+  <!-- 我的报告入口（付费用户可见） -->
+  <view wx:if="{{isPaid}}" class="my-reports-entry" bindtap="goMyReports">
+    <text class="mre-text">📁 查看所有历史报告</text>
+    <text class="mre-arrow">›</text>
+  </view>
+
+  <!-- 底部说明 -->
+  <view class="footer-note">水卢冷门高报引擎 · 艺圆智探出品</view>
+  <view class="footer-note" style="font-size:11px;color:#aaa;margin-top:4rpx;">数据来源：2025年教育部公开录取数据</view>
+  <view class="footer-feedback" bindtap="goFeedback">
+    <view class="footer-feedback-left">
+      <text class="footer-feedback-icon">💬</text>
+      <view class="footer-feedback-info">
+        <text class="footer-feedback-title">遇到问题？给我们反馈</text>
+        <text class="footer-feedback-sub">数据错误、功能异常、使用建议都可以说</text>
+      </view>
+    </view>
+    <text class="footer-feedback-arrow">›</text>
+  </view>
+
+</view>
+
+<!-- ── 支付后等待 Webhook 倒计时蒙层 ── -->
+<view wx:if="{{showPayCountdown}}" class="countdown-mask">
+  <view class="countdown-box">
+    <text class="countdown-emoji">✅</text>
+    <text class="countdown-title">支付成功！</text>
+    <text class="countdown-desc">正在为您生成专属报告…</text>
+    <view class="countdown-circle">
+      <text class="countdown-num">{{payCountdown}}</text>
+    </view>
+    <text class="countdown-hint">每一份报告都经过算法精心分析\n稍等 {{payCountdown}} 秒即可查看全部院校</text>
+  </view>
+</view>
+
+<!-- ── 支付成功庆祝弹窗 ── -->
+<view wx:if="{{showPaySuccess}}" class="success-mask">
+  <view class="success-modal">
+    <text class="success-emoji">🎊</text>
+    <text class="success-title">报告已解锁！</text>
+    <text class="success-desc">全部{{totalCount}}所院校的完整分析已生成\n可在「我的报告」随时查看，或下载PDF保存</text>
+    <view class="success-stats">
+      <view class="success-stat">
+        <text class="success-stat-num">{{surgeCount}}</text>
+        <text class="success-stat-label">冲刺</text>
+      </view>
+      <view class="success-stat">
+        <text class="success-stat-num">{{stableCount}}</text>
+        <text class="success-stat-label">稳妥</text>
+      </view>
+      <view class="success-stat">
+        <text class="success-stat-num">{{safeCount}}</text>
+        <text class="success-stat-label">保底</text>
+      </view>
+      <view class="success-stat">
+        <text class="success-stat-num">{{gemsCount}}</text>
+        <text class="success-stat-label">冷门好校</text>
+      </view>
+    </view>
+    <text class="success-close" bindtap="closePaySuccess">开始查看报告 →</text>
+    <text class="success-pdf-hint">可在下方点击「保存完整PDF报告」下载，或进入「我的报告」随时查看</text>
+  </view>
+</view>
+
+<!-- ── 手机号收集弹窗 ── -->
+<view wx:if="{{showPhoneModal}}" class="phone-mask">
+  <view class="phone-modal">
+    <text class="pm-emoji">🎉</text>
+    <text class="pm-title">志愿已成功保存！</text>
+    <text class="pm-sub">留下手机号，高考出分后我们可以为你提供进一步的报考建议</text>
+    <button class="pm-phone-btn" open-type="getPhoneNumber" bindgetphonenumber="onGetPhoneNumber">一键授权手机号</button>
+    <text class="pm-skip" bindtap="skipPhone">暂不，以后再说</text>
+  </view>
+</view>

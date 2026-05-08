@@ -1,0 +1,7 @@
+{
+  "name": "serverPatch",
+  "version": "1.0.0",
+  "description": "通过 TAT RunCommand 修补服务器配置",
+  "main": "index.js",
+  "dependencies": {}
+}

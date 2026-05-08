@@ -1,0 +1,148 @@
+<!-- pages/consult/consult.wxml -->
+<!-- 袁希™ · 咨询 Tab — 信任建立 → 价值呈现 → 预约转化 -->
+
+<scroll-view class="page" scroll-y>
+
+  <!-- ══════════════════════════════
+       顾问 Hero 区
+  ══════════════════════════════ -->
+  <view class="hero">
+    <view class="hero-avatar-wrap">
+      <image class="hero-avatar" src="/images/yuanxi-avatar.png" mode="aspectFill"/>
+      <view class="hero-badge">
+        <text class="hero-badge-text">1% 教育顾问</text>
+      </view>
+    </view>
+    <view class="hero-name">袁希</view>
+    <view class="hero-tagline">用数据看清孩子，用方法走对路</view>
+    <view class="hero-stats-row">
+      <view class="hero-stat">
+        <text class="hero-stat-num">800+</text>
+        <text class="hero-stat-label">咨询案例</text>
+      </view>
+      <view class="hero-stat-divider"></view>
+      <view class="hero-stat">
+        <text class="hero-stat-num">12年</text>
+        <text class="hero-stat-label">教育研究</text>
+      </view>
+      <view class="hero-stat-divider"></view>
+      <view class="hero-stat">
+        <text class="hero-stat-num">98%</text>
+        <text class="hero-stat-label">路径落地率</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══════════════════════════════
+       "为什么需要一次深度咨询" 说服区
+  ══════════════════════════════ -->
+  <view class="section">
+    <view class="section-label">很多家长在这个问题上浪费了3-5年</view>
+    <view class="pain-card">
+      <view class="pain-item" wx:for="{{painPoints}}" wx:key="index">
+        <view class="pain-dot"></view>
+        <text class="pain-text">{{item}}</text>
+      </view>
+    </view>
+    <view class="pain-resolve">一次深度咨询，把这些问题清理干净</view>
+  </view>
+
+  <!-- ══════════════════════════════
+       咨询内容详解
+  ══════════════════════════════ -->
+  <view class="section">
+    <view class="section-title">一小时，我们谈什么</view>
+    <view class="what-list">
+      <view class="what-item" wx:for="{{whatWeDiscuss}}" wx:key="index">
+        <view class="what-icon-wrap">
+          <text class="what-icon">{{item.icon}}</text>
+        </view>
+        <view class="what-body">
+          <text class="what-title">{{item.title}}</text>
+          <text class="what-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══════════════════════════════
+       价格透明区
+  ══════════════════════════════ -->
+  <view class="section">
+    <view class="section-title">透明定价</view>
+    <view class="price-card">
+      <view class="price-row">
+        <text class="price-amount">¥3,000</text>
+        <text class="price-unit">/ 小时</text>
+      </view>
+      <view class="price-note">一次咨询 = 避免一次错误决策的代价</view>
+      <view class="price-divider"></view>
+      <view class="price-includes">
+        <view class="pi-row" wx:for="{{priceIncludes}}" wx:key="index">
+          <text class="pi-check">✓</text>
+          <text class="pi-text">{{item}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══════════════════════════════
+       案例证据区
+  ══════════════════════════════ -->
+  <view class="section">
+    <view class="section-title">真实案例</view>
+    <scroll-view class="cases-scroll" scroll-x enhanced show-scrollbar="{{false}}">
+      <view class="cases-row">
+        <view class="case-card" wx:for="{{cases}}" wx:key="index">
+          <view class="case-tag">{{item.tag}}</view>
+          <view class="case-child">{{item.child}}</view>
+          <view class="case-before">
+            <text class="case-label">咨询前</text>
+            <text class="case-text">{{item.before}}</text>
+          </view>
+          <view class="case-arrow">→</view>
+          <view class="case-after">
+            <text class="case-label after">咨询后</text>
+            <text class="case-text">{{item.after}}</text>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <!-- ══════════════════════════════
+       FAQ
+  ══════════════════════════════ -->
+  <view class="section">
+    <view class="section-title">常见问题</view>
+    <view class="faq-list">
+      <view
+        class="faq-item {{openFaq === index ? 'open' : ''}}"
+        wx:for="{{faqs}}"
+        wx:key="index"
+        bindtap="toggleFaq"
+        data-index="{{index}}"
+      >
+        <view class="faq-q-row">
+          <text class="faq-q">{{item.q}}</text>
+          <text class="faq-chevron">{{openFaq === index ? '−' : '+'}}</text>
+        </view>
+        <text class="faq-a" wx:if="{{openFaq === index}}">{{item.a}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══════════════════════════════
+       底部固定 CTA
+  ══════════════════════════════ -->
+  <view class="cta-spacer"></view>
+
+</scroll-view>
+
+<!-- 悬浮预约按钮 -->
+<view class="float-cta-wrap">
+  <view class="float-cta" bindtap="goToBooking">
+    <text class="float-cta-text">预约深度咨询 →</text>
+    <text class="float-cta-sub">当前开放 {{slotsLeft}} 个名额</text>
+  </view>
+</view>

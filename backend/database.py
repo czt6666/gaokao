@@ -265,6 +265,7 @@ class Feedback(Base):
     """用户意见反馈表"""
     __tablename__ = "feedbacks"
     id          = Column(Integer, primary_key=True, index=True)
+    user_id     = Column(Integer, nullable=True)
     content     = Column(Text, nullable=False)
     contact     = Column(String(100), default="")
     ip          = Column(String(45), default="")

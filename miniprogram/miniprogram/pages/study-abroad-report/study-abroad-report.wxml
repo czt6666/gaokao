@@ -1,0 +1,371 @@
+<!-- pages/study-abroad-report/study-abroad-report.wxml — Phase 2 -->
+<view class="page-container">
+
+  <!-- ══ 顶部状态栏 ══ -->
+  <view class="report-nav">
+    <view class="nav-back" bindtap="goBack">
+      <text class="nav-back-icon">‹</text>
+      <text class="nav-back-label">返回</text>
+    </view>
+    <text class="nav-title">选校分析报告</text>
+    <text class="nav-price">{{reportPrice}}</text>
+  </view>
+
+  <!-- ══ STEP 1: 信息录入 ══ -->
+  <block wx:if="{{step === 'input'}}">
+
+    <!-- 收藏学校提示 -->
+    <view class="fav-summary" wx:if="{{favCount > 0}}">
+      <text class="fav-summary-icon">⭐</text>
+      <text class="fav-summary-text">已收藏 {{favCount}} 所学校 · 将纳入报告对比</text>
+      <text class="fav-summary-sub">如需添加，返回学校详情页收藏更多</text>
+    </view>
+
+    <view class="fav-empty" wx:else bindtap="goSchools">
+      <text class="fav-empty-icon">🏫</text>
+      <text class="fav-empty-title">还没有收藏学校</text>
+      <text class="fav-empty-sub">点击去学校库收藏 →</text>
+    </view>
+
+    <!-- 输入卡片 -->
+    <view class="input-card">
+      <text class="input-card-title">📊 填写基本信息</text>
+      <text class="input-card-sub">用于计算适配度与4年费用预估</text>
+
+      <!-- SAT -->
+      <view class="input-group">
+        <text class="input-label">SAT 分数区间</text>
+        <scroll-view scroll-x class="input-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="input-chips-row">
+            <view
+              class="input-chip {{satBand === item.value ? 'chip-active' : ''}}"
+              wx:for="{{satBands}}" wx:key="value"
+              data-value="{{item.value}}" bindtap="onSatBand">
+              {{item.label}}
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- GPA -->
+      <view class="input-group">
+        <text class="input-label">GPA 区间</text>
+        <scroll-view scroll-x class="input-scroll" enhanced show-scrollbar="{{false}}">
+          <view class="input-chips-row">
+            <view
+              class="input-chip {{gpaBand === item.value ? 'chip-active' : ''}}"
+              wx:for="{{gpaBands}}" wx:key="value"
+              data-value="{{item.value}}" bindtap="onGpaBand">
+              {{item.label}}
+            </view>
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 专业方向 -->
+      <view class="input-group">
+        <text class="input-label">目标专业方向（选填）</text>
+        <view class="input-chips-grid">
+          <view
+            class="input-chip {{majorLabel === item.value ? 'chip-active' : ''}}"
+            wx:for="{{majorBands}}" wx:key="value"
+            data-value="{{item.value}}" bindtap="onMajorBand">
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 预算 -->
+      <view class="input-group">
+        <text class="input-label">留学预算（4年总计）</text>
+        <view class="input-chips-row">
+          <view
+            class="input-chip {{budgetBand === item.value ? 'chip-active' : ''}}"
+            wx:for="{{budgetBands}}" wx:key="value"
+            data-value="{{item.value}}" bindtap="onBudgetBand">
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 报告内容预告 -->
+    <view class="report-preview-card">
+      <text class="preview-card-title">报告包含什么？</text>
+      <view class="preview-module" wx:for="{{reportModules}}" wx:key="title">
+        <text class="preview-icon">{{item.icon}}</text>
+        <view>
+          <text class="preview-module-title">{{item.title}}</text>
+          <text class="preview-module-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="generate-btn" bindtap="generatePreview">
+      <text class="generate-btn-text">生成预览</text>
+    </view>
+
+  </block>
+
+  <!-- ══ STEP 2: 预览（前两个模块可见，其余模糊）══ -->
+  <block wx:elif="{{step === 'preview' && report}}">
+
+    <!-- M1: 个人画像摘要 -->
+    <view class="report-section">
+      <view class="report-section-head">
+        <text class="report-section-num">1</text>
+        <text class="report-section-title">个人画像摘要</text>
+      </view>
+      <view class="profile-grid">
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.satLabel}}</text>
+          <text class="profile-label">SAT 区间</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.gpaLabel}}</text>
+          <text class="profile-label">GPA 区间</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.majorLabel}}</text>
+          <text class="profile-label">目标专业</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.budgetLabel}}</text>
+          <text class="profile-label">4年预算</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- M2: 收藏学校概览（部分可见）-->
+    <view class="report-section">
+      <view class="report-section-head">
+        <text class="report-section-num">2</text>
+        <text class="report-section-title">收藏学校对比</text>
+        <text class="report-section-count">共 {{report.schools.length}} 所</text>
+      </view>
+
+      <!-- 仅显示前1所，其余模糊 -->
+      <view wx:for="{{report.schools}}" wx:key="id" wx:for-index="si">
+        <view class="school-compare-row" wx:if="{{si === 0}}">
+          <view class="compare-idx">{{item.idx}}</view>
+          <view class="compare-info">
+            <text class="compare-name">{{item.nameDisplay}}</text>
+            <text class="compare-qs">{{item.qsRankFmt}}</text>
+          </view>
+          <view class="compare-fit" style="color:{{item.fitColor}}">{{item.fitLabel}}</view>
+        </view>
+        <view class="school-compare-row blurred" wx:elif="{{si < 3}}">
+          <view class="compare-idx">{{item.idx}}</view>
+          <view class="compare-info">
+            <text class="compare-name">████████</text>
+            <text class="compare-qs">████</text>
+          </view>
+          <view class="compare-fit" style="color:#AEAEB2">██</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 付费解锁 CTA -->
+    <view class="unlock-card">
+      <view class="unlock-content">
+        <text class="unlock-title">解锁完整报告</text>
+        <text class="unlock-desc">查看全部 {{report.schools.length}} 所学校对比 · 4年总花费 · 就业出路 · 申请时间轴</text>
+        <view class="unlock-modules">
+          <text class="unlock-module">✓ 学校对比表</text>
+          <text class="unlock-module">✓ 4年CNY花费</text>
+          <text class="unlock-module">✓ STEM OPT状态</text>
+          <text class="unlock-module">✓ 申请时间轴</text>
+        </view>
+      </view>
+      <view class="unlock-btn {{payLoading ? 'loading' : ''}}" bindtap="unlockReport">
+        <text class="unlock-btn-price" wx:if="{{!payLoading}}">{{reportPrice}}</text>
+        <text class="unlock-btn-label" wx:if="{{!payLoading}}">立即解锁</text>
+        <text wx:else class="unlock-btn-label">处理中…</text>
+      </view>
+    </view>
+
+  </block>
+
+  <!-- ══ STEP 3: 完整报告 ══ -->
+  <block wx:elif="{{step === 'unlocked' && report}}">
+
+    <view class="report-header-bar">
+      <text class="report-header-title">选校分析报告</text>
+      <text class="report-header-date">生成于 {{report.generatedAt}}</text>
+    </view>
+
+    <!-- M0: 职业愿景锚点（有选定路径时展示）-->
+    <view class="report-section report-section-m0" wx:if="{{report.m0}}">
+      <view class="report-section-head">
+        <text class="report-section-num m0-num">🧭</text>
+        <text class="report-section-title">职业愿景锚点</text>
+      </view>
+      <view class="m0-card">
+        <view class="m0-title-row">
+          <text class="m0-icon">{{report.m0.icon}}</text>
+          <text class="m0-label">{{report.m0.label}}</text>
+        </view>
+        <text class="m0-tagline">{{report.m0.tagline}}</text>
+        <view class="m0-tags-row">
+          <view class="m0-tag m0-tag-stem" wx:if="{{report.m0.stemOpt}}">
+            <text>STEM OPT 3年延签</text>
+          </view>
+          <view class="m0-tag m0-tag-stay" wx:if="{{report.m0.usStayRate}}">
+            <text>留美率 {{report.m0.usStayRate}}</text>
+          </view>
+        </view>
+        <text class="m0-path" wx:if="{{report.m0.usPath}}">🇺🇸 {{report.m0.usPath}}</text>
+        <view class="m0-btn" bindtap="goCareerVision">
+          <text class="m0-btn-text">查看完整职业路径分析 →</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- M1: 个人画像 -->
+    <view class="report-section">
+      <view class="report-section-head">
+        <text class="report-section-num">1</text>
+        <text class="report-section-title">个人画像摘要</text>
+      </view>
+      <view class="profile-grid">
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.satLabel}}</text>
+          <text class="profile-label">SAT 区间</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.gpaLabel}}</text>
+          <text class="profile-label">GPA 区间</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.majorLabel}}</text>
+          <text class="profile-label">目标专业</text>
+        </view>
+        <view class="profile-item">
+          <text class="profile-val">{{report.m1.budgetLabel}}</text>
+          <text class="profile-label">4年预算</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- M2+M3+M4: 学校对比 -->
+    <view class="report-section">
+      <view class="report-section-head">
+        <text class="report-section-num">2–4</text>
+        <text class="report-section-title">学校详细对比</text>
+      </view>
+
+      <view class="school-detail-card" wx:for="{{report.schools}}" wx:key="id">
+        <!-- 学校头部 -->
+        <view class="sdc-head">
+          <view class="sdc-idx">{{item.idx}}</view>
+          <view class="sdc-name-col">
+            <text class="sdc-name">{{item.nameDisplay}}</text>
+            <text class="sdc-qs">{{item.qsRankFmt}}</text>
+          </view>
+          <view class="sdc-fit" style="color:{{item.fitColor}}">{{item.fitLabel}}</view>
+        </view>
+
+        <!-- 学校简介 -->
+        <text class="sdc-ps" wx:if="{{item.ps}}">{{item.ps}}</text>
+
+        <!-- 关键标签行 -->
+        <view class="sdc-tags">
+          <view class="sdc-tag sdc-tag-apply" wx:if="{{item.applyLabel !== '—'}}">
+            📝 {{item.applyLabel}}
+          </view>
+          <view class="sdc-tag sdc-tag-stem" wx:if="{{item.stemOpt}}">
+            🎓 STEM OPT
+          </view>
+          <!-- P6: 专业层级标签 -->
+          <view class="sdc-tag sdc-tag-tier" wx:if="{{item.programTierLabel}}">
+            🏅 {{item.programTierLabel}}
+          </view>
+          <!-- P6: ROI 标签 -->
+          <view class="sdc-tag sdc-tag-roi" wx:if="{{item.roiNote}}">
+            💹 ROI {{item.roiNote}}
+          </view>
+        </view>
+
+        <!-- 就业方向 -->
+        <view class="sdc-careers" wx:if="{{item.careerTags.length > 0}}">
+          <text class="sdc-careers-label">就业方向：</text>
+          <view class="sdc-career-tag" wx:for="{{item.careerTags}}" wx:for-item="career" wx:key="*this">
+            {{career}}
+          </view>
+        </view>
+
+        <!-- 中国学生备注 -->
+        <text class="sdc-cn-note" wx:if="{{item.cnNote}}">🇨🇳 {{item.cnNote}}</text>
+      </view>
+    </view>
+
+    <!-- P6: 预算ROI总结 -->
+    <view class="report-section" wx:if="{{report.budgetRoi}}">
+      <view class="report-section-head">
+        <text class="report-section-num">4</text>
+        <text class="report-section-title">4年ROI分析</text>
+      </view>
+      <view class="roi-summary-card">
+        <view class="roi-row">
+          <text class="roi-label">4年预算总额</text>
+          <text class="roi-value roi-cost">{{report.budgetRoi.total4yrFmt}}</text>
+        </view>
+        <view class="roi-row">
+          <text class="roi-label">目标职业方向</text>
+          <text class="roi-value">{{report.budgetRoi.careerLabel || '未设定'}}</text>
+        </view>
+        <view class="roi-row">
+          <text class="roi-label">参考年薪（入职1-3年）</text>
+          <text class="roi-value roi-earn">见学校对比卡片</text>
+        </view>
+        <text class="roi-note">ROI = 4年总成本 ÷ 预期年薪。越低越快回本。薪资数据来自 College Scorecard + BLS，具体以就业为准。</text>
+      </view>
+    </view>
+
+    <!-- M5: 申请时间轴 -->
+    <view class="report-section">
+      <view class="report-section-head">
+        <text class="report-section-num">5</text>
+        <text class="report-section-title">申请时间轴</text>
+        <text class="report-section-sub">通用版 · 具体日期以各校官网为准</text>
+      </view>
+
+      <view class="timeline-list">
+        <view class="timeline-item" wx:for="{{report.timeline}}" wx:key="phase">
+          <view class="timeline-dot"></view>
+          <view class="timeline-content">
+            <view class="timeline-row">
+              <text class="timeline-phase">{{item.phase}}</text>
+              <text class="timeline-date">{{item.date}}</text>
+            </view>
+            <text class="timeline-desc">{{item.desc}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="timeline-note">
+        <text class="timeline-note-text">⚠️ 以上为参考时间线，建议直接访问各校官网核实截止日期</text>
+      </view>
+    </view>
+
+    <!-- 底部 CTA -->
+    <view class="report-footer">
+      <view class="footer-cta-row">
+        <view class="footer-cta-btn primary" bindtap="goAssessment">
+          <text class="footer-cta-text">做完整评估 · 获取个性化方案</text>
+        </view>
+      </view>
+      <view class="footer-cta-row">
+        <view class="footer-cta-btn secondary" bindtap="shareReport">
+          <text class="footer-cta-text-sec">分享给家人</text>
+        </view>
+        <view class="footer-cta-btn secondary" bindtap="goSchools">
+          <text class="footer-cta-text-sec">继续浏览学校</text>
+        </view>
+      </view>
+      <text class="footer-disclaimer">报告由 AI 生成，仅供参考 · 不构成正式申请建议 · 数据截至2024学年</text>
+    </view>
+
+  </block>
+
+</view>

@@ -1,0 +1,77 @@
+<!-- pages/gaokao-feedback/gaokao-feedback.wxml -->
+
+<view class="page">
+
+  <!-- ── 提交成功状态 ── -->
+  <view wx:if="{{submitted}}" class="success-view">
+    <text class="success-emoji">✅</text>
+    <text class="success-title">反馈已收到，谢谢！</text>
+    <text class="success-sub">我们会尽快核查并改进。如果是数据错误，通常在48小时内修正。</text>
+    <view class="success-btn" bindtap="goBack">返回查看结果</view>
+  </view>
+
+  <!-- ── 反馈表单 ── -->
+  <block wx:else>
+
+    <!-- 关联学校信息（有则展示） -->
+    <view wx:if="{{targetSchool}}" class="context-card">
+      <text class="context-label">反馈关联</text>
+      <text class="context-school">{{targetSchool}}</text>
+      <text wx:if="{{targetMajor}}" class="context-major">{{targetMajor}}</text>
+    </view>
+
+    <!-- 反馈类型选择 -->
+    <view class="section">
+      <text class="section-title">反馈类型</text>
+      <view class="type-grid">
+        <view
+          wx:for="{{typeOptions}}"
+          wx:key="key"
+          class="type-chip {{selectedTypeIdx === index ? 'type-chip-active' : ''}}"
+          bindtap="selectType"
+          data-idx="{{index}}"
+        >
+          <text class="type-label">{{item.label}}</text>
+          <text class="type-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 反馈内容 -->
+    <view class="section">
+      <view class="section-title-row">
+        <text class="section-title">详细描述</text>
+        <text class="char-count">{{charCount}}/500</text>
+      </view>
+      <view class="textarea-wrap">
+        <textarea
+          class="desc-textarea"
+          placeholder="请描述你遇到的问题或建议，越具体我们越能快速改进..."
+          placeholder-class="textarea-ph"
+          maxlength="500"
+          auto-height
+          bindinput="onInput"
+          value="{{description}}"
+        />
+      </view>
+    </view>
+
+    <!-- 用户信息摘要（只读） -->
+    <view wx:if="{{userRank || userProvince}}" class="meta-row">
+      <text class="meta-text">你的查询：{{userProvince}} · 位次 {{userRank}}</text>
+    </view>
+
+    <!-- 提交按钮 -->
+    <view
+      class="submit-btn {{submitting ? 'submit-btn-loading' : ''}}"
+      bindtap="submit"
+    >
+      <view wx:if="{{submitting}}" class="spinner"></view>
+      <text class="submit-text">{{submitting ? '提交中…' : '提交反馈'}}</text>
+    </view>
+
+    <text class="hint">我们会认真查看每一条反馈</text>
+
+  </block>
+
+</view>

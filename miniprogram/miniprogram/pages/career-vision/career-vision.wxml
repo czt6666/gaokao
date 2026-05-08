@@ -1,0 +1,190 @@
+<!-- pages/career-vision/career-vision.wxml — P3 职业愿景详情页 -->
+<view class="page-wrap">
+
+  <!-- ══ 导航栏 ══ -->
+  <view class="cv-nav">
+    <view class="nav-back" bindtap="goBack">
+      <text class="nav-back-icon">‹</text>
+      <text class="nav-back-label">返回</text>
+    </view>
+    <text class="nav-title" wx:if="{{cluster}}">{{cluster.label}}</text>
+  </view>
+
+  <!-- ══ 加载中 ══ -->
+  <view class="cv-loading-wrap" wx:if="{{!ready}}">
+    <view class="cv-loading-ring"></view>
+    <text class="cv-loading-text">加载中…</text>
+  </view>
+
+  <!-- ══ 主体内容 ══ -->
+  <block wx:if="{{ready && cluster}}">
+
+    <!-- ── Hero 头部 ── -->
+    <view class="cv-hero">
+      <text class="cv-hero-icon">{{cluster.icon}}</text>
+      <text class="cv-hero-label">{{cluster.label}}</text>
+      <text class="cv-hero-tagline">{{cluster.tagline}}</text>
+      <view class="cv-hero-score-row" wx:if="{{vision}}">
+        <view class="cv-hero-score-pill">
+          <text class="cv-hero-score-num">{{vision.matchScore}}%</text>
+          <text class="cv-hero-score-label">匹配度</text>
+        </view>
+        <view class="cv-hero-stem-pill" wx:if="{{cluster.stemOpt}}">
+          <text>STEM OPT 延签资格</text>
+        </view>
+        <view class="cv-hero-stay-pill" wx:if="{{cluster.usStayRate}}">
+          <text>留美率 {{cluster.usStayRate}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── S1：为什么适合（匹配原因）── -->
+    <view class="cv-section-card">
+      <view class="cv-section-header" bindtap="toggleSection" data-section="overview">
+        <view class="cv-section-title-row">
+          <text class="cv-section-num">01</text>
+          <text class="cv-section-title">为什么适合{{childName}}</text>
+        </view>
+        <text class="cv-section-arrow">{{expandedSection === 'overview' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="cv-section-body" wx:if="{{expandedSection === 'overview'}}">
+        <text class="cv-section-desc">{{cluster.desc}}</text>
+
+        <!-- AI 匹配原因 -->
+        <view wx:if="{{vision && vision.reasons && vision.reasons.length > 0}}">
+          <text class="cv-sub-label">系统分析结果</text><text class="ai-gen-tag">AI 生成</text>
+          <view class="cv-reason-list">
+            <view class="cv-reason-row" wx:for="{{vision.reasons}}" wx:key="*this">
+              <text class="cv-reason-dot">·</text>
+              <text class="cv-reason-text">{{item}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 职业时间线：毕业 / 5年 / 10年 -->
+        <view wx:if="{{cluster.careerTimeline}}">
+          <text class="cv-sub-label">职业成长路径</text>
+          <view class="cv-timeline-row">
+            <view class="cv-tl-item">
+              <text class="cv-tl-year">毕业时</text>
+              <text class="cv-tl-role">{{cluster.careerTimeline.grad}}</text>
+            </view>
+            <text class="cv-tl-arrow">→</text>
+            <view class="cv-tl-item">
+              <text class="cv-tl-year">5年后</text>
+              <text class="cv-tl-role">{{cluster.careerTimeline.y5}}</text>
+            </view>
+            <text class="cv-tl-arrow">→</text>
+            <view class="cv-tl-item">
+              <text class="cv-tl-year">10年后</text>
+              <text class="cv-tl-role">{{cluster.careerTimeline.y10}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── S2：专业方向选择 ── -->
+    <view class="cv-section-card">
+      <view class="cv-section-header" bindtap="toggleSection" data-section="major">
+        <view class="cv-section-title-row">
+          <text class="cv-section-num">02</text>
+          <text class="cv-section-title">推荐专业方向</text>
+        </view>
+        <text class="cv-section-arrow">{{expandedSection === 'major' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="cv-section-body" wx:if="{{expandedSection === 'major'}}">
+        <text class="cv-major-intro">以下是美国高校中与「{{cluster.label}}」最相关的本科专业方向（CIP代码分类）：</text>
+        <view class="cv-major-list">
+          <view
+            class="cv-major-item {{selectedMajorIdx === index ? 'cv-major-active' : ''}}"
+            wx:for="{{cluster.programPercentageKeys}}" wx:key="*this"
+            bindtap="selectMajor" data-idx="{{index}}">
+            <text class="cv-major-name">{{item}}</text>
+            <text class="cv-major-check" wx:if="{{selectedMajorIdx === index}}">✓</text>
+          </view>
+        </view>
+        <text class="cv-major-note">选择专业方向后，可在下方查看对应学校排名</text>
+      </view>
+    </view>
+
+    <!-- ── S3：美国路径 vs 回国路径 ── -->
+    <view class="cv-section-card">
+      <view class="cv-section-header" bindtap="toggleSection" data-section="path">
+        <view class="cv-section-title-row">
+          <text class="cv-section-num">03</text>
+          <text class="cv-section-title">留美 vs 回国 路径对比</text>
+        </view>
+        <text class="cv-section-arrow">{{expandedSection === 'path' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="cv-section-body" wx:if="{{expandedSection === 'path'}}">
+        <view class="cv-path-grid">
+          <!-- 留美路径 -->
+          <view class="cv-path-card cv-path-us">
+            <text class="cv-path-flag">🇺🇸</text>
+            <text class="cv-path-title">留美发展</text>
+            <text class="cv-path-desc">{{cluster.usPath}}</text>
+            <view class="cv-path-tag cv-tag-green" wx:if="{{cluster.stemOpt}}">
+              <text>STEM OPT 3年工签缓冲</text>
+            </view>
+          </view>
+          <!-- 回国路径 -->
+          <view class="cv-path-card cv-path-cn">
+            <text class="cv-path-flag">🇨🇳</text>
+            <text class="cv-path-title">回国发展</text>
+            <text class="cv-path-desc">{{cluster.returnPath}}</text>
+            <view class="cv-path-tag cv-tag-gold">
+              <text>海归背景加成</text>
+            </view>
+          </view>
+        </view>
+        <view class="cv-employer-row" wx:if="{{cluster.typicalEmployers && cluster.typicalEmployers.length > 0}}">
+          <text class="cv-sub-label">典型雇主</text>
+          <view class="cv-employer-tags">
+            <view class="cv-employer-tag"
+              wx:for="{{cluster.typicalEmployers}}" wx:for-item="emp" wx:key="*this">
+              <text>{{emp}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── S4：薪资参考 ── -->
+    <view class="cv-section-card" wx:if="{{cluster.blsKey}}">
+      <view class="cv-section-header" bindtap="toggleSection" data-section="salary">
+        <view class="cv-section-title-row">
+          <text class="cv-section-num">04</text>
+          <text class="cv-section-title">美国薪资参考（BLS数据）</text>
+        </view>
+        <text class="cv-section-arrow">{{expandedSection === 'salary' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="cv-section-body" wx:if="{{expandedSection === 'salary'}}">
+        <view class="cv-salary-card">
+          <text class="cv-salary-label">毕业2年后中位薪资（College Scorecard）</text>
+          <text class="cv-salary-note">具体数据将在学校对比页呈现（按专业/学校筛选）</text>
+          <text class="cv-salary-bls">BLS 职业代码：{{cluster.blsKey}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── CTA 行动建议 ── -->
+    <view class="cv-cta-section">
+      <text class="cv-cta-headline">下一步：找到最适合的学校项目</text>
+      <text class="cv-cta-sub">基于「{{cluster.label}}」方向，筛选项目排名最优的美国大学</text>
+
+      <view class="cv-cta-btn cv-cta-primary" bindtap="goSchoolsByProgram">
+        <text class="cv-cta-btn-text">查看「{{cluster.label}}」方向学校排名</text>
+        <text class="cv-cta-btn-arrow">→</text>
+      </view>
+
+      <view class="cv-cta-btn cv-cta-secondary" bindtap="goReport">
+        <text class="cv-cta-btn-text-sec">生成选校分析报告 ¥199</text>
+      </view>
+
+      <text class="cv-cta-disclaimer">数据来源：College Scorecard · BLS · 袁希方法论 · 数据截至2024学年</text>
+    </view>
+
+  </block>
+
+</view>

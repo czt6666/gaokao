@@ -1,0 +1,2487 @@
+/* pages/school-detail/school-detail.wxss (Apple Design) */
+
+/* ── 头部 ── */
+.school-header {
+  background: #1D1D1F;
+  padding: 40rpx 32rpx 48rpx;
+}
+
+.header-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.rank-block {
+  background: rgba(0, 113, 227, 0.15);
+  border: 1rpx solid rgba(0, 113, 227, 0.25);
+  border-radius: 12rpx;
+  padding: 12rpx 16rpx;
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 70rpx;
+}
+
+.rank-label {
+  display: block;
+  font-size: 18rpx;
+  color: #86868B;
+}
+
+.rank-num {
+  display: block;
+  font-size: 36rpx;
+  font-weight: 800;
+  color: #0071E3;
+}
+
+.name-block {
+  flex: 1;
+}
+
+.school-name {
+  display: block;
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 6rpx;
+}
+
+.school-name-en {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.location {
+  font-size: 24rpx;
+  color: #0071E3;
+  flex: 1;
+}
+
+.type-badge {
+  padding: 6rpx 20rpx;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 20rpx;
+  font-size: 22rpx;
+  color: #FFFFFF;
+}
+
+.fit-badge-row {
+  margin-top: 8rpx;
+}
+
+.fit-badge {
+  display: inline-block;
+  padding: 8rpx 24rpx;
+  border-radius: 24rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+/* ── 官网 ── */
+.website-section {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: rgba(0, 113, 227, 0.08);
+  border: 1rpx solid rgba(0, 113, 227, 0.15);
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 32rpx 0;
+}
+
+.website-icon {
+  font-size: 28rpx;
+  color: #0071E3;
+}
+
+.website-url {
+  flex: 1;
+  font-size: 22rpx;
+  color: #0071E3;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.website-copy {
+  font-size: 20rpx;
+  color: #86868B;
+  flex-shrink: 0;
+}
+
+/* ── 核心数据 ── */
+.stats-row {
+  display: flex;
+  align-items: center;
+  padding: 24rpx 32rpx;
+  background: #FFFFFF;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.stat-item {
+  flex: 1;
+  text-align: center;
+}
+
+.stat-value {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 6rpx;
+}
+
+.tuition-val {
+  font-size: 20rpx;
+}
+
+.stat-label {
+  display: block;
+  font-size: 20rpx;
+  color: #86868B;
+}
+
+.stat-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+/* ── 通用区块 ── */
+.section-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 16rpx;
+}
+
+.intro-text {
+  font-size: 28rpx;
+  color: #6E6E73;
+  line-height: 1.8;
+}
+
+/* ── 标签 ── */
+.tags-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+/* ── 专业 ── */
+.majors-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.major-chip {
+  padding: 10rpx 20rpx;
+  background: #F5F5F7;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  color: #1D1D1F;
+}
+
+/* ── 个性化专业推荐 ── */
+.personalized-majors-section {
+  background: rgba(0, 113, 227, 0.08);
+  border: 1rpx solid rgba(0, 113, 227, 0.15);
+  border-radius: 20rpx;
+  margin: 0 32rpx;
+}
+
+.personalized-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  margin-bottom: 4rpx;
+  line-height: 1.6;
+}
+
+.mi-inline {
+  color: #0071E3;
+  font-weight: 600;
+}
+
+.major-chip-highlight {
+  background: linear-gradient(135deg, #0071E3, #0066CC);
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* ── MI ── */
+.mi-subtitle {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  margin-bottom: 16rpx;
+}
+
+.mi-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.mi-chip {
+  padding: 10rpx 24rpx;
+  background: rgba(0, 113, 227, 0.08);
+  color: #0071E3;
+  border-radius: 20rpx;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+/* ── 名人校友 ── */
+.alumni-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.alumni-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+}
+
+.alumni-avatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0071E3, #0066CC);
+  color: #FFFFFF;
+  font-size: 30rpx;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.alumni-info {
+  flex: 1;
+}
+
+.alumni-name {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.alumni-title {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+}
+
+/* ── 校友感言 ── */
+.alumni-quote-section {
+  background: rgba(0, 113, 227, 0.04);
+  border-left: 6rpx solid #0071E3;
+  border-radius: 0 16rpx 16rpx 0;
+  margin-left: 32rpx;
+  padding-left: 28rpx !important;
+}
+
+.quote-mark {
+  display: block;
+  font-size: 72rpx;
+  color: #0071E3;
+  line-height: 0.6;
+  margin-bottom: 8rpx;
+  font-family: Georgia, serif;
+}
+
+.quote-text {
+  display: block;
+  font-size: 26rpx;
+  color: #6E6E73;
+  line-height: 1.8;
+  font-style: italic;
+}
+
+.quote-mark-end {
+  display: block;
+  font-size: 72rpx;
+  color: #0071E3;
+  line-height: 0.4;
+  text-align: right;
+  margin-top: 8rpx;
+  font-family: Georgia, serif;
+}
+
+/* ── 申请要求 ── */
+.req-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.req-label {
+  font-size: 26rpx;
+  color: #86868B;
+}
+
+.req-value {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+/* ── 课程体系 ── */
+.curriculum-badge {
+  display: inline-block;
+  padding: 12rpx 32rpx;
+  background: rgba(0, 113, 227, 0.08);
+  color: #0071E3;
+  border-radius: 12rpx;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+/* ── 无报告提示 ── */
+.no-assessment-tip {
+  background: rgba(255, 149, 0, 0.08);
+}
+
+.tip-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 12rpx;
+}
+
+.tip-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+}
+
+/* ══ 官方实时数据（College Scorecard）══ */
+/* ══ 官方数据整体容器 ══ */
+.live-data-section {
+  margin: 0 32rpx;
+}
+
+/* 标题行 */
+.ld-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.ld-header-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.live-badge {
+  font-size: 20rpx;
+  padding: 6rpx 16rpx;
+  background: rgba(52, 199, 89, 0.08);
+  border-radius: 24rpx;
+  color: #34C759;
+  border: 1rpx solid rgba(52, 199, 89, 0.20);
+}
+
+/* 加载骨架 */
+.live-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+  padding: 8rpx 0;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 24rpx;
+}
+
+.skeleton-row {
+  height: 28rpx;
+  background: #F5F5F7;
+  border-radius: 8rpx;
+  animation: skeletonPulse 1.4s ease-in-out infinite;
+}
+
+.skeleton-row.short {
+  width: 60%;
+}
+
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 0.5; }
+  50%       { opacity: 1;   }
+}
+
+/* ── 分组卡片 ── */
+.ld-group {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  border: 1rpx solid rgba(0, 0, 0, 0.07);
+  padding: 24rpx 24rpx 20rpx;
+  margin-bottom: 12rpx;
+}
+
+.ld-group-title {
+  display: block;
+  font-size: 18rpx;
+  font-weight: 600;
+  color: #AEAEB2;
+  text-transform: uppercase;
+  letter-spacing: 1rpx;
+  margin-bottom: 18rpx;
+}
+
+/* 每组数据行（三列） */
+.ld-row {
+  display: flex;
+  gap: 0;
+}
+
+.ld-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4rpx 0;
+  border-right: 1rpx solid rgba(0, 0, 0, 0.06);
+}
+
+.ld-item:last-child {
+  border-right: none;
+}
+
+.ld-val {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+  margin-bottom: 6rpx;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.ld-label {
+  display: block;
+  font-size: 18rpx;
+  color: #86868B;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* 各类数值颜色 */
+.ld-val-admission { color: #FF3B30; }  /* 录取率 — 红色（竞争激烈感）*/
+.ld-val-tuition   { color: #FF9500; font-size: 24rpx; } /* 学费 — 橙色 */
+.ld-val-cny       { color: #FF9500; font-size: 24rpx; } /* 人民币 — 橙色 */
+.ld-val-earn      { color: #34C759; } /* 收入 — 绿色（正向）*/
+.ld-val-gender    { font-size: 22rpx; } /* 男女比例 — 较小字体 */
+
+/* 净费用备注 */
+.ld-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  margin-top: 16rpx;
+  padding: 14rpx 16rpx;
+  background: rgba(0, 113, 227, 0.05);
+  border-radius: 10rpx;
+  border: 1rpx solid rgba(0, 113, 227, 0.10);
+}
+
+.ld-note-icon {
+  font-size: 22rpx;
+  flex-shrink: 0;
+}
+
+.ld-note-text {
+  font-size: 22rpx;
+  color: #0071E3;
+  line-height: 1.6;
+}
+
+/* 助学金分组特殊样式 */
+.ld-group-aid {
+  background: rgba(52, 199, 89, 0.05);
+  border-color: rgba(52, 199, 89, 0.18);
+}
+
+.ld-aid-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  flex-wrap: wrap;
+}
+
+.ld-aid-pct {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #34C759;
+  flex-shrink: 0;
+}
+
+.ld-aid-desc {
+  font-size: 24rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* 数据来源声明条 */
+.ld-source-bar {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 12rpx;
+  margin-top: 4rpx;
+}
+
+.ld-source-icon {
+  font-size: 20rpx;
+  flex-shrink: 0;
+}
+
+.ld-source-text {
+  font-size: 18rpx;
+  color: #AEAEB2;
+  line-height: 1.5;
+}
+
+/* ══ 费用三列表：学费 + 生活费 = 总计 ══ */
+.ld-cost-table {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-top: 16rpx;
+  padding: 20rpx 16rpx;
+  background: rgba(255, 149, 0, 0.05);
+  border: 0.5rpx solid rgba(255, 149, 0, 0.20);
+  border-radius: 14rpx;
+  gap: 4rpx;
+}
+
+.ld-cost-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.ld-cost-col-total {
+  background: rgba(255, 149, 0, 0.08);
+  border-radius: 10rpx;
+  padding: 8rpx 4rpx;
+}
+
+.ld-cost-plus {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #AEAEB2;
+  align-self: center;
+  padding: 0 4rpx;
+  flex-shrink: 0;
+}
+
+.ld-cost-val {
+  display: block;
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #FF9500;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.ld-cost-total-val {
+  color: #FF6B00;
+  font-size: 23rpx;
+}
+
+.ld-cost-sub {
+  display: block;
+  font-size: 18rpx;
+  color: #86868B;
+  text-align: center;
+}
+
+.ld-cost-label {
+  display: block;
+  font-size: 18rpx;
+  color: #6E6E73;
+  text-align: center;
+  letter-spacing: 0.5rpx;
+  margin-top: 4rpx;
+}
+
+/* 州内学费提示条 */
+.ld-instate-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  margin-top: 12rpx;
+  padding: 10rpx 14rpx;
+  background: rgba(0, 0, 0, 0.03);
+  border-radius: 8rpx;
+}
+
+/* 数据来源备注 */
+.ld-note-source { margin-top: 6rpx; opacity: 0.70; }
+
+/* ══ 旧版总费用卡（保留为降级样式）══ */
+.ld-total-cost { display: none; }
+.ld-total-cost-row { display: none; }
+.ld-total-cost-label { display: none; }
+.ld-total-cost-val { display: none; }
+.ld-total-cost-tip { display: none; }
+
+/* ══ SAT/ACT 区间值 ══ */
+.ld-val-range {
+  font-size: 26rpx;
+  color: #0071E3;
+  font-weight: 700;
+}
+
+/* ══ 专业分布条形图 ══ */
+.ld-prog-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14rpx;
+}
+
+.ld-prog-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.ld-prog-bar-wrap {
+  width: 120rpx;
+  height: 8rpx;
+  background: #F0F0F2;
+  border-radius: 4rpx;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ld-prog-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #0071E3, #34C759);
+  border-radius: 4rpx;
+  min-width: 4rpx;
+}
+
+.ld-prog-label {
+  flex: 1;
+  font-size: 24rpx;
+  color: #1D1D1F;
+}
+
+.ld-prog-val {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #0071E3;
+  min-width: 50rpx;
+  text-align: right;
+}
+
+/* ══ 族裔构成条形图 ══ */
+.ld-race-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16rpx;
+}
+
+.ld-race-item {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+}
+
+.ld-race-label {
+  font-size: 24rpx;
+  color: #6E6E73;
+  width: 80rpx;
+  flex-shrink: 0;
+}
+
+.ld-race-bar-wrap {
+  flex: 1;
+  height: 10rpx;
+  background: #F0F0F2;
+  border-radius: 5rpx;
+  overflow: hidden;
+}
+
+.ld-race-bar {
+  height: 100%;
+  border-radius: 5rpx;
+  min-width: 4rpx;
+}
+
+.ld-race-val {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  min-width: 50rpx;
+  text-align: right;
+}
+
+/* ══════════════════════════════════════════════
+   第二层：留学生支持与社区资源
+══════════════════════════════════════════════ */
+.res-section {
+  margin: 0 32rpx;
+}
+
+.res-header {
+  margin-bottom: 16rpx;
+}
+
+.res-header-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.res-header-sub {
+  display: block;
+  font-size: 20rpx;
+  color: #AEAEB2;
+}
+
+/* 通用资源卡片 */
+.res-card {
+  background: #FFFFFF;
+  border: 1rpx solid rgba(0, 0, 0, 0.07);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 12rpx;
+}
+
+.res-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.res-card-icon {
+  font-size: 34rpx;
+  flex-shrink: 0;
+  line-height: 1.4;
+}
+
+.res-card-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 2rpx;
+}
+
+.res-card-sub {
+  display: block;
+  font-size: 20rpx;
+  color: #86868B;
+}
+
+.res-card-body {
+  font-size: 26rpx;
+  color: #3C3C43;
+  line-height: 1.8;
+}
+
+/* CSSA 卡片 */
+.res-card-cssa {
+  background: rgba(0, 113, 227, 0.04);
+  border-color: rgba(0, 113, 227, 0.12);
+}
+
+.res-cssa-url {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0, 113, 227, 0.08);
+  border-radius: 10rpx;
+  padding: 12rpx 16rpx;
+  margin-top: 8rpx;
+}
+
+.res-url-text {
+  font-size: 22rpx;
+  color: #0071E3;
+  flex: 1;
+  word-break: break-all;
+}
+
+.res-url-copy {
+  font-size: 20rpx;
+  color: #86868B;
+  flex-shrink: 0;
+  margin-left: 12rpx;
+}
+
+/* 隐藏机会卡片 */
+.res-card-opps {
+  background: rgba(52, 199, 89, 0.04);
+  border-color: rgba(52, 199, 89, 0.15);
+}
+
+.res-opp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin-bottom: 14rpx;
+}
+
+.res-opp-item:last-child {
+  margin-bottom: 0;
+}
+
+.res-opp-dot {
+  font-size: 28rpx;
+  color: #34C759;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1.6;
+}
+
+.res-opp-text {
+  font-size: 26rpx;
+  color: #3C3C43;
+  line-height: 1.7;
+  flex: 1;
+}
+
+/* 过来人建议卡片 */
+.res-card-tip {
+  background: rgba(175, 82, 222, 0.04);
+  border-color: rgba(175, 82, 222, 0.12);
+}
+
+.res-card-tip-text {
+  color: #1D1D1F;
+  font-style: italic;
+}
+
+/* 建设中提示 */
+.res-building {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40rpx 32rpx;
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  text-align: center;
+}
+
+.res-building-icon {
+  font-size: 48rpx;
+  margin-bottom: 12rpx;
+}
+
+.res-building-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  margin-bottom: 8rpx;
+}
+
+.res-building-sub {
+  display: block;
+  font-size: 24rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+}
+
+/* ── 底部按钮 ── */
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 16rpx;
+  padding: 20rpx 32rpx calc(20rpx + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(20rpx);
+  -webkit-backdrop-filter: blur(20rpx);
+  border-top: 1rpx solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 -4rpx 16rpx rgba(0, 0, 0, 0.07);
+}
+
+.bottom-bar .btn-outline,
+.bottom-bar .btn-primary {
+  flex: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   🎓 寄宿高中详情样式
+══════════════════════════════════════════════════════════════ */
+
+.bd-section {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  margin: 0 20rpx 16rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+}
+
+.bd-section-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 18rpx;
+}
+
+.bd-row {
+  display: flex;
+  gap: 0;
+  background: #F5F5F7;
+  border-radius: 14rpx;
+  overflow: hidden;
+  margin-bottom: 12rpx;
+}
+
+.bd-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 18rpx 8rpx;
+  border-right: 1rpx solid rgba(0,0,0,0.06);
+}
+
+.bd-item:last-child { border-right: none; }
+
+.bd-val {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.bd-item.bd-item-red .bd-val  { color: #FF3B30; }
+.bd-item.bd-item-orange .bd-val { color: #FF9500; font-size: 24rpx; }
+.bd-item.bd-item-purple .bd-val { color: #5856D6; }
+.bd-item.bd-item-green .bd-val  { color: #34C759; }
+
+.bd-label {
+  font-size: 20rpx;
+  color: #AEAEB2;
+  text-align: center;
+}
+
+.bd-cny-row {
+  text-align: center;
+  margin-bottom: 12rpx;
+}
+
+.bd-cny-text {
+  font-size: 22rpx;
+  color: #86868B;
+}
+
+.bd-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  background: rgba(0,113,227,0.06);
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+  margin-top: 4rpx;
+}
+
+.bd-note-icon { font-size: 22rpx; }
+
+.bd-note-text {
+  flex: 1;
+  font-size: 22rpx;
+  color: #3C3C43;
+  line-height: 1.6;
+}
+
+.bd-note-card {
+  background: #F5F5F7;
+  border-radius: 14rpx;
+  padding: 18rpx;
+}
+
+.bd-note-card-text {
+  font-size: 24rpx;
+  color: #3C3C43;
+  line-height: 1.7;
+}
+
+.bd-college-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.bd-college-chip {
+  font-size: 22rpx;
+  font-weight: 600;
+  color: #0071E3;
+  background: rgba(0,113,227,0.1);
+  padding: 8rpx 18rpx;
+  border-radius: 980rpx;
+}
+
+.bd-college-note {
+  font-size: 20rpx;
+  color: #AEAEB2;
+  display: block;
+}
+
+.bd-alumni-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10rpx;
+}
+
+.bd-alumni-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+}
+
+.bd-alumni-dot {
+  font-size: 18rpx;
+  color: #5856D6;
+  margin-top: 4rpx;
+  flex-shrink: 0;
+}
+
+.bd-alumni-name {
+  font-size: 24rpx;
+  color: #3C3C43;
+  line-height: 1.5;
+}
+
+/* 资源二层 */
+.bd-res-section {
+  margin: 0 20rpx 16rpx;
+}
+
+.bd-res-header {
+  padding: 0 4rpx 16rpx;
+}
+
+.bd-res-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  display: block;
+  margin-bottom: 4rpx;
+}
+
+.bd-res-sub {
+  font-size: 22rpx;
+  color: #86868B;
+}
+
+.bd-res-card {
+  background: #FFFFFF;
+  border-radius: 18rpx;
+  padding: 22rpx 20rpx;
+  margin-bottom: 12rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+  border-left: 4rpx solid transparent;
+}
+
+.bd-res-card-cn   { border-left-color: #FF3B30; }
+.bd-res-card-emp  { border-left-color: #FF9500; }
+.bd-res-card-opps { border-left-color: #5856D6; }
+.bd-res-card-china{ border-left-color: #FF9500; }
+.bd-res-card-tip  { border-left-color: #34C759; }
+
+.bd-res-card-head {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-bottom: 12rpx;
+}
+
+.bd-res-card-icon { font-size: 32rpx; }
+
+.bd-res-card-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+
+.bd-res-card-body {
+  font-size: 24rpx;
+  color: #3C3C43;
+  line-height: 1.7;
+}
+
+.bd-res-tip-text {
+  color: #248A3D;
+  font-style: italic;
+}
+
+.bd-opp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12rpx;
+}
+
+.bd-opp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+}
+
+.bd-opp-dot {
+  font-size: 24rpx;
+  color: #5856D6;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.bd-opp-text {
+  flex: 1;
+  font-size: 23rpx;
+  color: #3C3C43;
+  line-height: 1.6;
+}
+
+/* 官网入口 */
+.bd-website-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 20rpx 24rpx;
+  margin: 0 20rpx 16rpx;
+  box-shadow: 0 2rpx 10rpx rgba(0,0,0,0.05);
+}
+
+.bd-website-icon { font-size: 28rpx; }
+
+.bd-website-url {
+  flex: 1;
+  font-size: 22rpx;
+  color: #0071E3;
+}
+
+.bd-website-copy {
+  font-size: 22rpx;
+  color: #AEAEB2;
+}
+
+/* ─── fitFor 顶部定位卡 ──────────────────────────── */
+.bd-fitfor-card {
+  background: linear-gradient(135deg, rgba(88,86,214,0.08) 0%, rgba(255,149,0,0.06) 100%);
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx;
+  margin: 0 20rpx 16rpx;
+  border: 1.5rpx solid rgba(88, 86, 214, 0.15);
+}
+
+.bd-fitfor-top {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 12rpx;
+}
+
+.bd-fitfor-icon { font-size: 30rpx; }
+
+.bd-fitfor-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.bd-fitfor-body {
+  font-size: 28rpx;
+  color: #3A3A3C;
+  line-height: 1.6;
+  margin-bottom: 16rpx;
+  display: block;
+}
+
+/* 融合度（detail page） */
+.bd-integration-row {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
+  margin-top: 4rpx;
+}
+
+.bd-integration-label {
+  font-size: 22rpx;
+  color: #6E6E73;
+  flex-shrink: 0;
+}
+
+.bd-integration-dots {
+  display: flex;
+  gap: 6rpx;
+}
+
+.bd-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: 50%;
+  background: #E5E5EA;
+}
+
+.bd-dot-on {
+  background: #34C759;
+}
+
+.bd-integration-badge {
+  font-size: 22rpx;
+  color: #248A3D;
+  font-weight: 600;
+}
+
+.bd-integration-hint {
+  font-size: 20rpx;
+  color: #AEAEB2;
+}
+
+/* ─── 申请要求 section ───────────────────────────── */
+.bd-admission-section {
+  border-left: 4rpx solid #FF9500;
+}
+
+.bd-adm-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.bd-adm-item {
+  background: #F5F5F7;
+  border-radius: 14rpx;
+  padding: 16rpx 20rpx;
+  min-width: 140rpx;
+  flex: 1;
+}
+
+.bd-adm-label {
+  display: block;
+  font-size: 20rpx;
+  color: #8E8E93;
+  margin-bottom: 6rpx;
+}
+
+.bd-adm-val {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.bd-adm-val-red {
+  color: #FF3B30;
+}
+
+/* ─── 中国学生申请 tip card ──────────────────────── */
+.bd-tip-card {
+  background: rgba(255, 59, 48, 0.05);
+  border-radius: 14rpx;
+  padding: 18rpx 20rpx;
+  border-left: 4rpx solid #FF3B30;
+}
+
+.bd-tip-head {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  margin-bottom: 8rpx;
+}
+
+.bd-tip-icon { font-size: 24rpx; }
+
+.bd-tip-title {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #C0392B;
+}
+
+.bd-tip-body {
+  font-size: 26rpx;
+  color: #3A3A3C;
+  line-height: 1.6;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   🇨🇳 中国大学富数据样式
+═══════════════════════════════════════════════════════════ */
+
+.cn-section {
+  border-left: 4rpx solid #FF3B30;
+}
+
+/* ─── 录取难度 ────── */
+.cn-difficulty-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.cn-diff-label {
+  font-size: 26rpx;
+  color: #6E6E73;
+}
+
+.cn-diff-badge {
+  font-size: 24rpx;
+  font-weight: 700;
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+}
+
+.cn-diff-extreme   { background: rgba(255,59,48,0.12);  color: #FF3B30; }
+.cn-diff-very_high { background: rgba(255,107,53,0.12); color: #FF6B35; }
+.cn-diff-high      { background: rgba(255,149,0,0.12);  color: #FF9500; }
+.cn-diff-medium    { background: rgba(52,199,89,0.12);  color: #248A3D; }
+
+.cn-diff-sub {
+  font-size: 22rpx;
+  color: #8E8E93;
+}
+
+/* ─── 高考分数表 ────── */
+.cn-gaokao-section {
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  padding: 16rpx 18rpx;
+  margin-top: 10rpx;
+}
+
+.cn-gaokao-title {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  margin-bottom: 12rpx;
+}
+
+.cn-gaokao-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8rpx 0;
+  border-bottom: 1rpx solid rgba(0,0,0,0.05);
+}
+
+.cn-gaokao-province {
+  font-size: 26rpx;
+  color: #3A3A3C;
+}
+
+.cn-gaokao-score {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FF3B30;
+}
+
+.cn-gaokao-rank {
+  color: #5856D6;
+}
+
+.cn-gaokao-disclaimer {
+  display: block;
+  font-size: 20rpx;
+  color: #AEAEB2;
+  margin-top: 12rpx;
+  text-align: center;
+}
+
+/* ─── note card ────── */
+.cn-note-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  background: rgba(255,149,0,0.07);
+  border-radius: 12rpx;
+  padding: 14rpx 16rpx;
+  margin-top: 12rpx;
+}
+
+.cn-note-green { background: rgba(52,199,89,0.07); }
+
+.cn-note-icon { font-size: 24rpx; flex-shrink: 0; }
+
+.cn-note-text {
+  font-size: 25rpx;
+  color: #3A3A3C;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* ─── 费用 Grid ────── */
+.cn-cost-grid {
+  display: flex;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.cn-cost-item {
+  flex: 1;
+  background: #F5F5F7;
+  border-radius: 14rpx;
+  padding: 16rpx 12rpx;
+  text-align: center;
+}
+
+.cn-cost-item-total {
+  background: rgba(52,199,89,0.10);
+}
+
+.cn-cost-val {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.cn-cost-total-val { color: #248A3D; }
+
+.cn-cost-label {
+  font-size: 20rpx;
+  color: #8E8E93;
+}
+
+/* ─── 毕业去向 ────── */
+.cn-outcome-row {
+  display: flex;
+  gap: 0;
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  overflow: hidden;
+}
+
+.cn-outcome-item {
+  flex: 1;
+  padding: 20rpx 8rpx;
+  text-align: center;
+  border-right: 1rpx solid rgba(0,0,0,0.05);
+}
+
+.cn-outcome-val {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  margin-bottom: 4rpx;
+}
+
+.cn-val-green  { color: #248A3D; }
+.cn-val-blue   { color: #0071E3; }
+.cn-val-purple { color: #5856D6; }
+.cn-val-orange { color: #FF9500; }
+
+.cn-outcome-label {
+  display: block;
+  font-size: 20rpx;
+  color: #6E6E73;
+  margin-bottom: 2rpx;
+}
+
+.cn-outcome-sub {
+  font-size: 18rpx;
+  color: #AEAEB2;
+}
+
+/* ─── 薪资 ────── */
+.cn-salary-row {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(90deg, rgba(88,86,214,0.06) 0%, rgba(0,113,227,0.06) 100%);
+  border-radius: 16rpx;
+  padding: 20rpx 16rpx;
+  margin-bottom: 12rpx;
+  gap: 0;
+}
+
+.cn-salary-item {
+  flex: 1;
+  text-align: center;
+}
+
+.cn-salary-sep {
+  width: 1rpx;
+  height: 40rpx;
+  background: rgba(0,0,0,0.1);
+}
+
+.cn-salary-val {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #5856D6;
+  margin-bottom: 6rpx;
+}
+
+.cn-salary-label {
+  font-size: 20rpx;
+  color: #6E6E73;
+}
+
+/* ─── 雇主去向 ────── */
+.cn-employer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-bottom: 14rpx;
+}
+
+.cn-employer-chip {
+  background: rgba(0,113,227,0.08);
+  color: #0071E3;
+  font-size: 24rpx;
+  border-radius: 20rpx;
+  padding: 8rpx 20rpx;
+}
+
+.cn-industry-row, .cn-city-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8rpx;
+  margin-top: 6rpx;
+}
+
+.cn-industry-label, .cn-city-label {
+  font-size: 24rpx;
+  color: #8E8E93;
+  flex-shrink: 0;
+}
+
+.cn-industry-text, .cn-city-text {
+  font-size: 24rpx;
+  color: #3A3A3C;
+  line-height: 1.5;
+}
+
+/* ─── 实战资源板块 ────── */
+.cn-res-section {
+  margin: 0 20rpx 20rpx;
+}
+
+.cn-res-header {
+  margin-bottom: 16rpx;
+}
+
+.cn-res-title {
+  display: block;
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+  margin-bottom: 4rpx;
+}
+
+.cn-res-sub {
+  font-size: 22rpx;
+  color: #8E8E93;
+}
+
+.cn-res-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 14rpx;
+  border-left: 4rpx solid #E5E5EA;
+  box-shadow: 0 2rpx 8rpx rgba(0,0,0,0.05);
+}
+
+.cn-res-admission  { border-left-color: #FF9500; }
+.cn-res-career     { border-left-color: #0071E3; }
+.cn-res-opps       { border-left-color: #5856D6; }
+.cn-res-alumni     { border-left-color: #34C759; }
+.cn-res-competition{ border-left-color: #FF3B30; }
+
+.cn-res-head {
+  display: flex;
+  align-items: center;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.cn-res-icon { font-size: 28rpx; }
+
+.cn-res-card-title {
+  font-size: 26rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.cn-res-body {
+  font-size: 26rpx;
+  color: #3A3A3C;
+  line-height: 1.7;
+}
+
+.cn-opp-list { padding-left: 4rpx; }
+
+.cn-opp-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10rpx;
+  margin-bottom: 10rpx;
+}
+
+.cn-opp-dot {
+  font-size: 28rpx;
+  color: #5856D6;
+  flex-shrink: 0;
+  line-height: 1.5;
+}
+
+.cn-opp-text {
+  font-size: 26rpx;
+  color: #3A3A3C;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* ══ 中国高校联系方式板块 ══ */
+.cn-contact-section {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  margin: 24rpx 0;
+  padding: 32rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.06);
+}
+
+.cn-contact-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 24rpx;
+}
+
+.cn-contact-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1C1C1E;
+  flex: 1;
+}
+
+.cn-live-badge {
+  font-size: 22rpx;
+  color: #34C759;
+  background: rgba(52,199,89,0.10);
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+}
+
+.cn-live-badge.loading {
+  color: #8E8E93;
+  background: rgba(142,142,147,0.10);
+}
+
+.cn-contact-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F2F2F7;
+}
+
+.cn-contact-row:last-child { border-bottom: none; }
+
+.cn-contact-icon {
+  font-size: 32rpx;
+  width: 40rpx;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.cn-contact-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+
+.cn-contact-label {
+  font-size: 24rpx;
+  color: #8E8E93;
+}
+
+.cn-contact-value {
+  font-size: 26rpx;
+  color: #3A3A3C;
+  line-height: 1.5;
+}
+
+.cn-gaokao-link { cursor: pointer; }
+
+.link-text {
+  color: #5856D6 !important;
+  font-size: 26rpx;
+}
+
+/* ══ 高考分数线板块 ══ */
+.gaokao-section {
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  margin: 24rpx 0;
+  padding: 32rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.06);
+}
+
+.gaokao-header {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  margin-bottom: 24rpx;
+}
+
+.gaokao-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: #1C1C1E;
+}
+
+.gaokao-subtitle {
+  font-size: 22rpx;
+  color: #8E8E93;
+}
+
+/* 省份横向滚动选择器 */
+.province-scroll {
+  width: 100%;
+  white-space: nowrap;
+  margin-bottom: 24rpx;
+}
+
+.province-tabs {
+  display: flex;
+  gap: 12rpx;
+  padding-bottom: 4rpx;
+}
+
+.province-tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 10rpx 24rpx;
+  border-radius: 32rpx;
+  font-size: 26rpx;
+  color: #3A3A3C;
+  background: #F2F2F7;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.province-tab.active {
+  background: #5856D6;
+  color: #FFFFFF;
+  font-weight: 600;
+}
+
+/* 分数线表格 */
+.score-table {
+  border-radius: 12rpx;
+  overflow: hidden;
+  border: 1rpx solid #E5E5EA;
+}
+
+.score-row {
+  display: flex;
+  align-items: center;
+}
+
+.header-row {
+  background: #F8F8FF;
+  border-bottom: 2rpx solid #E5E5EA;
+}
+
+.row-even { background: #FFFFFF; }
+.row-odd  { background: #FAFAFA; }
+
+.score-cell {
+  padding: 18rpx 16rpx;
+  font-size: 26rpx;
+  color: #3A3A3C;
+}
+
+.header-row .score-cell {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #8E8E93;
+}
+
+.year-col  { width: 120rpx; flex-shrink: 0; }
+.type-col  { width: 100rpx; flex-shrink: 0; }
+.score-col { flex: 1; }
+.rank-col  { flex: 1; text-align: right; padding-right: 24rpx; }
+
+.highlight-score {
+  font-weight: 700;
+  font-size: 28rpx;
+  color: #5856D6;
+}
+
+.score-empty {
+  text-align: center;
+  padding: 40rpx;
+  color: #8E8E93;
+  font-size: 26rpx;
+}
+
+.gaokao-disclaimer {
+  margin-top: 20rpx;
+  padding: 16rpx 20rpx;
+  background: rgba(255,149,0,0.08);
+  border-radius: 12rpx;
+  border-left: 4rpx solid #FF9500;
+}
+
+.gaokao-disclaimer text {
+  font-size: 22rpx;
+  color: #8E5E00;
+  line-height: 1.6;
+}
+
+/* ── 2025最新年高亮行 ── */
+.row-2025 {
+  background: #FFF8E1 !important;
+  border-left: 4rpx solid #FF9500;
+}
+.row-2025 .year-col {
+  color: #FF6900;
+  font-weight: 600;
+}
+
+/* ── 2026预判卡片区域 ── */
+.pred-2026-block {
+  margin: 20rpx 0;
+  background: linear-gradient(135deg, #F0F4FF 0%, #EAF0FE 100%);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  border: 1rpx solid #C5D5F8;
+}
+.pred-2026-header {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 18rpx;
+}
+.pred-2026-badge {
+  background: #2463EB;
+  color: #FFFFFF;
+  font-size: 22rpx;
+  font-weight: 700;
+  padding: 6rpx 18rpx;
+  border-radius: 20rpx;
+  margin-right: 12rpx;
+}
+.pred-2026-hint {
+  font-size: 22rpx;
+  color: #6B7280;
+}
+.pred-2026-cards {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+.pred-2026-card {
+  flex: 1;
+  min-width: 200rpx;
+  background: #FFFFFF;
+  border-radius: 12rpx;
+  padding: 20rpx 16rpx;
+  border: 1rpx solid #D1DDF6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.pred-card-type {
+  font-size: 22rpx;
+  color: #6B7280;
+  margin-bottom: 8rpx;
+}
+.pred-card-score {
+  font-size: 44rpx;
+  font-weight: 700;
+  color: #1A3A8F;
+  line-height: 1.1;
+}
+.pred-card-range {
+  font-size: 20rpx;
+  color: #9CA3AF;
+  margin-top: 6rpx;
+}
+.pred-card-trend {
+  font-size: 22rpx;
+  font-weight: 600;
+  margin-top: 8rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+}
+.pred-card-trend.rising  { color: #DC2626; background: #FEE2E2; }
+.pred-card-trend.stable  { color: #6B7280; background: #F3F4F6; }
+.pred-card-trend.falling { color: #2563EB; background: #EFF6FF; }
+
+/* ══════════════════════════════════════════════════════
+   招生政策区块
+══════════════════════════════════════════════════════ */
+.policy-section {
+  margin: 24rpx 0;
+}
+.policy-header {
+  display: flex;
+  flex-direction: row;
+  align-items: baseline;
+  margin-bottom: 20rpx;
+}
+.policy-title {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #111827;
+  margin-right: 16rpx;
+}
+.policy-disclaimer {
+  font-size: 20rpx;
+  color: #9CA3AF;
+}
+
+/* ── 政策卡片 ── */
+.policy-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  border: 1rpx solid #E5E7EB;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.04);
+}
+.policy-card-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 16rpx;
+  flex-wrap: wrap;
+  gap: 10rpx;
+}
+.policy-card-icon {
+  font-size: 32rpx;
+  margin-right: 8rpx;
+}
+.policy-card-name {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1F2937;
+  flex: 1;
+}
+.policy-card-body {
+  font-size: 26rpx;
+  color: #4B5563;
+  line-height: 1.7;
+}
+
+/* ── 政策徽章 ── */
+.policy-badge {
+  font-size: 22rpx;
+  font-weight: 600;
+  padding: 6rpx 16rpx;
+  border-radius: 20rpx;
+  white-space: nowrap;
+}
+/* 转专业难度色彩 */
+.transfer-free     { background: #D1FAE5; color: #065F46; }
+.transfer-easy     { background: #D1FAE5; color: #065F46; }
+.transfer-medium   { background: #FEF3C7; color: #92400E; }
+.transfer-hard     { background: #FEE2E2; color: #991B1B; }
+.transfer-restricted { background: #F3F4F6; color: #374151; }
+/* 大类招生 */
+.broad-full    { background: #DBEAFE; color: #1E40AF; }
+.broad-partial { background: #EDE9FE; color: #5B21B6; }
+.broad-major   { background: #F3F4F6; color: #374151; }
+/* 强基 */
+.qiangji-yes { background: #D1FAE5; color: #065F46; }
+.qiangji-no  { background: #F3F4F6; color: #6B7280; }
+
+/* ── 提示条 ── */
+.policy-tip {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  margin-top: 14rpx;
+  background: #FFFBEB;
+  border-radius: 10rpx;
+  padding: 14rpx 16rpx;
+  border-left: 4rpx solid #F59E0B;
+}
+.policy-tip-icon { font-size: 26rpx; margin-right: 10rpx; flex-shrink: 0; }
+.policy-tip-text { font-size: 24rpx; color: #78350F; line-height: 1.6; }
+
+/* ── 分流时间 ── */
+.policy-split-timing {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-top: 14rpx;
+  background: #F0F9FF;
+  border-radius: 10rpx;
+  padding: 12rpx 16rpx;
+}
+.timing-icon { font-size: 24rpx; margin-right: 8rpx; }
+.timing-text { font-size: 24rpx; color: #0369A1; }
+
+/* ── 强基专业标签 ── */
+.qiangji-majors {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 16rpx;
+}
+.qiangji-major-tag {
+  font-size: 22rpx;
+  padding: 6rpx 16rpx;
+  background: #EFF6FF;
+  color: #1D4ED8;
+  border-radius: 20rpx;
+  border: 1rpx solid #BFDBFE;
+}
+
+/* ── 强基入围参考分 ── */
+.qiangji-ref-score {
+  margin-top: 16rpx;
+  background: #F8FAFC;
+  border-radius: 12rpx;
+  padding: 16rpx 20rpx;
+}
+.ref-score-label {
+  font-size: 22rpx;
+  color: #6B7280;
+  display: block;
+  margin-bottom: 10rpx;
+}
+.ref-score-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  padding: 6rpx 0;
+  border-bottom: 1rpx solid #E5E7EB;
+}
+.ref-score-row:last-child { border-bottom: none; }
+.ref-score-province { font-size: 24rpx; color: #374151; }
+.ref-score-val { font-size: 24rpx; font-weight: 600; color: #1D4ED8; }
+
+/* ── 保研/深造统计条 ── */
+.postgrad-stats {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background: linear-gradient(135deg, #EFF6FF 0%, #F0FDF4 100%);
+  border-radius: 12rpx;
+  padding: 20rpx;
+  margin-bottom: 16rpx;
+}
+.postgrad-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.postgrad-num {
+  font-size: 40rpx;
+  font-weight: 700;
+  color: #1E40AF;
+}
+.postgrad-label {
+  font-size: 20rpx;
+  color: #6B7280;
+  margin-top: 4rpx;
+}
+.postgrad-divider {
+  width: 1rpx;
+  height: 60rpx;
+  background: #D1D5DB;
+}
+
+/* ── Phase 1-B: 中国学生视角 ─────────────────────────────── */
+.cn-student-section {
+  background: #F5F5F7;
+  margin: 0 0 24rpx;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+}
+
+.cn-student-header {
+  margin-bottom: 20rpx;
+}
+
+.cn-student-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.3rpx;
+}
+
+.cn-student-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #86868B;
+  margin-top: 4rpx;
+}
+
+.cn-info-card {
+  background: #FFFFFF;
+  border-radius: 16rpx;
+  padding: 20rpx;
+  margin-bottom: 12rpx;
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+}
+
+.cn-info-card:last-child {
+  margin-bottom: 0;
+}
+
+.cn-info-stem {
+  background: linear-gradient(135deg, #EFF6FF 0%, #F5F3FF 100%);
+  border-color: rgba(99,102,241,0.15);
+}
+
+.cn-info-cost4yr {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FFF7F0 100%);
+  border-color: rgba(251,191,36,0.2);
+}
+
+.cn-info-head {
+  display: flex;
+  gap: 16rpx;
+  align-items: flex-start;
+}
+
+.cn-info-icon {
+  font-size: 36rpx;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+}
+
+.cn-info-title {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+  line-height: 1.3;
+  margin-bottom: 6rpx;
+}
+
+.cn-info-body {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+}
+
+/* 就业方向标签 */
+.cn-career-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 14rpx;
+}
+
+.cn-career-tag {
+  font-size: 22rpx;
+  color: #0071E3;
+  background: rgba(0,113,227,0.08);
+  border-radius: 980rpx;
+  padding: 6rpx 18rpx;
+  font-weight: 500;
+}
+
+/* ── Phase 1-C: 快速适配度检测 ──────────────────────────── */
+.fit-check-section {
+  background: #FFFFFF;
+  margin: 0 0 24rpx;
+  padding: 28rpx 24rpx;
+  border-radius: 20rpx;
+  box-shadow: 0 2rpx 12rpx rgba(0,0,0,0.06);
+  border: 0.5rpx solid rgba(0,0,0,0.05);
+}
+
+.fit-check-header {
+  margin-bottom: 20rpx;
+}
+
+.fit-check-title {
+  display: block;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+  letter-spacing: -0.3rpx;
+}
+
+.fit-check-sub {
+  display: block;
+  font-size: 22rpx;
+  color: #86868B;
+  margin-top: 4rpx;
+}
+
+.fit-row {
+  margin-bottom: 16rpx;
+}
+
+.fit-row-label {
+  display: block;
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #3C3C43;
+  margin-bottom: 10rpx;
+}
+
+.fit-scroll { width: 100%; }
+
+.fit-band-row {
+  display: flex;
+  gap: 8rpx;
+  padding-bottom: 4rpx;
+  white-space: nowrap;
+}
+
+.fit-band-chip {
+  display: inline-flex;
+  padding: 10rpx 24rpx;
+  border-radius: 980rpx;
+  font-size: 24rpx;
+  font-weight: 500;
+  color: #3C3C43;
+  background: #F5F5F7;
+  flex-shrink: 0;
+  letter-spacing: 0.2rpx;
+}
+
+.fit-chip-active {
+  background: #1D1D1F;
+  color: #FFFFFF;
+}
+
+.fit-result {
+  border-radius: 16rpx;
+  padding: 20rpx;
+  border: 1.5rpx solid;
+  margin-top: 8rpx;
+}
+
+.fit-result-top {
+  margin-bottom: 8rpx;
+}
+
+.fit-result-tier {
+  font-size: 28rpx;
+  font-weight: 700;
+  letter-spacing: -0.3rpx;
+}
+
+.fit-result-reason {
+  display: block;
+  font-size: 24rpx;
+  color: #3C3C43;
+  line-height: 1.5;
+}
+
+.fit-result-cta {
+  margin-top: 14rpx;
+  padding: 12rpx 0 0;
+  border-top: 1rpx solid rgba(0,0,0,0.08);
+}
+
+.fit-cta-text {
+  font-size: 24rpx;
+  color: #0071E3;
+  font-weight: 600;
+}
+
+.fit-hint {
+  text-align: center;
+  padding: 20rpx 0 8rpx;
+}
+
+.fit-hint-text {
+  font-size: 24rpx;
+  color: #AEAEB2;
+}
+
+/* ── Phase 1-D: 收藏按钮 ─────────────────────────────────── */
+.header-fav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+  flex-shrink: 0;
+  margin-top: -4rpx;
+}
+
+.header-fav-icon {
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+/* ── Phase 2: 报告入口 banner ───────────────────────────── */
+.report-cta-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #1D1D1F 0%, #3C3C3E 100%);
+  margin: 0 0 24rpx;
+  padding: 24rpx;
+  border-radius: 20rpx;
+}
+
+.report-cta-banner:active { opacity: 0.85; }
+
+.report-cta-left {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.report-cta-icon { font-size: 44rpx; }
+
+.report-cta-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+}
+
+.report-cta-sub {
+  display: block;
+  font-size: 22rpx;
+  color: rgba(255,255,255,0.6);
+  margin-top: 4rpx;
+}
+
+.report-cta-price {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+  flex-shrink: 0;
+}
+
+.report-cta-price-label {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #FFD60A;
+}
+
+.report-cta-arrow {
+  font-size: 40rpx;
+  color: rgba(255,255,255,0.4);
+  font-weight: 200;
+  line-height: 1;
+}
+
+/* ── Phase 3: 截止日期 & 奖学金提示 ─────────────────────── */
+.cn-info-deadline {
+  background: linear-gradient(135deg, #F0FFF4 0%, #F5F3FF 100%);
+  border-color: rgba(52,199,89,0.15);
+}
+
+.deadline-extra-row {
+  display: flex;
+  gap: 8rpx;
+  flex-wrap: wrap;
+  margin-top: 12rpx;
+}
+
+.deadline-chip {
+  font-size: 20rpx;
+  font-weight: 500;
+  padding: 5rpx 14rpx;
+  border-radius: 980rpx;
+}
+
+.chip-green {
+  color: #34C759;
+  background: rgba(52,199,89,0.1);
+}
+
+.chip-blue {
+  color: #0071E3;
+  background: rgba(0,113,227,0.08);
+}
+
+.chip-gray {
+  color: #86868B;
+  background: rgba(0,0,0,0.05);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   P5 专业上下文（Program Context Section）
+   ══════════════════════════════════════════════════════════════════ */
+.program-ctx-section {
+  margin: 24rpx 32rpx;
+  background: linear-gradient(135deg, #F0F4FF 0%, #EFF8FF 100%);
+  border-radius: 20rpx; padding: 28rpx;
+  border: 1rpx solid rgba(0,113,227,0.18);
+}
+.program-ctx-header {
+  display: flex; flex-direction: row; align-items: center;
+  gap: 16rpx; margin-bottom: 24rpx;
+}
+.program-ctx-icon { font-size: 36rpx; }
+.program-ctx-title-col { display: flex; flex-direction: column; gap: 4rpx; }
+.program-ctx-title { font-size: 28rpx; font-weight: 700; color: #1D1D1F; }
+.program-ctx-sub { font-size: 22rpx; color: #6E6E73; }
+.program-ctx-grid {
+  display: flex; flex-direction: row; flex-wrap: wrap; gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+.program-ctx-item {
+  background: #FFFFFF; border-radius: 14rpx;
+  padding: 18rpx 22rpx; min-width: 140rpx;
+  border: 1rpx solid rgba(0,113,227,0.1);
+  display: flex; flex-direction: column; gap: 4rpx;
+}
+.pci-value { font-size: 32rpx; font-weight: 800; color: #0071E3; letter-spacing: -0.02em; }
+.pci-value-gray { color: #6E6E73; }
+.pci-tier-1 { color: #C4A35A; }
+.pci-tier-2 { color: #0071E3; }
+.pci-tier-3 { color: #34C759; }
+.pci-label { font-size: 20rpx; color: #AEAEB2; }
+.pci-vs { margin-top: 4rpx; }
+.pci-vs-text { font-size: 20rpx; font-weight: 600; }
+.pci-vs-high { color: #1A8038; }
+.pci-vs-low  { color: #FF3B30; }
+.pci-vs-mid  { color: #6E6E73; }
+.program-ctx-note { display: block; font-size: 20rpx; color: #AEAEB2; line-height: 1.5; }

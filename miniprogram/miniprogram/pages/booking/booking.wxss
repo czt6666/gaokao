@@ -1,0 +1,336 @@
+/* pages/booking/booking.wxss — Apple Light Mode Edition */
+/* 袁希™ · 预约咨询 · iOS 26 Light Mode */
+@import "/styles/liquid-glass.wxss";
+
+/* ══ 画布 ════════════════════════════════════════════════════ */
+page {
+  background: linear-gradient(180deg, #FAFBFF 0%, #F4F6FB 55%, #EFF2F8 100%);
+  min-height: 100vh;
+}
+
+.root {
+  min-height: 100vh;
+  padding-bottom: 60rpx;
+}
+
+/* ══ Hero ════════════════════════════════════════════════════ */
+.hero {
+  padding: 72rpx 44rpx 52rpx;
+  position: relative;
+}
+
+.hero-title {
+  font-size: 52rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+  line-height: 1.2;
+  margin-bottom: 14rpx;
+  letter-spacing: -0.01em;
+}
+
+.hero-sub {
+  font-size: 26rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+}
+
+.hero-price-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10rpx;
+  margin-top: 28rpx;
+}
+
+.hero-price {
+  font-size: 72rpx;
+  font-weight: 900;
+  color: #C4A35A;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  text-shadow: 0 0 40px rgba(196,163,90,0.30);
+}
+
+.hero-price-unit {
+  font-size: 28rpx;
+  color: #6E6E73;
+}
+
+/* ══ Include List ════════════════════════════════════════════ */
+.include-section {
+  margin: 0 28rpx 28rpx;
+  background: rgba(255,255,255,0.84);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+  border-top-color: rgba(255,255,255,0.98);
+  border-radius: 28rpx;
+  padding: 28rpx 28rpx;
+  box-shadow:
+    0 2rpx 20rpx rgba(0,0,0,0.07),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.include-title {
+  font-size: 22rpx;
+  font-weight: 700;
+  color: #AEAEB2;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  margin-bottom: 20rpx;
+}
+
+.include-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16rpx;
+  margin-bottom: 18rpx;
+}
+
+.include-item:last-child { margin-bottom: 0; }
+
+.include-check {
+  color: #C4A35A;
+  font-size: 26rpx;
+  font-weight: 700;
+  flex-shrink: 0;
+  margin-top: 2rpx;
+  text-shadow: 0 0 10px rgba(196,163,90,0.45);
+}
+
+.include-text {
+  font-size: 27rpx;
+  color: #6E6E73;
+  line-height: 1.5;
+}
+
+/* ══ Form Cards ════════════════════════════════════════════ */
+.form-section {
+  margin: 0 28rpx 24rpx;
+}
+
+.form-label {
+  font-size: 24rpx;
+  font-weight: 700;
+  color: #AEAEB2;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 14rpx;
+  padding-left: 4rpx;
+}
+
+.phone-card {
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+  border-top-color: rgba(255,255,255,0.98);
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 0 24rpx;
+  height: 100rpx;
+  box-shadow:
+    0 2rpx 16rpx rgba(0,0,0,0.06),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.phone-prefix {
+  font-size: 30rpx;
+  color: #AEAEB2;
+  flex-shrink: 0;
+}
+
+.phone-divider {
+  width: 1rpx;
+  height: 40rpx;
+  background: rgba(0,0,0,0.05);
+}
+
+.phone-input {
+  flex: 1;
+  font-size: 32rpx;
+  color: #1D1D1F;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.phone-placeholder { color: #AEAEB2; }
+
+/* ══ Way Grid (booking method) ════════════════════════════ */
+.way-grid {
+  display: flex;
+  gap: 16rpx;
+}
+
+.way-card {
+  flex: 1;
+  background: rgba(255,255,255,0.84);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+  border-top-color: rgba(255,255,255,0.98);
+  border-radius: 22rpx;
+  padding: 24rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  box-shadow:
+    0 2rpx 16rpx rgba(0,0,0,0.06),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.way-card.selected {
+  background: rgba(196,163,90,0.10);
+  border-color: rgba(196,163,90,0.18);
+  box-shadow:
+    0 4px 16px rgba(196,163,90,0.12),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.way-icon  { font-size: 36rpx; }
+
+.way-label {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #6E6E73;
+  text-align: center;
+}
+
+.way-card.selected .way-label { color: #C4A35A; }
+
+/* ══ QR Section ════════════════════════════════════════════ */
+.qr-section {
+  margin: 0 28rpx 28rpx;
+  background: rgba(196,163,90,0.08);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5rpx solid rgba(196,163,90,0.15);
+  border-top-color: rgba(255,255,255,0.98);
+  border-radius: 28rpx;
+  padding: 36rpx 28rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18rpx;
+  box-shadow:
+    0 2rpx 20rpx rgba(0,0,0,0.07),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.qr-title {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+
+.qr-image {
+  width: 240rpx;
+  height: 240rpx;
+  border-radius: 16rpx;
+  background: rgba(255,255,255,0.92);
+  padding: 12rpx;
+  box-sizing: border-box;
+}
+
+.qr-wechat-id {
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #C4A35A;
+  letter-spacing: 0.04em;
+}
+
+.qr-hint {
+  font-size: 23rpx;
+  color: #AEAEB2;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ══ Submit Button ══════════════════════════════════════════ */
+.submit-section {
+  margin: 8rpx 28rpx 40rpx;
+}
+
+.submit-btn {
+  width: 100%;
+  height: 104rpx;
+  background: linear-gradient(135deg, #C4A35A 0%, #E2C97E 50%, #C4A35A 100%);
+  border: 1rpx solid rgba(196,163,90,0.20);
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow:
+    0 6px 24px rgba(196,163,90,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.50);
+}
+
+.submit-btn.loading { opacity: 0.65; }
+
+.submit-text {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #06111F;
+  letter-spacing: 0.03em;
+}
+
+/* ══ Success Overlay ════════════════════════════════════════ */
+.success-mask {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.32);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.30s;
+}
+
+.success-mask.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.success-card {
+  width: 80%;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+  border-top-color: rgba(255,255,255,0.98);
+  border-radius: 40rpx;
+  padding: 60rpx 44rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  box-shadow:
+    0 12px 48px rgba(0,0,0,0.12),
+    inset 0 1rpx 0 rgba(255,255,255,0.95);
+}
+
+.success-icon   { font-size: 80rpx; }
+
+.success-title {
+  font-size: 38rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+  text-align: center;
+}
+
+.success-sub {
+  font-size: 26rpx;
+  color: #6E6E73;
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ══ Section dividers ═══════════════════════════════════════ */
+.section-gap { height: 12rpx; }

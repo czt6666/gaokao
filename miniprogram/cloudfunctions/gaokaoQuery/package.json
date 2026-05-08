@@ -1,0 +1,9 @@
+{
+  "name": "gaokaoQuery",
+  "version": "1.0.0",
+  "description": "艺圆智探 · 水卢冷门高报引擎 API 代理云函数",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

@@ -1261,6 +1261,7 @@ from pydantic import BaseModel as _BaseModel
 class _FeedbackPayload(_BaseModel):
     content: str
     contact: str = ""
+    user_id: int | None = None
 
 @app.post("/api/feedback")
 def submit_feedback(req: _FeedbackPayload, request: Request, db: Session = Depends(get_db)):
@@ -1268,6 +1269,7 @@ def submit_feedback(req: _FeedbackPayload, request: Request, db: Session = Depen
     fb = Feedback(
         content=req.content[:2000],
         contact=req.contact[:100],
+        user_id=req.user_id,
         ip=request.headers.get("X-Forwarded-For", request.client.host if request.client else ""),
     )
     db.add(fb)

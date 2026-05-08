@@ -1,0 +1,145 @@
+<!-- pages/booking/booking.wxml -->
+<!-- 袁希™ · 袁希 1对1 预约页 -->
+
+<view class="page">
+
+  <!-- ── 服务标题区 ── -->
+  <view class="hero">
+    <view class="hero-tag">袁希 · 1 对 1</view>
+    <view class="hero-title">
+      <text>让袁希亲自</text>
+      <text class="hero-name">{{childName ? '为' + childName + '解读' : '解读这份报告'}}</text>
+    </view>
+    <view class="hero-price-row">
+      <text class="hero-price">¥3,000</text>
+      <text class="hero-price-unit"> / 小时 · 通常1小时内完成</text>
+    </view>
+  </view>
+
+  <!-- ── 服务包含 ── -->
+  <view class="section">
+    <text class="section-title">这1小时包含</text>
+    <view class="include-list">
+      <view class="include-item">
+        <text class="include-icon">📊</text>
+        <view class="include-right">
+          <text class="include-name">报告逐项解读</text>
+          <text class="include-desc">每个维度的含义、对孩子的具体影响、你可能看不懂的部分</text>
+        </view>
+      </view>
+      <view class="include-item">
+        <text class="include-icon">💬</text>
+        <view class="include-right">
+          <text class="include-name">你的痛点逐条答疑</text>
+          <text class="include-desc" wx:if="{{painPoints}}">你填写的「{{painPoints}}」——袁希会在咨询前读完，直接切入</text>
+          <text class="include-desc" wx:else>袁希会在咨询前读完你填写的所有内容，直接切入你的困惑</text>
+        </view>
+      </view>
+      <view class="include-item">
+        <text class="include-icon">🗺️</text>
+        <view class="include-right">
+          <text class="include-name">专属12个月行动方案</text>
+          <text class="include-desc">接下来该做什么，不该花精力在哪里，具体到可执行的步骤</text>
+        </view>
+      </view>
+      <view class="include-item">
+        <text class="include-icon">🏫</text>
+        <view class="include-right">
+          <text class="include-name">学校与路径具体建议</text>
+          <text class="include-desc">基于孩子的真实数据，给出适合的学校方向和申请策略</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ── 手机号收集 ── -->
+  <view class="section">
+    <text class="section-title">留下联系方式</text>
+    <text class="section-sub">助理会在工作时间内（9:00–21:00）与你确认咨询时间</text>
+
+    <view class="phone-wrap">
+      <text class="phone-prefix">+86</text>
+      <input
+        class="phone-input"
+        type="number"
+        placeholder="输入手机号"
+        placeholder-class="phone-placeholder"
+        value="{{phone}}"
+        bindinput="onPhoneInput"
+        maxlength="11"
+      />
+    </view>
+    <text class="phone-error" wx:if="{{phoneError}}">{{phoneError}}</text>
+
+    <!-- 微信一键获取手机号（需企业资质） -->
+    <button
+      class="wx-phone-btn"
+      open-type="getPhoneNumber"
+      bindgetphonenumber="onGetWxPhone"
+    >
+      <text>📱  微信授权手机号（更快）</text>
+    </button>
+  </view>
+
+  <!-- ── 预约方式 ── -->
+  <view class="section">
+    <text class="section-title">预约方式</text>
+
+    <!-- 方式 A：添加助理微信（主路径） -->
+    <view class="booking-way {{activeWay === 'wechat' ? 'active' : ''}}" bindtap="selectWechat">
+      <view class="way-header">
+        <view class="way-radio {{activeWay === 'wechat' ? 'checked' : ''}}"></view>
+        <text class="way-title">添加助理微信，确认后支付</text>
+        <text class="way-badge">推荐</text>
+      </view>
+      <text class="way-desc">助理确认时间 → 袁希咨询前阅读你的报告 → 咨询完成后支付</text>
+
+      <!-- 助理微信二维码 -->
+      <view class="qr-area" wx:if="{{activeWay === 'wechat'}}">
+        <image class="qr-img" src="{{assistantQR}}" mode="aspectFit" />
+        <text class="qr-hint">长按识别，添加助理微信</text>
+        <text class="wechat-id">微信号：{{assistantWechatId}}</text>
+      </view>
+    </view>
+
+    <!-- 方式 B：微信支付（开发中） -->
+    <view class="booking-way disabled" bindtap="selectPay">
+      <view class="way-header">
+        <view class="way-radio"></view>
+        <text class="way-title">微信支付，立即锁定名额</text>
+        <text class="way-badge-soon">即将开放</text>
+      </view>
+      <text class="way-desc">支付后助理安排时间，支持退款（咨询前24小时内）</text>
+    </view>
+  </view>
+
+  <!-- ── 提交按钮 ── -->
+  <view class="submit-area">
+    <view
+      class="submit-btn {{submitting ? 'loading' : ''}}"
+      bindtap="onSubmit"
+    >
+      <text wx:if="{{!submitting}}">提交预约信息</text>
+      <text wx:else>提交中…</text>
+    </view>
+    <text class="submit-note">提交后助理会主动联系你，无需等待</text>
+  </view>
+
+  <!-- ── 底部声明 ── -->
+  <view class="footer-note">
+    <text>· 袁希本人主理，不转包给其他顾问</text>
+    <text>· 咨询内容保密，不用于任何其他用途</text>
+    <text>· 如有特殊情况无法按时，提前告知可免费改期</text>
+  </view>
+
+</view>
+
+<!-- 提交成功弹层 -->
+<view class="success-overlay" wx:if="{{showSuccess}}">
+  <view class="success-card">
+    <text class="success-icon">✅</text>
+    <text class="success-title">预约信息已收到</text>
+    <text class="success-desc">助理会在工作时间内联系你确认咨询时间。\n\n记得查收微信消息。</text>
+    <view class="success-btn" bindtap="onSuccessClose">好的</view>
+  </view>
+</view>

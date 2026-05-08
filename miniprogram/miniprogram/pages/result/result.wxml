@@ -1,0 +1,1014 @@
+<!-- pages/result/result.wxml — 袁希™ 成长战略报告 v2 -->
+<view class="root">
+
+  <!-- ══ 加载中 ══ -->
+  <view class="loading-page" wx:if="{{status === 'loading'}}">
+    <view class="loading-ring"></view>
+    <text class="loading-text">正在生成报告{{loadingDots}}</text>
+    <text class="loading-sub">袁希方法论分析引擎运行中</text>
+  </view>
+
+  <!-- ══ 错误 ══ -->
+  <view class="error-page" wx:if="{{status === 'error'}}">
+    <text class="error-icon">!</text>
+    <text class="error-title">未找到评估数据</text>
+    <text class="error-desc">请先完成孩子评估问卷</text>
+    <button class="btn-retry" bindtap="retake">重新开始</button>
+  </view>
+
+  <!-- ══ 报告主体 ══ -->
+  <block wx:if="{{status === 'done' && report}}">
+
+    <!-- Hero 头部 -->
+    <view class="hero">
+      <view class="hero-content">
+        <view class="hero-avatar">
+          <text class="hero-initial">{{report.meta.childName[0] || '子'}}</text>
+        </view>
+        <text class="hero-name">{{report.meta.childName}} 的成长路径</text>
+        <text class="hero-meta">{{report.meta.schoolStage}} · {{report.meta.childAge}}岁</text>
+
+        <!-- 主视觉：职业原型（大图标 + 大标题） -->
+        <text class="hero-archetype-icon">{{report.pathRecommendation.primaryIcon}}</text>
+        <text class="hero-archetype-label">{{report.pathRecommendation.primaryLabel}}</text>
+
+        <!-- 分数降级为辅助信息行 -->
+        <view class="hero-score-row">
+          <view class="one-pct-badge">
+            <text class="one-pct-badge-text">1% 成长路径</text>
+          </view>
+          <view class="overall-badge">
+            <text class="overall-num" style="color:{{report.compatibility.overallColor}}">{{report.compatibility.overall}}</text>
+            <text class="overall-unit">分</text>
+            <text class="overall-label" style="color:{{report.compatibility.overallColor}}">{{report.compatibility.overallLabel}}</text>
+          </view>
+        </view>
+
+        <!-- 地理偏好确认标签 -->
+        <view class="geo-heard-badge" wx:if="{{report.pathRecommendation.geoFlagLabel}}">
+          <text class="geo-heard-icon">·</text>
+          <text class="geo-heard-text">你选择的方向：{{report.pathRecommendation.geoFlagLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 职业愿景（Hero 紧随，常驻显示）── -->
+    <view class="career-vision-section"
+          wx:if="{{careerVisions || careerVisionsLoading}}">
+      <view class="cv-top-row">
+        <text class="cv-top-icon">🧭</text>
+        <text class="cv-top-title">{{report.meta.childName}} 的职业愿景</text>
+        <view class="cv-badge"><text>天赋驱动</text></view>
+      </view>
+
+      <!-- 加载中 -->
+      <view class="cv-loading" wx:if="{{careerVisionsLoading && !careerVisions}}">
+        <view class="cv-loading-ring"></view>
+        <text class="cv-loading-text">正在为 {{report.meta.childName}} 匹配职业路径…</text>
+      </view>
+
+      <!-- 卡片列表（常驻可见） -->
+      <block wx:if="{{careerVisions && careerVisions.length > 0}}">
+        <text class="cv-intro">基于{{report.meta.childName}}的多元智能档案与职业匹配模型，以下是最契合的职业愿景方向：</text>
+
+        <!-- 职业愿景卡片 -->
+        <view class="cv-card" wx:for="{{careerVisions}}" wx:key="id">
+          <!-- 卡片头部 -->
+          <view class="cv-card-head">
+            <view class="cv-rank-col">
+              <text class="cv-rank-num">#{{index + 1}}</text>
+              <text class="cv-match-score">{{item.matchScore}}%</text>
+              <text class="cv-match-label">匹配度</text>
+            </view>
+            <view class="cv-title-col">
+              <view class="cv-icon-row">
+                <text class="cv-icon">{{item.icon}}</text>
+                <text class="cv-label">{{item.label}}</text>
+              </view>
+              <text class="cv-tagline">{{item.tagline}}</text>
+            </view>
+          </view>
+
+          <!-- 为什么匹配 -->
+          <view class="cv-reasons">
+            <text class="cv-reasons-label">为什么适合{{report.meta.childName}}：</text>
+            <view class="cv-reason-item" wx:for="{{item.reasons}}" wx:for-item="reason" wx:key="*this">
+              <text class="cv-reason-dot">·</text>
+              <text class="cv-reason-text">{{reason}}</text>
+            </view>
+          </view>
+
+          <!-- 标签行 -->
+          <view class="cv-tags-row">
+            <view class="cv-tag cv-tag-stem" wx:if="{{item.stemOpt}}">
+              <text>STEM OPT延签</text>
+            </view>
+            <view class="cv-tag cv-tag-stay" wx:if="{{item.usStayRate}}">
+              <text>留美率 {{item.usStayRate}}</text>
+            </view>
+          </view>
+
+          <!-- 深入了解按钮 -->
+          <view class="cv-explore-btn" bindtap="goCareerVision" data-id="{{item.id}}">
+            <text class="cv-explore-text">深入了解这条路</text>
+            <text class="cv-explore-arrow">→</text>
+          </view>
+        </view>
+
+        <text class="cv-disclaimer">职业愿景基于多元智能评分与 Holland 兴趣模型综合计算，供参考。</text>
+      </block>
+    </view>
+
+    <!-- HIDDEN: AI战略规划 -->
+    <view class="section-card section-ai-plan" wx:if="{{false}}">
+      <view class="section-header ai-plan-header" bindtap="toggleAiPlan">
+        <view class="section-title-row">
+          <text class="section-num ai-plan-num">✦</text>
+          <text class="section-title">AI战略规划</text>
+          <text class="ai-gen-tag">AI 生成</text>
+          <view class="ai-plan-badge"><text>含3/5/10年路径</text></view>
+        </view>
+        <text class="section-arrow">{{showFullPlan ? '▲' : '▼'}}</text>
+      </view>
+      <!-- 折叠预览：前200字 + 展开按钮 -->
+      <view class="ai-plan-preview" wx:if="{{!showFullPlan}}">
+        <text class="ai-plan-text">{{aiPlanText.slice(0, 220)}}…</text>
+        <view class="ai-plan-expand-btn" bindtap="toggleAiPlan">
+          <text class="ai-plan-expand-text">展开完整规划 ↓</text>
+        </view>
+      </view>
+      <!-- 展开后：完整内容 + 收起按钮 -->
+      <view class="ai-plan-full" wx:if="{{showFullPlan}}">
+        <text class="ai-plan-text">{{aiPlanText}}</text>
+        <view class="ai-plan-expand-btn ai-plan-collapse-btn" bindtap="toggleAiPlan">
+          <text class="ai-plan-expand-text">收起 ↑</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 顶部咨询入口（紧凑版，报告核心结论之后） ── -->
+    <view class="consult-mini-card" bindtap="goConsult">
+      <text class="consult-mini-icon">✦</text>
+      <view class="consult-mini-body">
+        <text class="consult-mini-title">让袁希本人解读这份报告</text>
+        <text class="consult-mini-sub">1对1深度咨询 · 厘清下一步</text>
+      </view>
+      <text class="consult-mini-arrow">→</text>
+    </view>
+
+    <!-- ── SECTION 1：孩子画像 ── -->
+    <view class="section-card" bindtap="toggleSection" data-section="child">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">01</text>
+          <text class="section-title">孩子真实画像</text>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'child' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="section-body" wx:if="{{expandedSection === 'child'}}">
+        <text class="sub-label">能力优势（前三维度）</text>
+        <view class="mi-list">
+          <view class="mi-item" wx:for="{{report.childPortrait.topIntelligences}}" wx:key="key">
+            <view class="mi-row">
+              <text class="mi-rank">{{index + 1}}</text>
+              <text class="mi-name">{{item.label}}</text>
+              <text class="mi-pct">{{item.pct}}%</text>
+            </view>
+            <view class="mi-bar-bg"><view class="mi-bar-fill" style="width:{{item.pct}}%"></view></view>
+            <text class="mi-desc">{{item.description}}</text>
+          </view>
+        </view>
+        <text class="sub-label">思维模式</text>
+        <view class="mindset-card">
+          <view class="mindset-row">
+            <text class="mindset-score">{{report.childPortrait.mindsetScore}}/5</text>
+            <text class="mindset-level">{{report.childPortrait.mindsetLabel}}</text>
+          </view>
+          <text class="mindset-desc">{{report.childPortrait.mindsetDesc}}</text>
+        </view>
+        <view class="stage-tip">
+          <text class="stage-icon">→</text>
+          <text class="stage-text">{{report.childPortrait.stageWindow}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── SECTION 2：家庭画像 ── -->
+    <view class="section-card" bindtap="toggleSection" data-section="family">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">02</text>
+          <text class="section-title">家庭系统画像</text>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'family' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="section-body" wx:if="{{expandedSection === 'family'}}">
+        <view wx:if="{{report.familyPortrait.complete}}">
+          <view class="family-tag-row">
+            <view class="family-tag">
+              <text class="tag-label">教养风格</text>
+              <text class="tag-value">{{report.familyPortrait.parentingLabel}}</text>
+            </view>
+            <view class="family-tag">
+              <text class="tag-label">亲子沟通</text>
+              <text class="tag-value">{{report.familyPortrait.commLabel}}</text>
+            </view>
+            <view class="family-tag">
+              <text class="tag-label">家长参与</text>
+              <text class="tag-value">{{report.familyPortrait.engagementLabel}}</text>
+            </view>
+          </view>
+          <text class="family-note">{{report.familyPortrait.parentingNote}}</text>
+          <view class="quote-block" wx:if="{{report.familyPortrait.keyQuotes.idealPerson}}">
+            <text class="quote-label">家长眼中的理想未来</text>
+            <text class="quote-text">"{{report.familyPortrait.keyQuotes.idealPerson}}…"</text>
+          </view>
+          <view class="quote-block" wx:if="{{report.familyPortrait.keyQuotes.childPassion}}">
+            <text class="quote-label">孩子的热情所在</text>
+            <text class="quote-text">"{{report.familyPortrait.keyQuotes.childPassion}}…"</text>
+          </view>
+          <view class="consensus-row">
+            <text class="consensus-icon">{{report.familyPortrait.valueConsensus === 'aligned' ? '✓' : report.familyPortrait.valueConsensus === 'diverged' ? '!' : '–'}}</text>
+            <text class="consensus-text">{{report.familyPortrait.valueConsensus === 'aligned' ? '家长与孩子在教育方向上基本一致' : report.familyPortrait.valueConsensus === 'diverged' ? '家长与孩子在未来方向上存在分歧，建议重点对话' : '价值观方向尚未明确对齐'}}</text>
+          </view>
+        </view>
+        <view wx:else class="incomplete-tip">
+          <text class="incomplete-text">重新开始评测，回答完孩子问题后会自动进入家庭视角部分</text>
+          <view class="fill-link" bindtap="retake">重新评测 →</view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── SECTION 3：适配性评分 ── -->
+    <view class="section-card" bindtap="toggleSection" data-section="compat">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">03</text>
+          <text class="section-title">四维适配性评分</text>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'compat' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="section-body" wx:if="{{expandedSection === 'compat'}}">
+
+        <!-- 情绪价值卡片：解释分数的温暖说明 -->
+        <view class="score-context-card score-context-{{report.compatibility.scoreContext.tone}}">
+          <view class="score-context-header">
+            <text class="score-context-icon">✦</text>
+            <text class="score-context-headline">{{report.compatibility.scoreContext.headline}}</text>
+          </view>
+          <text class="score-context-body">{{report.compatibility.scoreContext.body}}</text>
+          <view wx:if="{{report.compatibility.scoreContext.tone === 'warm'}}" class="score-context-note">
+            <text class="score-context-note-text">· 评分是基于您的回答计算的起点参考，不是对孩子潜力的判断。许多认真的家长在填写时会低估孩子，这份报告最大的价值在于指引方向，而不是给孩子贴标签。</text>
+          </view>
+        </view>
+
+        <view class="dim-list">
+          <view class="dim-item" wx:for="{{report.compatibility.dimensions}}" wx:key="id">
+            <view class="dim-header-row">
+              <text class="dim-icon">{{item.icon}}</text>
+              <text class="dim-name">{{item.label}}</text>
+              <view class="dim-level-tag" style="background:{{item.levelColor}}20;color:{{item.levelColor}}">
+                <text>{{item.levelLabel}}</text>
+              </view>
+              <text class="dim-score" style="color:{{item.levelColor}}">{{item.score}}</text>
+            </view>
+            <view class="dim-bar-bg">
+              <view class="dim-bar-fill" style="width:{{item.score}}%;background:{{item.levelColor}}"></view>
+            </view>
+            <text class="dim-evidence">{{item.evidence}}</text>
+          </view>
+        </view>
+        <view class="overall-row">
+          <text class="overall-row-label">综合适配度</text>
+          <text class="overall-row-score" style="color:{{report.compatibility.overallColor}}">{{report.compatibility.overall}}分 · {{report.compatibility.overallLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── SECTION 4：路径建议（默认展开） ── -->
+    <view class="section-card section-featured" bindtap="toggleSection" data-section="path">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">04</text>
+          <text class="section-title">路径建议</text>
+          <view class="featured-tag"><text>核心结论</text></view>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'path' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="section-body" wx:if="{{expandedSection === 'path'}}">
+        <view class="path-main-card">
+          <text class="path-main-icon">{{report.pathRecommendation.primaryIcon}}</text>
+          <view class="path-main-right">
+            <text class="path-main-label">{{report.pathRecommendation.primaryLabel}}</text>
+            <view class="confidence-tag"><text>{{report.pathRecommendation.confidenceLabel}}</text></view>
+          </view>
+        </view>
+        <text class="sub-label">判断依据</text>
+        <view class="rationale-list">
+          <view class="rationale-item" wx:for="{{report.pathRecommendation.rationale}}" wx:key="index">
+            <text class="rationale-dot">·</text>
+            <text class="rationale-text">{{item}}</text>
+          </view>
+        </view>
+        <!-- 出国备战路线：专属时间线模块 -->
+        <view wx:if="{{report.pathRecommendation.primaryPath === 'abroad_prep'}}" class="prep-timeline-card">
+          <view class="prep-timeline-header">
+            <text class="prep-timeline-icon">→</text>
+            <text class="prep-timeline-title">出国时间线预估</text>
+            <text class="prep-timeline-estimate">{{report.pathRecommendation.timeline}}</text>
+          </view>
+          <view class="prep-gap-list">
+            <view class="prep-gap-item" wx:for="{{report.pathRecommendation.gapDetails}}" wx:key="label">
+              <view class="prep-gap-row">
+                <text class="prep-gap-label">{{item.label}}</text>
+                <text class="prep-gap-months">{{item.months}}个月</text>
+              </view>
+              <text class="prep-gap-detail">{{item.detail}}</text>
+            </view>
+          </view>
+          <view class="prep-strengths-section">
+            <text class="prep-strengths-title">孩子适合出国的优势</text>
+            <view class="prep-strengths-list">
+              <view class="prep-strength-item" wx:for="{{report.pathRecommendation.strengths}}" wx:key="index">
+                <text class="prep-strength-dot">✓</text>
+                <text class="prep-strength-text">{{item}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <text class="sub-label risk-label">{{report.pathRecommendation.primaryPath === 'abroad_prep' ? '当前需要突破的关键项' : '需要关注的风险'}}</text>
+        <view class="risk-list">
+          <view class="risk-item" wx:for="{{report.pathRecommendation.risks}}" wx:key="index">
+            <text class="risk-text">{{item}}</text>
+          </view>
+        </view>
+        <text class="alt-path">{{report.pathRecommendation.primaryPath === 'abroad_prep' ? '目标：' : '备选方案：'}}{{report.pathRecommendation.alternativePath}}</text>
+      </view>
+    </view>
+
+    <!-- ── SECTION 5：三个行动 ── -->
+    <view class="section-card" bindtap="toggleSection" data-section="actions">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">05</text>
+          <text class="section-title">现在最重要的三件事</text>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'actions' ? '▲' : '▼'}}</text>
+      </view>
+      <view class="section-body" wx:if="{{expandedSection === 'actions'}}">
+        <view class="action-item" wx:for="{{report.actions}}" wx:key="priority">
+          <view class="action-num-col">
+            <view class="action-circle"><text class="action-num-text">{{item.priority}}</text></view>
+            <view class="action-line" wx:if="{{index < report.actions.length - 1}}"></view>
+          </view>
+          <view class="action-content">
+            <view class="action-title-row">
+              <text class="action-icon">{{item.icon}}</text>
+              <text class="action-title">{{item.title}}</text>
+            </view>
+            <text class="action-timeframe">{{item.timeframe}}</text>
+            <text class="action-desc">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- HIDDEN: AI 专业方向智能推荐 -->
+    <view class="section-card ai-career-section" wx:if="{{false}}">
+      <view class="section-header" bindtap="toggleSection" data-section="career">
+        <view class="section-title-row">
+          <text class="section-num ai-plan-num">✦</text>
+          <text class="section-title">专业方向智能推荐</text>
+          <text class="ai-gen-tag">AI 生成</text>
+          <view class="ai-plan-badge"><text>基于天赋 · 有具体理由</text></view>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'career' ? '▲' : '▼'}}</text>
+      </view>
+
+      <!-- 加载中 -->
+      <view class="ai-career-loading" wx:if="{{aiFullReportLoading && !aiFullReport}}">
+        <view class="ai-career-loading-ring"></view>
+        <text class="ai-career-loading-text">正在分析 {{report.meta.childName}} 的天赋档案，生成专业推荐理由…</text>
+      </view>
+
+      <!-- 展开内容 -->
+      <view class="section-body" wx:if="{{aiFullReport && expandedSection === 'career'}}">
+
+        <!-- 天赋密码叙事 -->
+        <view class="ai-gift-card" wx:if="{{aiFullReport.giftNarrative}}">
+          <text class="ai-gift-label">✦ 天赋密码解读</text>
+          <text class="ai-gift-text">{{aiFullReport.giftNarrative}}</text>
+        </view>
+
+        <!-- 专业方向推荐列表 -->
+        <view wx:if="{{aiFullReport.careerMajorRecs && aiFullReport.careerMajorRecs.length > 0}}">
+          <text class="sub-label">AI 推荐专业方向（针对{{report.meta.childName}}）</text>
+          <view class="career-rec-card" wx:for="{{aiFullReport.careerMajorRecs}}" wx:key="majorName">
+            <view class="career-rec-header">
+              <text class="career-rec-num">{{index + 1}}</text>
+              <text class="career-rec-major">{{item.majorName}}</text>
+            </view>
+            <view class="career-rec-why">
+              <text class="career-rec-why-label">为什么适合{{report.meta.childName}}：</text>
+              <text class="career-rec-why-text">{{item.whyThisChild}}</text>
+            </view>
+            <view class="career-rec-meta">
+              <text class="career-rec-path">→ {{item.careerPath}}</text>
+              <text class="career-rec-schools" wx:if="{{item.schoolExamples}}">参考院校：{{item.schoolExamples}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 路径推荐理由 -->
+        <view class="ai-path-reason-card" wx:if="{{aiFullReport.pathReasoning}}">
+          <text class="ai-path-reason-label">→ 为什么推荐这条路径？</text>
+          <text class="ai-path-reason-text">{{aiFullReport.pathReasoning}}</text>
+        </view>
+
+        <!-- 本周最优先行动 -->
+        <view class="ai-top-action-card" wx:if="{{aiFullReport.topPriorityAction}}">
+          <text class="ai-top-action-label">✦ 本周最重要的一件事</text>
+          <text class="ai-top-action-text">{{aiFullReport.topPriorityAction}}</text>
+        </view>
+
+        <!-- 袁希结语 -->
+        <view class="ai-signature-card" wx:if="{{aiFullReport.yuanxiSignature}}">
+          <text class="ai-signature-mark">✦</text>
+          <text class="ai-signature-text">{{aiFullReport.yuanxiSignature}}</text>
+        </view>
+
+      </view>
+    </view>
+
+    <!-- ── SECTION 6：院校参考（冲刺/目标/稳妥三层客观推荐）── -->
+    <view class="section-card school-rec-section" wx:if="{{schoolRecs}}" bindtap="toggleSection" data-section="schools">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">06</text>
+          <text class="section-title">院校参考</text>
+          <view class="school-rec-badge"><text>基于真实匹配</text></view>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'schools' ? '▲' : '▼'}}</text>
+      </view>
+
+      <view class="section-body school-rec-body" wx:if="{{expandedSection === 'schools'}}">
+
+        <!-- 算法说明 -->
+        <view class="school-algo-note">
+          <text class="school-algo-icon">≡</text>
+          <text class="school-algo-text">根据{{schoolRecs.academicTierLabel}}，结合路径偏好和家庭预算，客观计算匹配度。不推荐不切实际的学校。</text>
+        </view>
+
+        <!-- 地理偏好执行说明：告诉用户我们是否匹配到了他们想要的国家/地区 -->
+        <view wx:if="{{schoolRecs.geoPrefNote}}"
+              class="geo-pref-note geo-pref-{{schoolRecs.geoPrefNote.type}}">
+          <text class="geo-pref-note-icon">
+            {{schoolRecs.geoPrefNote.type === 'respected' ? '✓' : schoolRecs.geoPrefNote.type === 'partial' ? '·' : schoolRecs.geoPrefNote.type === 'expanded' ? '!' : 'i'}}
+          </text>
+          <text class="geo-pref-note-text">{{schoolRecs.geoPrefNote.text}}</text>
+        </view>
+
+        <!-- 冲刺院校 -->
+        <view wx:if="{{schoolRecs.reach.length > 0}}">
+          <view class="reach-group-header reach">
+            <view class="reach-dot reach"></view>
+            <text class="reach-group-label reach">冲刺院校</text>
+            <text class="reach-group-tip">· 需要额外努力，但有可能性</text>
+          </view>
+          <view class="school-card-list">
+            <view class="school-rec-card" wx:for="{{schoolRecs.reach}}" wx:key="id"
+                  bindtap="goToSchool" data-id="{{item.id}}">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.nameEn}}">{{item.nameEn}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.matchScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag reach">冲刺</view>
+                <view class="src-country-tag">{{item.country}}</view>
+                <view class="src-type-tag" wx:if="{{item.qsRank}}">QS #{{item.qsRank}}</view>
+              </view>
+              <text class="src-intro">{{item.intro}}</text>
+              <view class="src-reasons" wx:if="{{item.matchReasons.length > 0}}">
+                <text class="src-reason-item" wx:for="{{item.matchReasons}}" wx:key="index" wx:for-item="reason">✓ {{reason}}</text>
+              </view>
+              <view class="src-footer">
+                <text class="src-tuition">{{item.tuitionDisplay}}</text>
+                <text class="src-arrow">详情 ›</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 目标院校 -->
+        <view wx:if="{{schoolRecs.match.length > 0}}">
+          <view class="reach-group-header match">
+            <view class="reach-dot match"></view>
+            <text class="reach-group-label match">目标院校</text>
+            <text class="reach-group-tip">· 与当前水平高度匹配</text>
+          </view>
+          <view class="school-card-list">
+            <view class="school-rec-card" wx:for="{{schoolRecs.match}}" wx:key="id"
+                  bindtap="goToSchool" data-id="{{item.id}}">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.nameEn}}">{{item.nameEn}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.matchScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag match">目标</view>
+                <view class="src-country-tag">{{item.country}}</view>
+                <view class="src-type-tag" wx:if="{{item.qsRank}}">QS #{{item.qsRank}}</view>
+              </view>
+              <text class="src-intro">{{item.intro}}</text>
+              <view class="src-reasons" wx:if="{{item.matchReasons.length > 0}}">
+                <text class="src-reason-item" wx:for="{{item.matchReasons}}" wx:key="index" wx:for-item="reason">✓ {{reason}}</text>
+              </view>
+              <view class="src-footer">
+                <text class="src-tuition">{{item.tuitionDisplay}}</text>
+                <text class="src-arrow">详情 ›</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 稳妥院校 -->
+        <view wx:if="{{schoolRecs.safety.length > 0}}">
+          <view class="reach-group-header safety">
+            <view class="reach-dot safety"></view>
+            <text class="reach-group-label safety">稳妥院校</text>
+            <text class="reach-group-tip">· 录取把握较大，可作保底</text>
+          </view>
+          <view class="school-card-list">
+            <view class="school-rec-card" wx:for="{{schoolRecs.safety}}" wx:key="id"
+                  bindtap="goToSchool" data-id="{{item.id}}">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.nameEn}}">{{item.nameEn}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.matchScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag safety">稳妥</view>
+                <view class="src-country-tag">{{item.country}}</view>
+                <view class="src-type-tag" wx:if="{{item.qsRank}}">QS #{{item.qsRank}}</view>
+              </view>
+              <text class="src-intro">{{item.intro}}</text>
+              <view class="src-reasons" wx:if="{{item.matchReasons.length > 0}}">
+                <text class="src-reason-item" wx:for="{{item.matchReasons}}" wx:key="index" wx:for-item="reason">✓ {{reason}}</text>
+              </view>
+              <view class="src-footer">
+                <text class="src-tuition">{{item.tuitionDisplay}}</text>
+                <text class="src-arrow">详情 ›</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 查看全部 -->
+        <view class="school-view-all" bindtap="goToAllSchools">
+          <text class="school-view-all-text">查看全部院校库 · 自定义筛选</text>
+          <text class="school-view-all-arrow">›</text>
+        </view>
+
+      </view>
+    </view>
+
+    <!-- HIDDEN: 袁希 AI 院校推荐 -->
+    <view class="section-card ai-school-section" wx:if="{{false}}">
+      <view class="section-header">
+        <view class="section-title-row">
+          <text class="section-num">✦</text>
+          <text class="section-title">袁希 AI 院校推荐</text>
+          <view class="ai-plan-badge"><text>基于多元智能个性化生成</text></view>
+        </view>
+      </view>
+
+      <!-- 加载中 -->
+      <view class="ai-school-loading" wx:if="{{aiSchoolRecsLoading && !aiSchoolRecs}}">
+        <text class="ai-school-loading-text">正在为 {{report.meta.childName}} 的多元智能特点匹配院校…</text>
+      </view>
+
+      <!-- AI推荐院校列表 -->
+      <view wx:if="{{aiSchoolRecs}}">
+        <view class="ai-school-card" wx:for="{{aiSchoolRecs}}" wx:key="name">
+          <view class="ai-school-top">
+            <view class="ai-school-name-col">
+              <text class="ai-school-name">{{item.nameCn || item.name}}</text>
+              <text class="ai-school-name-en" wx:if="{{item.nameCn}}">{{item.name}}</text>
+            </view>
+            <view class="ai-school-tags">
+              <text class="ai-school-country">{{item.country}}</text>
+              <text class="ai-school-tier ai-tier-{{item.tier}}">
+                {{item.tier === 'reach' ? '冲刺' : item.tier === 'match' ? '目标' : '稳妥'}}
+              </text>
+            </view>
+          </view>
+          <text class="ai-school-why">{{item.whyFit}}</text>
+          <text class="ai-school-feature" wx:if="{{item.feature}}">✦ {{item.feature}}</text>
+        </view>
+        <text class="ai-school-disclaimer">以上为 AI 基于孩子档案生成的个性化参考，具体录取要求请以学校官方为准。</text>
+      </view>
+    </view>
+
+    <!-- ── SECTION 6c：美国大学精准匹配（College Scorecard 实时数据）── -->
+    <view class="section-card usa-match-section"
+          wx:if="{{studyAbroadResult || studyAbroadLoading || studyAbroadError}}">
+
+      <!-- 标题行（可点击展开/收起，与其他 section 行为一致）-->
+      <view class="section-header" bindtap="toggleSection" data-section="usaMatch">
+        <view class="section-title-row">
+          <text class="section-num">US</text>
+          <text class="section-title">美国大学精准匹配</text>
+          <view class="school-rec-badge">
+            <text wx:if="{{studyAbroadResult && studyAbroadResult.meta && studyAbroadResult.meta.usedFallback}}">内置数据库</text>
+            <text wx:else>实时数据</text>
+          </view>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'usaMatch' ? '▲' : '▼'}}</text>
+      </view>
+
+      <!-- 加载中（不依赖展开状态，始终可见） -->
+      <view class="ai-school-loading" wx:if="{{studyAbroadLoading && !studyAbroadResult}}">
+        <text class="ai-school-loading-text">正在从 6,700+ 所美国大学中为 {{report.meta.childName}} 匹配最优选项…</text>
+      </view>
+
+      <!-- 错误（不依赖展开状态） -->
+      <view class="usa-match-error" wx:if="{{studyAbroadError && !studyAbroadResult}}">
+        <text class="usa-error-text">{{studyAbroadError}}</text>
+      </view>
+
+      <!-- 展开内容 -->
+      <view class="section-body usa-match-body"
+            wx:if="{{studyAbroadResult && expandedSection === 'usaMatch'}}">
+
+        <!-- 元信息 -->
+        <view class="usa-match-meta" wx:if="{{studyAbroadResult.meta}}">
+          <text class="usa-meta-text">基于 {{studyAbroadResult.meta.totalSchools}} 所学校数据 · {{studyAbroadResult.meta.majorArea}} 方向 · 预算 {{studyAbroadResult.meta.budgetFmt}}/年</text>
+        </view>
+
+        <!-- 冲刺档 -->
+        <view wx:if="{{studyAbroadResult.reach && studyAbroadResult.reach.length > 0}}">
+          <view class="reach-group-header reach">
+            <view class="reach-dot reach"></view>
+            <text class="reach-group-label reach">冲刺院校</text>
+            <text class="reach-group-tip">· 顶尖目标，全力准备</text>
+          </view>
+          <view class="school-card-list">
+            <view class="usa-school-card usa-tier-reach-card"
+                  wx:for="{{studyAbroadResult.reach}}" wx:key="unitId">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.locationFmt}}">{{item.locationFmt}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.totalScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag reach">冲刺</view>
+                <text class="usa-ownership-tag">{{item.ownership}}</text>
+              </view>
+              <view class="usa-school-stats">
+                <text class="usa-stat">录取率 {{item.admRateFmt}}</text>
+                <text class="usa-stat">毕业薪资 {{item.earn6yrFmt}}</text>
+                <text class="usa-stat">毕业率 {{item.gradRateFmt}}</text>
+              </view>
+              <text class="usa-school-insight">{{item.insightSentence}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 目标档 -->
+        <view wx:if="{{studyAbroadResult.target && studyAbroadResult.target.length > 0}}">
+          <view class="reach-group-header match">
+            <view class="reach-dot match"></view>
+            <text class="reach-group-label match">目标院校</text>
+            <text class="reach-group-tip">· 最匹配，重点申请</text>
+          </view>
+          <view class="school-card-list">
+            <view class="usa-school-card usa-tier-target-card"
+                  wx:for="{{studyAbroadResult.target}}" wx:key="unitId">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.locationFmt}}">{{item.locationFmt}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.totalScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag match">目标</view>
+                <text class="usa-ownership-tag">{{item.ownership}}</text>
+              </view>
+              <view class="usa-school-stats">
+                <text class="usa-stat">录取率 {{item.admRateFmt}}</text>
+                <text class="usa-stat">毕业薪资 {{item.earn6yrFmt}}</text>
+                <text class="usa-stat">毕业率 {{item.gradRateFmt}}</text>
+              </view>
+              <text class="usa-school-insight">{{item.insightSentence}}</text>
+            </view>
+          </view>
+        </view>
+
+        <!-- 稳妥档 -->
+        <view wx:if="{{studyAbroadResult.safety && studyAbroadResult.safety.length > 0}}">
+          <view class="reach-group-header safety">
+            <view class="reach-dot safety"></view>
+            <text class="reach-group-label safety">稳妥院校</text>
+            <text class="reach-group-tip">· 录取把握大，价值优选</text>
+          </view>
+          <view class="school-card-list">
+            <view class="usa-school-card usa-tier-safety-card"
+                  wx:for="{{studyAbroadResult.safety}}" wx:key="unitId">
+              <view class="src-top">
+                <view class="src-name-col">
+                  <text class="src-name">{{item.name}}</text>
+                  <text class="src-name-en" wx:if="{{item.locationFmt}}">{{item.locationFmt}}</text>
+                </view>
+                <view class="src-score-col">
+                  <text class="src-score">{{item.totalScore}}</text>
+                  <text class="src-score-label">匹配分</text>
+                </view>
+              </view>
+              <view class="src-tags">
+                <view class="src-tier-tag safety">稳妥</view>
+                <text class="usa-ownership-tag">{{item.ownership}}</text>
+              </view>
+              <view class="usa-school-stats">
+                <text class="usa-stat">录取率 {{item.admRateFmt}}</text>
+                <text class="usa-stat">毕业薪资 {{item.earn6yrFmt}}</text>
+                <text class="usa-stat">毕业率 {{item.gradRateFmt}}</text>
+              </view>
+              <text class="usa-school-insight">{{item.insightSentence}}</text>
+            </view>
+          </view>
+        </view>
+
+        <text class="ai-school-disclaimer">数据来源：U.S. Dept. of Education College Scorecard（实时更新）。以上个性化分析由 AI 生成，仅供参考，不代表 {{report.meta.childName}} 的个人录取概率。</text>
+      </view>
+    </view>
+
+    <!-- HIDDEN: 袁希深度洞察（AI异步注入） -->
+    <view class="section-card section-ai" wx:if="{{false}}">
+      <view class="section-header" bindtap="toggleSection" data-section="ai">
+        <view class="section-title-row">
+          <text class="section-num ai-num">07</text>
+          <text class="section-title">袁希深度洞察</text>
+          <view class="ai-badge"><text>AI分析</text></view>
+        </view>
+        <text class="section-arrow">{{expandedSection === 'ai' ? '▲' : '▼'}}</text>
+      </view>
+      <!-- 加载中 -->
+      <view class="ai-loading" wx:if="{{aiInsightLoading && !aiInsight}}">
+        <view class="ai-loading-ring"></view>
+        <text class="ai-loading-text">袁希分析引擎正在读取家长问卷…</text>
+      </view>
+      <!-- 洞察内容 -->
+      <view class="section-body ai-body" wx:if="{{aiInsight && expandedSection === 'ai'}}">
+        <!-- 袁希视角主卡 -->
+        <view class="yuanxi-card">
+          <text class="yuanxi-icon">✦</text>
+          <text class="yuanxi-text">{{aiInsight.yuanxiPerspective}}</text>
+        </view>
+        <!-- 家庭画像标签 -->
+        <view class="ai-tags-row" wx:if="{{aiInsight.parentingStyle || aiInsight.commQuality}}">
+          <view class="ai-tag" wx:if="{{aiInsight.parentingStyle}}">
+            <text class="ai-tag-label">教养风格</text>
+            <text class="ai-tag-val">{{aiInsight.parentingStyle}}</text>
+          </view>
+          <view class="ai-tag" wx:if="{{aiInsight.commQuality}}">
+            <text class="ai-tag-label">亲子沟通</text>
+            <text class="ai-tag-val">{{aiInsight.commQuality}}</text>
+          </view>
+          <view class="ai-tag" wx:if="{{aiInsight.valueConsensus}}">
+            <text class="ai-tag-label">价值观一致</text>
+            <text class="ai-tag-val">{{aiInsight.valueConsensus}}</text>
+          </view>
+        </view>
+        <!-- 关键引用 -->
+        <view class="ai-quote" wx:if="{{aiInsight.keyQuote}}">
+          <text class="ai-quote-mark">"</text>
+          <text class="ai-quote-text">{{aiInsight.keyQuote}}</text>
+        </view>
+        <!-- 优势 & 风险 -->
+        <view class="ai-signal-row">
+          <view class="ai-signal strength" wx:if="{{aiInsight.strengthSignal}}">
+            <text class="signal-icon">✦</text>
+            <view class="signal-body">
+              <text class="signal-title">家庭优势</text>
+              <text class="signal-desc">{{aiInsight.strengthSignal}}</text>
+            </view>
+          </view>
+          <view class="ai-signal risk" wx:if="{{aiInsight.riskSignal}}">
+            <text class="signal-icon">!</text>
+            <view class="signal-body">
+              <text class="signal-title">需要关注</text>
+              <text class="signal-desc">{{aiInsight.riskSignal}}</text>
+            </view>
+          </view>
+        </view>
+        <!-- 认知盲区 -->
+        <view class="blindspot-card" wx:if="{{aiInsight.blindspot}}">
+          <text class="blindspot-icon">?</text>
+          <view class="blindspot-body">
+            <text class="blindspot-title">认知盲区提醒</text>
+            <text class="blindspot-text">{{aiInsight.blindspot}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- ── 继续深探区 —— 报告提出了问题，接下来是解答 ── -->
+    <view class="continue-card">
+      <view class="continue-header-row">
+        <text class="continue-icon">✦</text>
+        <text class="continue-label">报告揭示的，只是第一层</text>
+      </view>
+      <text class="continue-hint">真正难的问题——在选择关口，在孩子某个具体的困难前——需要有人陪你想清楚。</text>
+
+      <!-- 三个未解决的问题，触发好奇心 -->
+      <view class="continue-questions">
+        <view class="cq-item">
+          <text class="cq-dot">›</text>
+          <text class="cq-text">{{report.meta.childName}}的第一步，具体是什么，什么时候迈？</text>
+        </view>
+        <view class="cq-item">
+          <text class="cq-dot">›</text>
+          <text class="cq-text">报告里的风险，我现在能做什么来提前化解？</text>
+        </view>
+        <view class="cq-item">
+          <text class="cq-dot">›</text>
+          <text class="cq-text">作为家长，我自己先要做哪些准备？</text>
+        </view>
+      </view>
+
+      <button class="btn-ask-main" bindtap="goAskYuanxi">✦ 继续和袁希深聊</button>
+    </view>
+
+    <!-- ── 袁希1对1 — 高客单价转化卡 ── -->
+    <view class="consult-bridge-card" bindtap="goConsult">
+      <!-- 顶部徽章 -->
+      <view class="cbc-badge-row">
+        <view class="cbc-badge"><text class="cbc-badge-text">袁希 · 1对1 深度咨询</text></view>
+      </view>
+
+      <!-- 主标题 -->
+      <text class="cbc-title">让袁希本人读这份报告</text>
+      <text class="cbc-sub">报告看到的是方向，真正的问题在细节——<text class="cbc-sub-em">选择关口、具体困难、下一步行动</text></text>
+
+      <!-- 包含内容 -->
+      <view class="cbc-includes">
+        <view class="cbc-include-item">
+          <text class="cbc-include-dot">✓</text>
+          <text class="cbc-include-text">深度解读报告里的每一个结论</text>
+        </view>
+        <view class="cbc-include-item">
+          <text class="cbc-include-dot">✓</text>
+          <text class="cbc-include-text">针对你填写的痛点逐一拆解</text>
+        </view>
+        <view class="cbc-include-item">
+          <text class="cbc-include-dot">✓</text>
+          <text class="cbc-include-text">给出清晰可执行的下一步方案</text>
+        </view>
+        <view class="cbc-include-item">
+          <text class="cbc-include-dot">✓</text>
+          <text class="cbc-include-text">20年 · 140万+ 家庭经验</text>
+        </view>
+      </view>
+
+      <!-- 价格 + 行动按钮 -->
+      <view class="cbc-bottom">
+        <view class="cbc-price-block">
+          <text class="cbc-price-num">¥3,000</text>
+          <text class="cbc-price-unit">/ 小时</text>
+          <text class="cbc-price-note">通常1小时完成</text>
+        </view>
+        <view class="cbc-cta-btn">
+          <text class="cbc-cta-text">预约 →</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- ══ 学生问卷 CTA 卡片（已隐藏：AI对话页面下线）══ -->
+    <!--
+    <view class="student-cta-card" wx:if="{{!studentSelfDone}}" bindtap="goStudentQuestionnaire">
+      <view class="student-cta-inner">
+        <view class="student-cta-icon-wrap">
+          <text class="student-cta-icon">↗</text>
+        </view>
+        <view class="student-cta-body">
+          <text class="student-cta-title">让 {{report.meta.childName}} 自己说说</text>
+          <text class="student-cta-desc">孩子的视角可能和你想的不一样——12 道题，让报告更精准</text>
+        </view>
+        <text class="student-cta-arrow">→</text>
+      </view>
+    </view>
+    <view class="student-done-card" wx:if="{{studentSelfDone && studentDivergence}}">
+      <view class="student-done-header">
+        <text class="student-done-icon">{{studentDivergence.hasMajorConflict ? '!' : '✓'}}</text>
+        <text class="student-done-title">{{report.meta.childName}} 的学生问卷已完成</text>
+      </view>
+      <text class="student-done-level">
+        {{studentDivergence.divergenceLevel === 'high' ? '与家长意见差距较大，建议深度沟通' :
+          studentDivergence.divergenceLevel === 'medium' ? '与家长意见有一定差距，值得关注' :
+          '与家长意见基本一致'}}
+      </text>
+      <view class="student-done-details" wx:if="{{studentDivergence.details && studentDivergence.details.length}}">
+        <view class="student-done-item" wx:for="{{studentDivergence.details}}" wx:key="dimension">
+          <text class="student-done-dim">{{item.note}}</text>
+        </view>
+      </view>
+    </view>
+    -->
+
+    <!-- ── 底部次要操作 ── -->
+    <view class="bottom-actions">
+      <!-- 分享提示说明 -->
+      <view class="share-tip-row">
+        <text class="share-tip-icon">↗</text>
+        <text class="share-tip-text">分享完整报告给朋友或家人，让他们一起参与孩子的规划</text>
+      </view>
+      <view class="btn-row">
+        <button class="btn-copy" bindtap="copyReport">复制报告文字</button>
+        <button class="btn-share" bindtap="generateShareCard">生成报告海报</button>
+      </view>
+      <!-- HIDDEN: 重新生成AI报告（测试专用） -->
+      <!--
+      <button class="btn-regen-ai" bindtap="regenAIReport">
+        <text class="btn-regen-icon">↺</text>
+        <view class="btn-regen-body">
+          <text class="btn-regen-title">重新生成AI报告</text>
+          <text class="btn-regen-sub">跳过评测 · 直接重跑AI云函数 · 调试专用</text>
+        </view>
+      </button>
+      -->
+      <!-- 调试状态栏：显示最近一次重新生成的结果 -->
+      <view class="regen-status-bar" wx:if="{{regenStatus}}">
+        <text class="regen-status-ts">{{regenTs}}</text>
+        <text class="regen-status-text">{{regenStatus}}</text>
+      </view>
+
+      <!-- 查看完整报告文档（Jobs版：原生排版，可分享/保存）-->
+      <button class="btn-export-full" bindtap="exportFullReport">
+        <text class="btn-export-icon">↗</text>
+        <view class="btn-export-body">
+          <text class="btn-export-title">查看完整报告</text>
+          <text class="btn-export-sub">原生文档视图 · 可分享给好友 · 可保存长图</text>
+        </view>
+      </button>
+      <!-- 微信原生分享（分享完整报告页） -->
+      <button class="btn-share-wx" open-type="share">分享完整报告给朋友</button>
+      <button class="btn-retake" bindtap="retake">重新评估</button>
+
+      <!-- 问题反馈入口 -->
+      <view class="feedback-entry" bindtap="goFeedback">
+        <text class="feedback-icon">💬</text>
+        <view class="feedback-info">
+          <text class="feedback-title">遇到问题？给我们反馈</text>
+          <text class="feedback-sub">数据错误、功能异常、使用建议都可以说</text>
+        </view>
+        <text class="feedback-arrow">›</text>
+      </view>
+    </view>
+
+    <!-- 隐藏画布（用于生成分享卡片） -->
+    <canvas type="2d" id="shareCanvas" style="position:fixed;left:-9999rpx;top:-9999rpx;width:750rpx;height:1100rpx;"></canvas>
+    <!-- 隐藏画布（用于导出完整报告长图）-->
+    <canvas type="2d" id="exportCanvas" style="position:fixed;left:-9999rpx;top:-9999rpx;width:750rpx;height:8000rpx;"></canvas>
+
+    <!-- 分享海报预览弹层 -->
+    <view class="share-mask" wx:if="{{showPosterModal}}" bindtap="closeShareCard">
+      <view class="share-modal" catchtap="">
+        <text class="share-modal-title">{{report.meta.childName}}的成长战略海报</text>
+        <text class="share-modal-sub">长按保存到相册，或点击"发送给朋友"分享完整报告</text>
+        <image class="share-preview" src="{{shareCardPath}}" mode="aspectFit" show-menu-by-longpress="true"></image>
+        <view class="share-modal-btns">
+          <button class="share-save-btn" bindtap="saveShareCard">保存到相册</button>
+          <button class="share-forward-btn" open-type="share">发送给朋友</button>
+        </view>
+        <button class="share-cancel-btn-full" bindtap="closeShareCard">关闭</button>
+      </view>
+    </view>
+
+  </block>
+</view>

@@ -1,0 +1,197 @@
+/* pages/my-reports/my-reports.wxss */
+
+page { background: linear-gradient(170deg, #EEF0FA 0%, #F5F6FF 50%, #F0EDF6 100%); min-height: 100vh; }
+
+.page { padding: 0 0 40rpx; }
+
+/* 加载中 */
+.loading-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 120rpx 0;
+  gap: 20rpx;
+}
+
+.loading-text {
+  font-size: 26rpx;
+  color: #AEAEB2;
+}
+
+/* 空状态 */
+.empty-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 100rpx 40rpx;
+  gap: 16rpx;
+}
+
+.empty-icon   { font-size: 80rpx; line-height: 1; }
+.empty-title  { font-size: 32rpx; font-weight: 700; color: #1A2744; }
+.empty-sub    { font-size: 24rpx; color: #8E8E93; text-align: center; line-height: 1.6; white-space: pre-wrap; }
+
+.go-query-btn {
+  margin-top: 16rpx;
+  background: #1A2744;
+  color: #FFFFFF;
+  font-size: 28rpx;
+  font-weight: 700;
+  border-radius: 980rpx;
+  padding: 22rpx 56rpx;
+}
+
+/* 报告列表 */
+.report-list { padding: 0 24rpx; }
+
+.list-header {
+  padding: 32rpx 4rpx 20rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.list-title {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #1A2744;
+}
+
+.list-sub {
+  font-size: 22rpx;
+  color: #8E8E93;
+}
+
+/* 报告卡片 */
+.report-card {
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: blur(20rpx) saturate(1.5);
+  -webkit-backdrop-filter: blur(20rpx) saturate(1.5);
+  border-radius: 20rpx;
+  padding: 26rpx 24rpx 20rpx;
+  margin-bottom: 18rpx;
+  border: 0.5rpx solid rgba(255,255,255,0.7);
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.05);
+}
+
+/* 报告头部 */
+.report-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18rpx;
+}
+
+.report-meta {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+
+.report-province {
+  font-size: 30rpx;
+  font-weight: 800;
+  color: #1A2744;
+}
+
+.report-sep { font-size: 22rpx; color: #D1D5DB; }
+
+.report-rank {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #5B4FCF;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-subject {
+  font-size: 22rpx;
+  color: #6B7280;
+}
+
+.report-date {
+  font-size: 20rpx;
+  color: #AEAEB2;
+  flex-shrink: 0;
+}
+
+/* 筛选条件标签 */
+.constraint-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10rpx;
+  margin-bottom: 16rpx;
+}
+
+.ct-tag {
+  font-size: 20rpx;
+  color: #5B4FCF;
+  background: rgba(91,79,207,0.08);
+  padding: 6rpx 14rpx;
+  border-radius: 8rpx;
+  line-height: 1.3;
+}
+
+/* 院校统计 */
+.report-stats {
+  display: flex;
+  gap: 0;
+  background: #F5F6FF;
+  border-radius: 12rpx;
+  padding: 14rpx 0;
+  margin-bottom: 18rpx;
+}
+
+.report-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4rpx;
+  border-right: 0.5rpx solid rgba(0,0,0,0.06);
+}
+
+.report-stat:last-child { border-right: none; }
+
+.rs-num {
+  font-size: 32rpx;
+  font-weight: 800;
+  color: #1A2744;
+  font-variant-numeric: tabular-nums;
+}
+
+.rs-label {
+  font-size: 18rpx;
+  color: #8E8E93;
+}
+
+.total-stat .rs-num { color: #5B4FCF; }
+
+/* 操作按钮 */
+.report-actions {
+  display: flex;
+  gap: 14rpx;
+}
+
+.ra-btn {
+  flex: 1;
+  text-align: center;
+  padding: 18rpx 0;
+  border-radius: 12rpx;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.ra-view {
+  background: #1A2744;
+  color: #FFFFFF;
+}
+
+.ra-pdf {
+  background: linear-gradient(135deg, #C9922A, #E8A830);
+  color: #FFFFFF;
+}
+
+.ra-view:active { opacity: 0.85; }
+.ra-pdf:active  { opacity: 0.85; }

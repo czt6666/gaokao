@@ -1,0 +1,124 @@
+<!-- pages/questionnaire/questionnaire.wxml -->
+<view class="page-container">
+
+  <!-- ── 进度条区域 ── -->
+  <view class="progress-area">
+    <view class="progress-info">
+      <text class="part-label">{{currentPartTitle}}</text>
+      <text class="count-label">{{currentIndex + 1}} / {{totalCount}}</text>
+    </view>
+    <view class="progress-bar-bg">
+      <view class="progress-bar-fill" style="width: {{progress}}%"></view>
+    </view>
+  </view>
+
+  <!-- ── 部分切换过渡动画 ── -->
+  <view class="part-transition {{showPartTransition ? 'visible' : ''}}">
+    <view class="transition-content">
+      <text class="transition-icon">✦</text>
+      <text class="transition-message">{{transitionMessage}}</text>
+      <text class="transition-title">{{transitionPartTitle}}</text>
+    </view>
+  </view>
+
+  <!-- ── 题目主体 ── -->
+  <view class="question-card section" wx:if="{{currentQuestion && !showPartTransition}}">
+
+    <!-- 题目编号标签 -->
+    <view class="q-number-row">
+      <view class="q-tag tag tag-blue">
+        第{{currentPart}}部分 · {{currentPartTitle}}
+      </view>
+    </view>
+
+    <!-- 题目文字 -->
+    <text class="q-text">{{currentQuestion.question}}</text>
+
+    <!-- ── 类型：文字输入 ── -->
+    <view class="answer-area" wx:if="{{currentQuestion.type === 'input'}}">
+      <input
+        class="text-input"
+        value="{{inputValue}}"
+        placeholder="{{currentQuestion.placeholder}}"
+        bindinput="onInputChange"
+        maxlength="30"
+        confirm-type="next"
+        bindconfirm="onNext"
+      />
+    </view>
+
+    <!-- ── 类型：数字输入 ── -->
+    <view class="answer-area" wx:if="{{currentQuestion.type === 'number'}}">
+      <input
+        class="text-input text-center"
+        type="number"
+        value="{{inputValue}}"
+        placeholder="{{currentQuestion.placeholder}}"
+        bindinput="onInputChange"
+        maxlength="3"
+        confirm-type="next"
+        bindconfirm="onNext"
+      />
+    </view>
+
+    <!-- ── 类型：单选题 ── -->
+    <view class="answer-area" wx:if="{{currentQuestion.type === 'choice'}}">
+      <view
+        class="choice-item {{selectedValue === item.value ? 'selected' : ''}}"
+        wx:for="{{currentQuestion.options}}"
+        wx:key="value"
+        data-value="{{item.value}}"
+        bindtap="onChoiceSelect"
+      >
+        <view class="choice-radio {{selectedValue === item.value ? 'checked' : ''}}"></view>
+        <text class="choice-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <!-- ── 类型：频率题 ── -->
+    <view class="answer-area" wx:if="{{currentQuestion.type === 'frequency'}}">
+      <view class="freq-tip">根据您对孩子的观察，选择最符合的频率</view>
+      <view class="freq-options">
+        <view
+          class="freq-item {{frequencyValue === item.value ? 'selected' : ''}}"
+          wx:for="{{frequencyOptions}}"
+          wx:key="value"
+          data-value="{{item.value}}"
+          bindtap="onFrequencySelect"
+        >
+          <view class="freq-value {{frequencyValue === item.value ? 'active' : ''}}">
+            <text class="freq-num">{{item.value}}</text>
+          </view>
+          <text class="freq-label">{{item.label}}</text>
+          <text class="freq-desc">{{item.desc}}</text>
+        </view>
+      </view>
+    </view>
+
+  </view>
+
+  <!-- ── 底部操作栏 ── -->
+  <view class="bottom-bar" wx:if="{{!showPartTransition}}">
+
+    <!-- 上一题按钮 -->
+    <button
+      class="btn-prev"
+      wx:if="{{currentIndex > 0}}"
+      bindtap="onPrev"
+    >← 上一题</button>
+
+    <view class="btn-spacer" wx:if="{{currentIndex === 0}}"></view>
+
+    <!-- 下一题按钮（只有 input/number 类型才显示，choice/frequency 自动跳） -->
+    <button
+      class="btn-next btn-primary"
+      wx:if="{{currentQuestion && (currentQuestion.type === 'input' || currentQuestion.type === 'number')}}"
+      bindtap="onNext"
+      loading="{{isSubmitting}}"
+    >
+      {{currentIndex + 1 >= totalCount ? '完成诊断' : '下一题 →'}}
+    </button>
+
+  </view>
+
+</view>

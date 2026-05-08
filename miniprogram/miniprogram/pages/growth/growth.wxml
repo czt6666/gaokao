@@ -1,0 +1,73 @@
+<!-- pages/growth/growth.wxml -->
+<!-- 收藏 · 已收藏的美国大学 -->
+
+<view class="page-container">
+
+  <!-- ══ 空状态 ══ -->
+  <view class="empty-state" wx:if="{{favSchools.length === 0}}">
+    <text class="empty-icon">🔖</text>
+    <text class="empty-title">还没有收藏任何学校</text>
+    <text class="empty-sub">在浏览页点击学校卡片右上角的 ♡ 即可收藏</text>
+    <view class="go-browse-btn" bindtap="goBrowse">去浏览美国大学 →</view>
+  </view>
+
+  <!-- ══ 收藏列表 ══ -->
+  <view wx:else>
+    <view class="fav-header">
+      <text class="fav-count">已收藏 {{favSchools.length}} 所院校</text>
+      <view class="fav-clear-btn" bindtap="confirmClearAll">清空全部</view>
+    </view>
+
+    <view
+      class="school-card"
+      wx:for="{{favSchools}}"
+      wx:key="unitId"
+      bindtap="viewSchool"
+      data-id="{{item.unitId}}"
+    >
+      <!-- 学校名 + 难度标签 -->
+      <view class="sc-top">
+        <view class="sc-name-row">
+          <text class="sc-name">{{item.name}}</text>
+        </view>
+        <view style="display:flex;align-items:center;gap:12rpx;">
+          <view class="sc-diff-tag" style="background:{{item.difficultyBg}};color:{{item.difficultyColor}};">
+            {{item.difficultyTag}}
+          </view>
+          <!-- 取消收藏按钮 -->
+          <view class="fav-remove" catchtap="removeFav" data-unitid="{{item.unitId}}">♥</view>
+        </view>
+      </view>
+
+      <!-- 地点 + 类型 -->
+      <view class="sc-meta-row">
+        <text class="sc-loc">📍 {{item.city}}{{item.state ? ', ' + item.state : ''}}</text>
+        <text class="sc-sep">·</text>
+        <text class="sc-type">{{item.ownershipShort || item.ownership}}</text>
+      </view>
+
+      <!-- 关键数据行 -->
+      <view class="sc-stats-row">
+        <view class="sc-stat" wx:if="{{item.admissionDisplay}}">
+          <text class="sc-stat-label">录取率</text>
+          <text class="sc-stat-value">{{item.admissionDisplay}}</text>
+        </view>
+        <view class="sc-stat" wx:if="{{item.tuitionDisplay}}">
+          <text class="sc-stat-label">学费</text>
+          <text class="sc-stat-value">{{item.tuitionDisplay}}</text>
+        </view>
+        <view class="sc-stat" wx:if="{{item.satAverage}}">
+          <text class="sc-stat-label">SAT</text>
+          <text class="sc-stat-value">{{item.satAverage}}</text>
+        </view>
+        <view class="sc-stat" wx:if="{{item.gradRateFmt}}">
+          <text class="sc-stat-label">毕业率</text>
+          <text class="sc-stat-value">{{item.gradRateFmt}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view style="height:60rpx;"></view>
+  </view>
+
+</view>

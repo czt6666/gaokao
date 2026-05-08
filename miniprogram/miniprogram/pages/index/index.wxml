@@ -1,0 +1,50 @@
+<!-- pages/index/index.wxml -->
+<!-- 艺圆智探 · 首页 — 简洁双卡片入口 -->
+
+<view class="page">
+
+  <!-- 品牌头部 -->
+  <view class="brand-header">
+    <text class="brand-name">艺圆智探</text>
+    <text class="brand-dot"> · </text>
+    <text class="brand-sub">教育决策中心</text>
+  </view>
+
+  <!-- 卡片1：高考志愿 -->
+  <view class="card card-gaokao" bindtap="tapGaokao">
+    <view class="card-inner">
+      <view class="card-icon-wrap card-icon-gaokao">
+        <text class="card-icon">🎓</text>
+      </view>
+      <view class="card-body">
+        <text class="card-title">高考志愿</text>
+        <text class="card-engine">水卢冷门高报引擎</text>
+        <text class="card-desc">发现别人看不到的冷门好校</text>
+      </view>
+      <text class="card-arrow">›</text>
+    </view>
+    <view class="card-footer-tag">覆盖31省 · 300万+条数据</view>
+  </view>
+
+  <!-- 卡片2：美国大学 -->
+  <view class="card card-abroad" bindtap="tapStudyAbroad">
+    <view class="card-inner">
+      <view class="card-icon-wrap card-icon-abroad">
+        <text class="card-icon">🌐</text>
+      </view>
+      <view class="card-body">
+        <text class="card-title card-title-abroad">美国大学</text>
+        <text class="card-engine card-engine-abroad">College Scorecard · 6,400+ 院校</text>
+        <text class="card-desc card-desc-abroad">留学规划，从这里开始</text>
+      </view>
+      <text class="card-arrow card-arrow-abroad">›</text>
+    </view>
+    <view class="card-footer-tag card-footer-tag-abroad">美国教育部官方数据</view>
+  </view>
+
+  <!-- 底部标语 -->
+  <view class="footer-tagline">
+    <text class="tagline-text">清醒的决策，从一元开始</text>
+  </view>
+
+</view>

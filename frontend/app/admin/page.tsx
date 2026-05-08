@@ -4,6 +4,14 @@ import { useState, useEffect, useRef } from "react";
 const API = process.env.NEXT_PUBLIC_API_URL || "";
 const STORAGE_KEY = "admin_token";
 
+// 后端返回 UTC 时间，统一转换为北京时间展示
+function toBJ(utcStr: string): string {
+  if (!utcStr || utcStr === "—") return "—";
+  const d = new Date(utcStr.replace(" ", "T") + "Z");
+  if (isNaN(d.getTime())) return utcStr;
+  return d.toLocaleString("zh-CN", { timeZone: "Asia/Shanghai", hour12: false });
+}
+
 // ── Types ─────────────────────────────────────────────────────
 interface TodayStats {
   today_queries: number; today_paid: number; today_revenue: number;
@@ -703,7 +711,7 @@ export default function AdminPage() {
                       <td style={{ padding: "8px 12px" }}>
                         <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11, background: "#EBF3FF", color: "#0071E3", fontWeight: 600 }}>{r.scan_count}</span>
                       </td>
-                      <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{r.created_at}</td>
+                      <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{toBJ(r.created_at)}</td>
                     </tr>
                   ))}
                   {!viral?.top_reports.length && <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无传播数据</td></tr>}
@@ -865,7 +873,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#F5F5F7" }}>
-                    {["订单号", "金额", "状态", "支付方式", "省份", "位次", "分数", "筛选条件", "创建时间", "支付时间", "操作"].map(h => (
+                    {["订单号", "用户ID", "金额", "状态", "支付方式", "省份", "位次", "分数", "筛选条件", "创建时间", "支付时间", "操作"].map(h => (
                       <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -873,7 +881,8 @@ export default function AdminPage() {
                 <tbody>
                   {orders.map(o => (
                     <tr key={o.order_no} style={{ borderBottom: "1px solid #F5F5F7" }}>
-                      <td style={{ padding: "10px 16px", fontFamily: "monospace", fontSize: 11, color: "#6e6e73" }}>{o.order_no.slice(0, 16)}…</td>
+                      <td style={{ padding: "10px 16px", fontFamily: "monospace", fontSize: 11, color: "#6e6e73" }}>{o.order_no}</td>
+                      <td style={{ padding: "10px 16px", color: "#aeaeb2", fontSize: 11 }}>{o.user_id ?? "—"}</td>
                       <td style={{ padding: "10px 16px", color: "#34C759", fontWeight: 600 }}>¥{o.amount}</td>
                       <td style={{ padding: "10px 16px" }}>
                         <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11,
@@ -894,8 +903,8 @@ export default function AdminPage() {
                           {!o.c_major && !o.c_city && !o.c_nature && !o.c_tier && <span style={{ color: "#aeaeb2" }}>—</span>}
                         </div>
                       </td>
-                      <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{o.created_at}</td>
-                      <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{o.pay_time || "—"}</td>
+                      <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(o.created_at)}</td>
+                      <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(o.pay_time)}</td>
                       <td style={{ padding: "10px 16px" }}>
                         {o.status === "paid" && (
                           <button onClick={() => handleRefund(o.order_no)}
@@ -948,7 +957,7 @@ export default function AdminPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>用户列表</div>
                 <input
-                  placeholder="搜索手机号 / 省份"
+                  placeholder="搜索手机号"
                   value={userSearch}
                   onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
                   style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, width: 180, outline: "none" }}
@@ -970,7 +979,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#F5F5F7" }}>
-                    {["ID", "手机号", "省份", "微信", "付费状态", "套餐", "到期/剩余", "查询次数", "付费订单", "注册时间", "操作"].map(h => (
+                    {["ID", "手机号", "微信", "付费状态", "套餐", "到期/剩余", "查询次数", "付费订单", "注册时间", "操作"].map(h => (
                       <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -980,7 +989,6 @@ export default function AdminPage() {
                     <tr key={u.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
                       <td style={{ padding: "10px 14px", color: "#aeaeb2", fontSize: 11 }}>{u.id}</td>
                       <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 12 }}>{u.phone || "—"}</td>
-                      <td style={{ padding: "10px 14px" }}>{u.province || "—"}</td>
                       <td style={{ padding: "10px 14px" }}>
                         <span style={{ fontSize: 11, color: u.wechat === "已绑定" ? "#34C759" : "#aeaeb2" }}>{u.wechat}</span>
                       </td>
@@ -1003,7 +1011,7 @@ export default function AdminPage() {
                       </td>
                       <td style={{ padding: "10px 14px", color: "#6e6e73" }}>{u.query_count}</td>
                       <td style={{ padding: "10px 14px" }}>{u.paid_orders}</td>
-                      <td style={{ padding: "10px 14px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{u.created_at}</td>
+                      <td style={{ padding: "10px 14px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(u.created_at)}</td>
                       <td style={{ padding: "10px 14px" }}>
                         <div style={{ display: "flex", gap: 4 }}>
                           {!u.is_paid ? (
@@ -1022,7 +1030,7 @@ export default function AdminPage() {
                     </tr>
                   ))}
                   {!users.length && (
-                    <tr><td colSpan={11} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无用户数据</td></tr>
+                    <tr><td colSpan={10} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无用户数据</td></tr>
                   )}
                 </tbody>
               </table>
@@ -1063,7 +1071,7 @@ export default function AdminPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: "#F5F5F7" }}>
-                      {["ID", "内容", "联系方式", "IP", "时间"].map(h => (
+                      {["ID", "用户ID", "内容", "联系方式", "IP", "时间"].map(h => (
                         <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
                       ))}
                     </tr>
@@ -1072,10 +1080,11 @@ export default function AdminPage() {
                     {feedbacks.map((f, i) => (
                       <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
                         <td style={{ padding: "8px 12px", color: "#aeaeb2", fontSize: 11 }}>{f.id}</td>
+                        <td style={{ padding: "8px 12px", color: "#aeaeb2", fontSize: 11 }}>{f.user_id ?? "—"}</td>
                         <td style={{ padding: "8px 12px", maxWidth: 400, lineHeight: 1.5 }}>{f.content}</td>
                         <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 12 }}>{f.contact || "—"}</td>
                         <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{f.ip || "—"}</td>
-                        <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{f.created_at}</td>
+                        <td style={{ padding: "8px 12px", color: "#6E6E73", fontSize: 11 }}>{toBJ(f.created_at)}</td>
                       </tr>
                     ))}
                   </tbody>

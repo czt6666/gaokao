@@ -1,0 +1,72 @@
+<!-- pages/feedback/feedback.wxml -->
+<!-- 艺圆智探 · 高考志愿 · 通用问题反馈 -->
+
+<view class="page">
+
+  <!-- ── 提交成功状态 ── -->
+  <view wx:if="{{submitted}}" class="success-view">
+    <text class="success-emoji">✅</text>
+    <text class="success-title">反馈已收到，谢谢！</text>
+    <text class="success-sub">我们会认真查看每一条反馈，并尽快改进。</text>
+    <view class="success-btn" bindtap="goBack">返回</view>
+  </view>
+
+  <!-- ── 反馈表单 ── -->
+  <block wx:else>
+
+    <view class="intro">
+      <text class="intro-title">告诉我们哪里不好用</text>
+      <text class="intro-sub">遇到问题、数据错误、想要的功能都可以告诉我们</text>
+    </view>
+
+    <!-- 反馈内容 -->
+    <view class="section">
+      <view class="section-title-row">
+        <text class="section-title">反馈内容<text class="required">*</text></text>
+        <text class="char-count">{{contentLen}}/2000</text>
+      </view>
+      <view class="textarea-wrap">
+        <textarea
+          class="desc-textarea"
+          placeholder="请描述你遇到的问题或建议，越具体我们越能快速改进..."
+          placeholder-class="textarea-ph"
+          maxlength="2000"
+          auto-height
+          bindinput="onContentInput"
+          value="{{content}}"
+        />
+      </view>
+    </view>
+
+    <!-- 联系方式（选填） -->
+    <view class="section">
+      <view class="section-title-row">
+        <text class="section-title">联系方式<text class="optional">（选填）</text></text>
+        <text class="char-count">{{contactLen}}/100</text>
+      </view>
+      <view class="input-wrap">
+        <input
+          class="contact-input"
+          placeholder="微信号 / 手机号，方便我们回复你"
+          placeholder-class="input-ph"
+          maxlength="100"
+          bindinput="onContactInput"
+          value="{{contact}}"
+        />
+      </view>
+    </view>
+
+    <!-- 提交按钮 -->
+    <view
+      class="submit-btn {{submitting ? 'submit-btn-loading' : ''}}"
+      bindtap="submit"
+    >
+      <view wx:if="{{submitting}}" class="spinner"></view>
+      <text class="submit-text">{{submitting ? '提交中…' : '提交反馈'}}</text>
+    </view>
+
+    <text class="hint">我们承诺不会用你的联系方式做任何推销</text>
+
+  </block>
+
+</view>

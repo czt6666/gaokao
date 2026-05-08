@@ -1,0 +1,252 @@
+<!-- printview.wxml — 袁希™ 成长战略报告 · Apple文档视图 -->
+<!-- Jobs原则：原生WXML渲染，无画布，完美CJK排版，可直接分享 -->
+
+<scroll-view scroll-y class="scroll-root" wx:if="{{report}}">
+
+  <!-- ══ Hero ══════════════════════════════════════════════════ -->
+  <view class="hero">
+    <view class="avatar">
+      <text class="avatar-text">{{report.meta.childName[0] || '子'}}</text>
+    </view>
+    <text class="h-name">{{report.meta.childName}} 的成长战略报告</text>
+    <text class="h-meta">{{report.meta.schoolStage}}{{report.meta.childAge ? ' · ' + report.meta.childAge + '岁' : ''}} · 袁希方法论</text>
+    <text class="h-score" style="color:{{report.compatibility.overallColor}}">{{report.compatibility.overall}}</text>
+    <text class="h-score-lbl">综合适配度 · {{report.compatibility.overallLabel}}</text>
+    <view class="h-path">
+      <text class="h-path-text">建议路径：{{report.pathRecommendation.primaryLabel}}</text>
+    </view>
+  </view>
+
+  <!-- ══ 四维适配性评分 ═══════════════════════════════════════ -->
+  <view class="sec" wx:if="{{report.compatibility.dimensions.length}}">
+    <view class="sec-hd">
+      <text class="sec-num">4D</text>
+      <text class="sec-title">四维适配性评分</text>
+    </view>
+    <view class="sec-bd">
+      <view class="dim-row"
+            wx:for="{{report.compatibility.dimensions}}"
+            wx:key="label">
+        <view class="dim-hd">
+          <text class="dim-lbl">{{item.label}}</text>
+          <text class="dim-sc" style="color:{{item.levelColor}}">{{item.score}}分 · {{item.levelLabel}}</text>
+        </view>
+        <view class="bar-bg">
+          <view class="bar-fill"
+                style="width:{{item.score}}%;background:{{item.levelColor}}">
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ 多元智能 ════════════════════════════════════════════== -->
+  <view class="sec" wx:if="{{report.childPortrait.topIntelligences.length}}">
+    <view class="sec-hd">
+      <text class="sec-num">MI</text>
+      <text class="sec-title">多元智能前三维度</text>
+    </view>
+    <view class="sec-bd">
+      <view class="dim-row"
+            wx:for="{{report.childPortrait.topIntelligences}}"
+            wx:key="label"
+            wx:if="{{index < 3}}">
+        <view class="dim-hd">
+          <text class="dim-lbl" style="color:{{index===0?'#C4A35A':index===1?'#0071E3':'#2A7A5A'}}">{{index+1}}. {{item.label}}</text>
+          <text class="dim-sc" style="color:{{index===0?'#C4A35A':index===1?'#0071E3':'#2A7A5A'}}">{{item.pct}}%</text>
+        </view>
+        <view class="bar-bg">
+          <view class="bar-fill"
+                style="width:{{item.pct}}%;background:{{index===0?'#C4A35A':index===1?'#0071E3':'#2A7A5A'}}">
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ 路径建议 ════════════════════════════════════════════== -->
+  <view class="sec" wx:if="{{report.pathRecommendation.primaryLabel}}">
+    <view class="sec-hd">
+      <text class="sec-num">→</text>
+      <text class="sec-title">路径建议：{{report.pathRecommendation.primaryLabel}}</text>
+    </view>
+    <view class="sec-bd">
+      <!-- rationale 数组模式 -->
+      <block wx:if="{{report.pathRecommendation.rationale.length}}">
+        <text class="rat-item"
+              wx:for="{{report.pathRecommendation.rationale}}"
+              wx:key="*this">· {{item.text || item}}</text>
+      </block>
+      <!-- description 字符串模式 -->
+      <text class="ai-text"
+            wx:elif="{{report.pathRecommendation.description}}">{{report.pathRecommendation.description}}</text>
+    </view>
+  </view>
+
+  <!-- ══ AI 战略规划 ════════════════════════════════════════=== -->
+  <view class="sec" wx:if="{{aiPlanText}}">
+    <view class="sec-hd">
+      <text class="sec-num">AI</text>
+      <text class="sec-title">战略规划</text>
+      <view class="sec-badge"><text class="sec-badge-text">含3/5/10年路径</text></view>
+    </view>
+    <view class="sec-bd">
+      <text class="ai-text">{{aiPlanText}}</text>
+    </view>
+  </view>
+
+  <!-- ══ AI 院校推荐 ════════════════════════════════════════=== -->
+  <view class="sec" wx:if="{{aiSchools.length}}">
+    <view class="sec-hd">
+      <text class="sec-num">AI</text>
+      <text class="sec-title">院校推荐</text>
+    </view>
+    <view class="sch-list">
+      <view class="sch-card"
+            wx:for="{{aiSchools}}"
+            wx:key="name"
+            wx:if="{{index < 5}}">
+        <view class="sch-row">
+          <view class="sch-left">
+            <text class="sch-name">{{item.name}}</text>
+            <text class="sch-loc">{{item.type}} · {{item.match}}</text>
+          </view>
+        </view>
+        <view class="sch-stats">
+          <text class="stat" wx:if="{{item.tuitionFmt}}">学费 {{item.tuitionFmt}}</text>
+          <text class="stat" wx:if="{{item.intlPctFmt}}">国际生 {{item.intlPctFmt}}</text>
+        </view>
+        <text class="sch-reason">{{item.reason || item.description}}</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ 美国大学精准匹配 ══════════════════════════════════════ -->
+  <view class="sec" wx:if="{{usaResult}}">
+    <view class="sec-hd">
+      <text class="sec-num">US</text>
+      <text class="sec-title">美国大学精准匹配</text>
+      <view class="sec-badge">
+        <text class="sec-badge-text">{{usaResult.meta && usaResult.meta.usedFallback ? '内置数据库' : '实时数据'}}</text>
+      </view>
+    </view>
+
+    <!-- 冲刺 -->
+    <block wx:if="{{usaResult.reach && usaResult.reach.length}}">
+      <text class="tier-hd" style="color:#C4A35A">冲刺院校</text>
+      <view class="sch-list">
+        <view class="sch-card" wx:for="{{usaResult.reach}}" wx:key="unitId">
+          <view class="sch-row">
+            <view class="sch-left">
+              <text class="sch-name">{{item.name}}</text>
+              <text class="sch-loc">{{item.locationFmt}} · {{item.ownership}}</text>
+            </view>
+            <view class="sch-right">
+              <text class="sch-score" style="color:#C4A35A">{{item.totalScore}}</text>
+              <text class="sch-slbl">匹配分</text>
+            </view>
+          </view>
+          <view class="sch-stats">
+            <text class="stat">录取率 {{item.admRateFmt}}</text>
+            <text class="stat">薪资 {{item.earn6yrFmt}}</text>
+            <text class="stat">毕业率 {{item.gradRateFmt}}</text>
+          </view>
+          <text class="sch-insight">{{item.insightSentence}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 目标 -->
+    <block wx:if="{{usaResult.target && usaResult.target.length}}">
+      <text class="tier-hd" style="color:#0071E3">目标院校</text>
+      <view class="sch-list">
+        <view class="sch-card" wx:for="{{usaResult.target}}" wx:key="unitId">
+          <view class="sch-row">
+            <view class="sch-left">
+              <text class="sch-name">{{item.name}}</text>
+              <text class="sch-loc">{{item.locationFmt}} · {{item.ownership}}</text>
+            </view>
+            <view class="sch-right">
+              <text class="sch-score" style="color:#0071E3">{{item.totalScore}}</text>
+              <text class="sch-slbl">匹配分</text>
+            </view>
+          </view>
+          <view class="sch-stats">
+            <text class="stat">录取率 {{item.admRateFmt}}</text>
+            <text class="stat">薪资 {{item.earn6yrFmt}}</text>
+            <text class="stat">毕业率 {{item.gradRateFmt}}</text>
+          </view>
+          <text class="sch-insight">{{item.insightSentence}}</text>
+        </view>
+      </view>
+    </block>
+
+    <!-- 稳妥 -->
+    <block wx:if="{{usaResult.safety && usaResult.safety.length}}">
+      <text class="tier-hd" style="color:#2A7A5A">稳妥院校</text>
+      <view class="sch-list">
+        <view class="sch-card" wx:for="{{usaResult.safety}}" wx:key="unitId">
+          <view class="sch-row">
+            <view class="sch-left">
+              <text class="sch-name">{{item.name}}</text>
+              <text class="sch-loc">{{item.locationFmt}} · {{item.ownership}}</text>
+            </view>
+            <view class="sch-right">
+              <text class="sch-score" style="color:#2A7A5A">{{item.totalScore}}</text>
+              <text class="sch-slbl">匹配分</text>
+            </view>
+          </view>
+          <view class="sch-stats">
+            <text class="stat">录取率 {{item.admRateFmt}}</text>
+            <text class="stat">薪资 {{item.earn6yrFmt}}</text>
+            <text class="stat">毕业率 {{item.gradRateFmt}}</text>
+          </view>
+          <text class="sch-insight">{{item.insightSentence}}</text>
+        </view>
+      </view>
+    </block>
+  </view>
+
+  <!-- ══ 行动计划 ════════════════════════════════════════════== -->
+  <view class="sec" wx:if="{{report.actions.length}}">
+    <view class="sec-hd">
+      <text class="sec-num">DO</text>
+      <text class="sec-title">行动计划</text>
+    </view>
+    <view class="sec-bd">
+      <view class="act-item"
+            wx:for="{{report.actions}}"
+            wx:key="title">
+        <view class="act-circle">
+          <text class="act-num">{{index+1}}</text>
+        </view>
+        <view class="act-body">
+          <text class="act-title">{{item.title}}</text>
+          <text class="act-time" wx:if="{{item.timeframe}}">{{item.timeframe}}</text>
+          <text class="act-desc">{{item.description || item.detail}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- ══ Footer ════════════════════════════════════════════════ -->
+  <view class="footer">
+    <text class="ftr-logo">袁希™ · 战略成长</text>
+    <text class="ftr-sub">艺圆智探 · 袁希方法论</text>
+    <text class="ftr-date">本报告由算法引擎 + AI生成，仅供教育决策参考</text>
+  </view>
+
+  <!-- 底部操作栏占位 -->
+  <view style="height:140rpx"></view>
+
+</scroll-view>
+
+<!-- ══ 底部操作栏（固定）══════════════════════════════════════ -->
+<view class="action-bar" wx:if="{{report}}">
+  <button class="btn-share" open-type="share">
+    <text class="btn-share-text">分享报告</text>
+  </button>
+  <view class="btn-image" bindtap="saveAsImage">
+    <text class="btn-image-text">保存长图</text>
+  </view>
+</view>

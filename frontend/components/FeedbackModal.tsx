@@ -17,10 +17,29 @@ export default function FeedbackModal({ onClose }: FeedbackModalProps) {
     if (!content.trim()) { alert("请填写反馈内容"); return; }
     setSending(true);
     try {
+      // 尝试获取当前登录用户ID
+      let userId: number | null = null;
+      try {
+        const token = localStorage.getItem("auth_token");
+        if (token) {
+          const meRes = await fetch(`${API}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (meRes.ok) {
+            const meData = await meRes.json();
+            userId = meData.user_id ?? null;
+          }
+        }
+      } catch { /* ignore auth errors */ }
+
       const res = await fetch(`${API}/api/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: content.trim(), contact: contact.trim() }),
+        body: JSON.stringify({
+          content: content.trim(),
+          contact: contact.trim(),
+          user_id: userId,
+        }),
       });
       if (!res.ok) throw new Error("提交失败");
       setSent(true);

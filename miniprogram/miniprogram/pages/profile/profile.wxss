@@ -1,0 +1,160 @@
+/* pages/profile/profile.wxss */
+/* 用户画像问卷 */
+
+page {
+  background: #F5F6FF;
+  min-height: 100vh;
+  font-family: -apple-system, "SF Pro Display", "PingFang SC", sans-serif;
+}
+
+.page-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 0 0 60rpx;
+}
+
+/* ══════════════════════════════════════════════
+   顶部英雄区
+══════════════════════════════════════════════ */
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 48rpx 32rpx 36rpx;
+  background: #FFFFFF;
+  border-bottom: 0.5rpx solid rgba(0,0,0,0.06);
+}
+
+.hero-icon {
+  font-size: 64rpx;
+  margin-bottom: 16rpx;
+}
+
+.hero-title {
+  font-size: 34rpx;
+  font-weight: 700;
+  color: #1A1A2E;
+  letter-spacing: -0.3rpx;
+  margin-bottom: 10rpx;
+}
+
+.hero-sub {
+  font-size: 24rpx;
+  color: #8E8E93;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ══════════════════════════════════════════════
+   问题块
+══════════════════════════════════════════════ */
+.q-block {
+  margin: 20rpx 20rpx 0;
+  background: #FFFFFF;
+  border-radius: 20rpx;
+  padding: 28rpx 24rpx 24rpx;
+  border: 0.5rpx solid rgba(0,0,0,0.06);
+  box-shadow: 0 1rpx 8rpx rgba(0,0,0,0.04);
+}
+
+.q-label {
+  display: flex;
+  align-items: center;
+  gap: 14rpx;
+  margin-bottom: 20rpx;
+}
+
+.q-num {
+  font-size: 20rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  background: #5B4FCF;
+  border-radius: 980rpx;
+  padding: 4rpx 14rpx;
+  letter-spacing: 0.5rpx;
+  flex-shrink: 0;
+}
+
+.q-text {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1A1A2E;
+  line-height: 1.4;
+}
+
+/* ══════════════════════════════════════════════
+   选项芯片网格
+══════════════════════════════════════════════ */
+.chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.chip {
+  padding: 14rpx 26rpx;
+  background: #F5F6FF;
+  border: 1.5rpx solid rgba(0,0,0,0.10);
+  border-radius: 980rpx;
+  font-size: 26rpx;
+  color: #3A3A4C;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.chip:active {
+  background: rgba(91,79,207,0.10);
+  border-color: rgba(91,79,207,0.30);
+}
+
+.chip-active {
+  background: rgba(91,79,207,0.12);
+  border-color: #5B4FCF;
+  color: #5B4FCF;
+  font-weight: 700;
+}
+
+/* ══════════════════════════════════════════════
+   底部操作区
+══════════════════════════════════════════════ */
+.footer {
+  margin: 40rpx 20rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.submit-btn {
+  width: 100%;
+  padding: 30rpx 0;
+  background: linear-gradient(135deg, #5B4FCF, #7B6FE0);
+  border-radius: 18rpx;
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #FFFFFF;
+  text-align: center;
+  box-shadow: 0 4rpx 20rpx rgba(91,79,207,0.28);
+}
+
+.submit-btn:active { opacity: 0.88; }
+
+.submit-btn-dim {
+  background: #C7C7CC;
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.submit-btn-loading {
+  opacity: 0.65;
+}
+
+.skip-btn {
+  font-size: 26rpx;
+  color: #8E8E93;
+  padding: 28rpx 40rpx;
+  text-align: center;
+}
+
+.skip-btn:active { opacity: 0.6; }

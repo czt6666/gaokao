@@ -1,0 +1,9 @@
+{
+  "name": "aiAnalysis",
+  "version": "1.0.0",
+  "description": "战略成长™ AI 评估分析云函数 — DeepSeek API",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "~2.6.3"
+  }
+}

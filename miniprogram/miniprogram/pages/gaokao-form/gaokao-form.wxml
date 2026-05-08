@@ -1,0 +1,84 @@
+<!-- pages/gaokao-form/gaokao-form.wxml -->
+<!-- 艺圆智探 · 我的志愿表 -->
+
+<view class="page">
+
+  <!-- 头部统计栏 -->
+  <view class="header">
+    <view class="header-inner">
+      <view class="header-title-row">
+        <text class="header-title">我的志愿表</text>
+        <view class="count-pill">{{list.length}} 个志愿</view>
+      </view>
+      <text class="header-sub">按优先级排序 · 冲稳保全覆盖</text>
+    </view>
+    <view wx:if="{{list.length > 0}}" class="header-hint">
+      <text class="hint-icon">💡</text>
+      <text class="hint-text">建议：冲 3-5 个，稳 4-6 个，保 3-5 个</text>
+    </view>
+  </view>
+
+  <!-- 志愿列表 -->
+  <view wx:if="{{list.length > 0}}" class="list">
+    <view
+      class="item"
+      wx:for="{{list}}"
+      wx:key="id"
+    >
+      <!-- 序号 + 概率条 -->
+      <view class="item-rank-col">
+        <text class="item-rank">{{index + 1}}</text>
+        <view class="prob-bar-wrap">
+          <view class="prob-bar-fill" style="height:{{item._probPct}}%; background:{{item._probColor}};"></view>
+        </view>
+      </view>
+
+      <!-- 主信息 -->
+      <view class="item-body">
+        <view class="item-top-row">
+          <view class="action-badge action-badge-{{item._actionClass}}">{{item.action}}</view>
+          <text class="item-school">{{item.school}}</text>
+        </view>
+        <text class="item-major">{{item.major || '专业未填'}}</text>
+        <view class="item-bottom-row">
+          <text class="item-prob" style="color:{{item._probColor}}">录取概率 {{item._probText}}</text>
+          <text class="item-date">{{item._dateStr}}</text>
+        </view>
+      </view>
+
+      <!-- 操作区 -->
+      <view class="item-actions">
+        <view
+          class="action-btn action-up {{index === 0 ? 'action-btn-disabled' : ''}}"
+          bindtap="moveUp"
+          data-index="{{index}}"
+        >▲</view>
+        <view
+          class="action-btn action-down {{index === list.length - 1 ? 'action-btn-disabled' : ''}}"
+          bindtap="moveDown"
+          data-index="{{index}}"
+        >▼</view>
+        <view
+          class="action-btn action-del"
+          bindtap="deleteItem"
+          data-index="{{index}}"
+        >✕</view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 空状态 -->
+  <view wx:if="{{list.length === 0}}" class="empty-state">
+    <text class="empty-icon">📋</text>
+    <text class="empty-title">志愿表还是空的</text>
+    <text class="empty-sub">查询高考志愿后，点击院校旁的「+」按钮\n即可加入志愿表</text>
+    <view class="empty-btn" bindtap="goQuery">去查询志愿</view>
+  </view>
+
+  <!-- 底部导出提示 -->
+  <view wx:if="{{list.length > 0}}" class="export-footer">
+    <text class="export-icon">📤</text>
+    <text class="export-text">截图保存，即可分享给家长和老师</text>
+  </view>
+
+</view>

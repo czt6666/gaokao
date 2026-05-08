@@ -90,8 +90,16 @@ export default function RootLayout({
   return (
     <html lang="zh-CN">
       <head>
-        {/* 百度站长验证 — 登录 https://ziyuan.baidu.com/ 后替换 content 值 */}
-        <meta name="baidu-site-verification" content="BAIDU_VERIFY_CODE" />
+        {/* 百度站长验证 — 登录 https://ziyuan.baidu.com/ 获取 */}
+        <meta name="baidu-site-verification" content="codeva-gBf887uEor" />
+        {/* 谷歌搜索控制台验证 — 登录 https://search.google.com/search-console 获取 */}
+        <meta name="google-site-verification" content="01bq_X9qg0R0xg6pVc8oAuxxLqymHqq5VLXskpOgh4Q" />
+        {/* 必应站长工具验证 — 登录 https://www.bing.com/webmasters 获取 */}
+        <meta name="msvalidate.01" content="5A20DD5D661CD45F8C47A404F1D24B4C" />
+        {/* 360搜索站长平台验证 — 登录 https://zhanzhang.so.com/ 获取 */}
+        <meta name="360-site-verification" content="ab79439c0f87a9a988e14f8812c86be6" />
+        {/* 搜狗站长平台验证 — 登录 https://zhanzhang.sogou.com/ 获取 */}
+        <meta name="sogou_site_verification" content="4ai3WCh2fu" />
         {/* 结构化数据 */}
         <script
           type="application/ld+json"

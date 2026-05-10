@@ -307,6 +307,7 @@ export default function Home() {
               <Link href="/compare" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>学校对比</Link>
               <Link href="/major-trend" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>专业风向标</Link>
               <Link href="/form" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>志愿表</Link>
+              <Link href="/ai-chat" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13, color: "var(--color-accent)", fontWeight: 600 }}>✦ AI 助手</Link>
             </div>
             <AuthNav />
             {/* 移动端更多按钮 */}
@@ -331,6 +332,7 @@ export default function Home() {
                   <Link href="/compare" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>学校对比</Link>
                   <Link href="/major-trend" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>专业风向标</Link>
                   <Link href="/form" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-text-primary)", textDecoration: "none", borderRadius: 8 }}>志愿表</Link>
+                  <Link href="/ai-chat" onClick={() => setShowMobileMenu(false)} style={{ display: "block", padding: "8px 14px", fontSize: 14, color: "var(--color-accent)", textDecoration: "none", borderRadius: 8, fontWeight: 600 }}>✦ AI 助手</Link>
                 </div>
               )}
             </div>

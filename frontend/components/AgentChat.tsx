@@ -363,9 +363,7 @@ export default function AgentChat() {
         }
       `}</style>
 
-      {/* ===== AI 助手已隐藏（详见 docs/hidden-features.md） ===== */}
-      {/* 如需恢复，把下面 block 的 false 改为 !open 并显示按钮即可 */}
-      {false && !open && (
+      {!open && (
         <span
           aria-hidden
           style={{
@@ -381,7 +379,7 @@ export default function AgentChat() {
           }}
         />
       )}
-      {false && (
+      {(
         <button
           onClick={() => setOpen((v) => !v)}
           aria-label="AI 助手 · 家长任何问题都能问"
@@ -450,7 +448,7 @@ export default function AgentChat() {
         aria-label="意见反馈"
         style={{
           position: "fixed",
-          bottom: 80,
+          bottom: 24,
           right: 16,
           zIndex: 1000,
           width: 48,

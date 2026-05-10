@@ -1062,6 +1062,9 @@ function ResultsContent() {
             <Link href="/form" style={{ fontSize: 13, padding: "6px 14px", borderRadius: 980, background: "var(--color-accent)", color: "#fff", textDecoration: "none", fontWeight: 500 }}>
               我的志愿表
             </Link>
+            <Link href="/ai-chat" style={{ fontSize: 13, padding: "6px 14px", borderRadius: 980, border: "1px solid var(--color-separator)", color: "var(--color-accent)", textDecoration: "none", fontWeight: 600 }}>
+              ✦ AI 助手
+            </Link>
             <AuthNav />
           </div>
 
@@ -1135,6 +1138,18 @@ function ResultsContent() {
                   }}
                 >
                   我的志愿表
+                </Link>
+                <Link
+                  href="/ai-chat"
+                  onClick={() => setShowMobileMenu(false)}
+                  style={{
+                    fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                    border: "1px solid var(--color-separator)",
+                    color: "var(--color-accent)", textDecoration: "none",
+                    fontWeight: 600, display: "block",
+                  }}
+                >
+                  ✦ AI 助手
                 </Link>
                 <button
                   onClick={() => { setShowMobileMenu(false); setShowEmailInput(!showEmailInput); }}

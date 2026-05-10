@@ -53,7 +53,7 @@ _SUBJECT_MAP = [
 
 
 def _extract_params(messages: List[Dict]) -> Dict:
-    """从对话历史中提取 province / rank / subject"""
+    """从对话历史中提取 province / rank / score / subject"""
     full_text = " ".join(m.get("content", "") for m in messages)
 
     # 省份：取最后出现的
@@ -62,11 +62,18 @@ def _extract_params(messages: List[Dict]) -> Dict:
         if p in full_text:
             province = p
 
-    # 位次：优先匹配 "位次xxxx" 或 "排名xxxx"，备选纯数字
+    # 位次：优先匹配 "位次xxxx" 或 "排名xxxx"
     rank = ""
     m = re.search(r'(?:位次|排名)[：: ]?(\d{1,6})', full_text)
     if m:
         rank = m.group(1)
+
+    # 分数：匹配 "600分" / "650分" 等二三位数分数（不与位次重复）
+    score = ""
+    if not rank:
+        ms = re.search(r'(\d{2,3})\s*分', full_text)
+        if ms:
+            score = ms.group(1)
 
     # 选科
     subject = ""
@@ -75,7 +82,7 @@ def _extract_params(messages: List[Dict]) -> Dict:
             subject = value
             break
 
-    return {"province": province, "rank": rank, "subject": subject}
+    return {"province": province, "rank": rank, "score": score, "subject": subject}
 
 
 def _detect_actions(messages: List[Dict]) -> List[Dict]:
@@ -85,7 +92,7 @@ def _detect_actions(messages: List[Dict]) -> List[Dict]:
         "",
     )
     params = _extract_params(messages)
-    province, rank, subject = params["province"], params["rank"], params["subject"]
+    province, rank, score, subject = params["province"], params["rank"], params.get("score", ""), params["subject"]
 
     # 拼接 results URL
     results_params: Dict = {}
@@ -100,12 +107,18 @@ def _detect_actions(messages: List[Dict]) -> List[Dict]:
     if re.search(r'如何|怎么用|开始|填写|输入分数|填分|我的分数|填报志愿|怎么填', user_msg):
         actions.append({"label": "填写分数", "url": "/#query-form", "icon": "📝", "desc": "输入位次或模考分获取推荐"})
 
-    # 意图：推荐结果
-    if re.search(r'推荐|能上|可以报|冲稳保|志愿|什么学校|哪些学校|查推荐|看推荐|适合报|适合我', user_msg):
-        if rank or province:
-            actions.append({"label": "查看推荐结果", "url": results_url, "icon": "🎯", "desc": f"{province or ''}{'位次'+rank if rank else ''} 推荐"})
+    # 意图：推荐结果 / 查询可报学校（宽泛匹配）
+    if re.search(r'推荐|能上|可以报|可以去|能去|去哪|冲稳保|志愿|什么学校|哪些学校|哪个学校|查推荐|看推荐|适合报|适合我|被低估|冷门窗口|冷门高校|隐藏宝藏', user_msg):
+        if rank:
+            actions.append({"label": "查看推荐结果", "url": results_url, "icon": "🎯", "desc": f"{province or ''}{'位次'+rank} 推荐"})
         else:
-            actions.append({"label": "填写分数获取推荐", "url": "/", "icon": "📝", "desc": "先输入分数，再查推荐"})
+            score_hint = f"分数 {score} 分" if score else "分数或位次"
+            actions.append({
+                "label": "输入分数查推荐",
+                "url": "/#query-form",
+                "icon": "📝",
+                "desc": f"填入{score_hint}，看看还能去哪些被低估的学校",
+            })
 
     # 意图：学校库
     if re.search(r'搜索学校|查学校|学校库|院校库|浏览学校|所有学校|学校名单|学校列表', user_msg):
@@ -153,8 +166,25 @@ def stream_agent_turn(messages: List[Dict], session_id: str = "") -> Iterator[st
         yield "data: [DONE]\n\n"
         return
 
+    # ── 前置意图拦截：推荐学校类问题直接导航，不走 LLM ──────────────
+    actions = _detect_actions(messages)
+    nav_actions = [a for a in actions if a["url"].startswith("/#query-form") or a["url"].startswith("/results")]
+    if nav_actions:
+        if any(a["url"].startswith("/#query-form") for a in nav_actions):
+            reply = "填入你的分数或位次，马上帮你筛出被低估的高性价比学校 👇"
+        else:
+            reply = "根据你的位次，可以直接查看个性化推荐结果 👇"
+        yield sse({"type": "token", "content": reply})
+        yield sse({"type": "meta", "searched": False, "query": "", "sources": []})
+        yield sse({"type": "actions", "actions": nav_actions})
+        yield "data: [DONE]\n\n"
+        return
+    # ─────────────────────────────────────────────────────────────────
+
     sources: List[Dict] = []
     search_query = ""
+    skip_next_url = [False]  # 用列表包装，方便在嵌套作用域内修改
+    _citation_re = re.compile(r'【[^】]*】')  # 匹配所有【...】格式：【N】【来源N】【名称】
 
     try:
         with httpx.stream(
@@ -206,6 +236,22 @@ def stream_agent_turn(messages: List[Dict], session_id: str = "") -> Iterator[st
 
                     elif chunk_type == "response.output_text.delta":
                         content = chunk.get("delta", "")
+                        if not content:
+                            continue
+                        # 跳过紧跟【来源N】后面的 (url) chunk
+                        if skip_next_url[0]:
+                            skip_next_url[0] = False
+                            end = content.find(")")
+                            if end >= 0:
+                                content = content[end + 1:]  # 保留 ) 之后的部分
+                            else:
+                                continue  # URL 跨 chunk，整块跳过
+                        # 去掉内联引用标记【N】【来源N】【名称】等
+                        if _citation_re.search(content):
+                            # 只有【来源N】后面才跟着 (url) chunk
+                            if re.search(r'【来源\d+】', content):
+                                skip_next_url[0] = True
+                            content = _citation_re.sub("", content)
                         if content:
                             yield sse({"type": "token", "content": content})
 

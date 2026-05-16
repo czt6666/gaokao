@@ -19,16 +19,18 @@ const _agent = new https.Agent({
 });
 
 // ── HTTP GET → JSON ──────────────────────────────────────────────
-function fetchJSON(path) {
+function fetchJSON(path, authToken) {
   return new Promise((resolve, reject) => {
+    const headers = {
+      'Accept': 'application/json',
+      'Accept-Encoding': 'gzip, deflate',
+      'User-Agent': 'WeChatMiniProgram/gaokaoQuery',
+    };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
     const options = {
       hostname: BASE_URL, port: 443, path,
       method: 'GET', agent: _agent,
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-        'User-Agent': 'WeChatMiniProgram/gaokaoQuery',
-      },
+      headers,
     };
     const req = https.request(options, (res) => {
       const enc = (res.headers['content-encoding'] || '').toLowerCase();
@@ -176,6 +178,8 @@ exports.main = async (event, context) => {
           hidden_gems:   trimList(raw.hidden_gems),
           total_matched: raw.total_matched || 0,
           is_paid:       raw.is_paid || false,
+          is_trial:      raw.is_trial || false,
+          trial_limit:   raw.trial_limit || null,
         },
       };
 
@@ -368,6 +372,31 @@ exports.main = async (event, context) => {
         console.log('[consumeReferralCredit] creditId=%s', creditId);
         return { success: true };
       } catch (e) {
+        return { success: false, error: e.message };
+      }
+
+    // ── getUserStatus：查询用户会员状态（订阅类型、到期时间等）────────
+    } else if (type === 'getUserStatus') {
+      const { auth_token } = event;
+      if (!auth_token) return { success: false, error: '缺少 auth_token' };
+      try {
+        const data = await fetchJSON('/api/auth/me', auth_token);
+        return {
+          success: true,
+          user_id:            data.user_id            || null,
+          is_paid:            data.is_paid            || false,
+          subscription_type:  data.subscription_type  || '',
+          subscription_label: data.subscription_label || '',
+          subscription_end_at: data.subscription_end_at || null,
+          days_remaining:     data.days_remaining,
+          referral_code:      data.referral_code      || '',
+          referral_count:     data.referral_count     || 0,
+          referral_reward_days: data.referral_reward_days || 0,
+        };
+      } catch (e) {
+        if (e.message && e.message.includes('401')) {
+          return { success: false, error: '登录已过期', code: 401 };
+        }
         return { success: false, error: e.message };
       }
 

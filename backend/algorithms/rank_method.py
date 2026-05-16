@@ -123,10 +123,33 @@ def predict_admission(
         except Exception:
             return raw_rank
 
+    # ── 异常年份检测 ────────────────────────────────────────────
+    # 如果某一年位次与其他年份差异 >3 倍，很可能是数据错误或异常小年/大年。
+    # 异常年份降低权重，避免误导推荐。
+    _ANOMALY_RATIO_THRESHOLD = 3.0
+    _anomaly_warning = ""
+    _anomaly_years: list = []
+    if len(recent) >= 2:
+        _ranks_only = [r["min_rank"] for r in recent if r.get("min_rank")]
+        _median_r = statistics.median(_ranks_only) if _ranks_only else 0
+        if _median_r > 0:
+            for r in recent:
+                _yr_rank = r.get("min_rank", 0)
+                if _yr_rank > 0:
+                    _ratio = max(_yr_rank, _median_r) / min(_yr_rank, _median_r)
+                    if _ratio > _ANOMALY_RATIO_THRESHOLD:
+                        _anomaly_years.append(r["year"])
+            if _anomaly_years:
+                _anomaly_warning = f"历史数据存在异常波动（{_ANOMALY_RATIO_THRESHOLD:.0f}倍以上），{_anomaly_years}年数据可能为爆冷/爆热年份，概率仅供参考"
+
     # 指数加权平均：最近年权重最高，按 ~0.7^i 衰减
     # [2.0, 1.4, 1.0, 0.7, 0.5] — 每年权重约为前一年的 70%
     # 理由：高考招生政策/院校计划每年有调整，近年数据与当前实际更相关
     weights = [2.0, 1.4, 1.0, 0.7, 0.5][:len(recent)]
+    # 异常年份权重降低80%（仅保留20%影响力）
+    for i, r in enumerate(recent):
+        if r["year"] in _anomaly_years:
+            weights[i] *= 0.2
     total_w = sum(weights)
     # 用归一化后的位次做加权平均（P4核心步骤）
     normalized_ranks = [_normalize_rank(recent[i]["min_rank"], recent[i]["year"]) for i in range(len(recent))]
@@ -143,13 +166,17 @@ def predict_admission(
     # 用层级贝叶斯思想：posterior = (n * sample_mean + k * prior) / (n + k)
     # k=2 表示先验等价于 2 年数据的权重，n=实际年数
     # 效果：1年数据 → 先验占67%；2年 → 50%；3年 → 40%；5年 → 29%
+    # 【修复】专业 raw avg 明显劣于学校先验（>1.8倍），说明可能是专科/二段/特殊项目，
+    # 不应向学校先验收缩，避免被错误拉入推荐列表。
     if school_prior_rank > 0 and len(recent) <= 3:
-        _k_prior = 2.0  # 先验强度（等价样本数）
-        _n = len(recent)
-        avg_rank = (_n * avg_rank + _k_prior * school_prior_rank) / (_n + _k_prior)
-        # 标准差也收缩：小样本时放大不确定性
-        if len(recent) == 1:
-            std_rank = max(std_rank, avg_rank * 0.15)  # 至少15%不确定性
+        _ratio = avg_rank / school_prior_rank if school_prior_rank > 0 else 0
+        if _ratio <= 1.8:
+            _k_prior = 2.0  # 先验强度（等价样本数）
+            _n = len(recent)
+            avg_rank = (_n * avg_rank + _k_prior * school_prior_rank) / (_n + _k_prior)
+            # 标准差也收缩：小样本时放大不确定性
+            if len(recent) == 1:
+                std_rank = max(std_rank, avg_rank * 0.15)  # 至少15%不确定性
     # ── 缺陷1修复：去掉 volatility_factor 双重波动惩罚 ──────────────
     # 原设计：volatility_factor = 1 + CV 放在分母，让波动大的专业 sigmoid 更平缓。
     # 但这和高波动收缩（输出阶段把概率拉向50%）是同一问题的两次惩罚。
@@ -282,6 +309,7 @@ def predict_admission(
         "recent_years_data": recent,
         "plan_warning": plan_warning,   # 招生计划变动提示（空字符串=无异常）
         "data_reliability": data_reliability,  # 正常/中/低/极低
+        "anomaly_warning": _anomaly_warning,  # 历史数据异常波动提示
     }
 
 

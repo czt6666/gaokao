@@ -106,14 +106,18 @@ class AdmissionRecord(Base):
     province      = Column(String, index=True)              # 招生省份
     year          = Column(Integer, index=True)
     batch         = Column(String, default="")              # 批次
-    subject_req   = Column(String, default="")              # 选科要求
-    min_score     = Column(Integer, default=0)              # 最低录取分
-    min_rank      = Column(Integer, default=0)              # 最低录取位次
-    admit_count   = Column(Integer, default=0)              # 录取人数
-    school_province = Column(String, default="")            # 院校所在省
-    school_nature = Column(String, default="")              # 公办/民办
-    is_985        = Column(String, default="否")
-    is_211        = Column(String, default="否")
+    subject_req      = Column(String, default="")           # 选科要求（原始文本）
+    subject_must     = Column(String, default="")           # 必选科目（首选+必选）
+    subject_any_of   = Column(String, default="")           # OR 组（分号分隔多组，组内斜杠分隔）
+    batch_type       = Column(String, default="")           # 批次分类
+    major_restrictions = Column(String, default="")         # 专业限制标签
+    min_score        = Column(Integer, default=0)           # 最低录取分
+    min_rank         = Column(Integer, default=0)           # 最低录取位次
+    admit_count      = Column(Integer, default=0)           # 录取人数
+    school_province  = Column(String, default="")           # 院校所在省
+    school_nature    = Column(String, default="")           # 公办/民办
+    is_985           = Column(String, default="否")
+    is_211           = Column(String, default="否")
 
     __table_args__ = (
         Index("ix_adm_school_major_year", "school_name", "major_name", "year", "province"),

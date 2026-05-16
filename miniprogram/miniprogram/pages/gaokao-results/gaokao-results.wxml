@@ -28,25 +28,23 @@
     <text wx:for="{{constraintTags}}" wx:key="label" class="constraint-bar-tag">{{item.label}}：{{item.value}}</text>
   </view>
 
+  <!-- ── 解锁完整报告横幅 ── -->
+  <view wx:if="{{!isPaid && showPayBanner}}" class="pay-banner">
+    <text class="pay-banner-title">🔒 解锁完整报告</text>
+    <text class="pay-banner-desc">全部{{totalCount}}所院校深度分析 · 安全线 · 风险提醒 · 近3年趋势 · 在读生口碑 · PDF下载</text>
+    <view class="pay-banner-btn-wrap">
+      <!-- 有免费次数时显示免费解锁按钮 -->
+      <view wx:if="{{hasFreeCredit}}" class="free-unlock-btn" bindtap="onFreeUnlock">🎁 免费解锁</view>
+      <view class="pay-btn" bindtap="onSingleBannerTap">¥39 立即解锁</view>
+    </view>
+  </view>
+
   <!-- ── Tab 栏 ── -->
   <view class="tab-bar">
     <view class="tab-item {{activeTab==='gems'?'active':''}}"   bindtap="setTab" data-tab="gems">冷门好校 <text class="tab-count">{{gemsCount}}</text></view>
     <view class="tab-item {{activeTab==='surge'?'active':''}}"  bindtap="setTab" data-tab="surge">冲 <text class="tab-count">{{surgeCount}}</text></view>
     <view class="tab-item {{activeTab==='stable'?'active':''}}" bindtap="setTab" data-tab="stable">稳 <text class="tab-count">{{stableCount}}</text></view>
     <view class="tab-item {{activeTab==='safe'?'active':''}}"   bindtap="setTab" data-tab="safe">保 <text class="tab-count">{{safeCount}}</text></view>
-  </view>
-
-  <!-- ── 付费解锁提示 ── -->
-  <view wx:if="{{!isPaid && showPayBanner}}" class="pay-banner">
-    <view class="pay-banner-left">
-      <text class="pay-banner-title">🔒 解锁完整报告</text>
-      <text class="pay-banner-desc">全部{{totalCount}}所院校 · 就业薪资 · 推荐理由 · 可保存PDF</text>
-    </view>
-    <view class="pay-banner-btns">
-      <!-- 有免费次数时显示免费解锁按钮 -->
-      <view wx:if="{{hasFreeCredit}}" class="free-unlock-btn" bindtap="onFreeUnlock">🎁 免费解锁</view>
-      <view class="pay-btn" bindtap="onPay">{{payBannerText || '¥1.99 解锁'}}</view>
-    </view>
   </view>
 
   <!-- 内容声明 -->
@@ -56,15 +54,19 @@
   <view class="school-list">
     <block wx:for="{{currentList}}" wx:key="idx">
 
-      <!-- 锁定卡片（未付费时最多显示3张） -->
-      <view wx:if="{{item.locked && (isPaid || item._lockedIdx < 3)}}" class="school-card locked-card" bindtap="onPay">
+      <!-- 锁定卡片（未付费/试看时最多显示3张锁定预览） -->
+      <view wx:if="{{item.locked && (isPaid || item._lockedIdx < 3)}}" class="school-card locked-card" bindtap="onCardUnlock" data-locked-idx="{{item._lockedIdx}}">
         <view class="locked-body">
           <view class="locked-icon">🔒</view>
           <view class="locked-info">
             <text class="locked-name">{{item.school_name || '院校信息已锁定'}}</text>
-            <text class="locked-hint">付费¥1.99解锁，查看录取概率与推荐理由</text>
+            <text class="locked-hint">
+              {{item._lockedIdx === 0 ? '¥9.9 解锁前三所学校，含录取概率与就业薪资' : '¥39 解锁全部学校，查看完整分析与推荐理由'}}
+            </text>
           </view>
-          <view class="locked-unlock-btn">解锁</view>
+          <view class="locked-unlock-btn {{item._lockedIdx === 0 ? 'locked-unlock-btn-dark' : ''}}">
+            {{item._lockedIdx === 0 ? '¥9.9 解锁前三所学校' : '¥39 解锁全部学校'}}
+          </view>
         </view>
       </view>
 
@@ -91,7 +93,7 @@
             </view>
           </view>
           <view class="prob-block">
-            <text class="prob-num" style="color:{{item._probColor}}">{{item._probText}}</text>
+            <text class="prob-num {{item._blurred?'blur-text':''}}" style="color:{{item._probColor}}">{{item._probText}}</text>
             <text class="prob-label">录取概率</text>
           </view>
         </view>
@@ -107,41 +109,47 @@
         <!-- 数据行 -->
         <view class="data-row">
           <view class="data-cell" wx:if="{{item.employment && item.employment.avg_salary}}">
-            <text class="data-val">¥{{item._salaryK}}k</text>
+            <text class="data-val {{item._blurred?'blur-text':''}}">¥{{item._salaryK}}k</text>
             <text class="data-label">平均月薪</text>
           </view>
-          <view class="data-cell" wx:if="{{item.avg_min_rank_3yr}}">
-            <text class="data-val">{{item.avg_min_rank_3yr}}</text>
-            <text class="data-label">近3年均值位次</text>
+          <view class="data-cell" wx:if="{{item.last_year_min_score}}">
+            <text class="data-val {{item._blurred?'blur-text':''}}">{{item.last_year_min_score}}</text>
+            <text class="data-label">去年最低分</text>
           </view>
-          <view class="data-cell" wx:if="{{item.rank_diff}}">
-            <text class="data-val" style="color:{{item.rank_diff>0?'#059669':'#DC2626'}}">{{item.rank_diff>0?'+':''}}{{item.rank_diff}}</text>
-            <text class="data-label">位次差</text>
+          <view class="data-cell" wx:if="{{item.last_year_min_rank}}">
+            <text class="data-val {{item._blurred?'blur-text':''}}">{{item.last_year_min_rank}}</text>
+            <text class="data-label">去年最低位次</text>
           </view>
         </view>
 
         <!-- 推荐理由（付费后显示，默认可展开） -->
         <view wx:if="{{item.reason}}" class="reason-block" bindtap="toggleReason" data-idx="{{index}}">
-          <text class="reason-text {{item._reasonExpanded ? 'reason-text-expanded' : ''}}">{{item.reason}}</text>
+          <text class="reason-text {{item._reasonExpanded ? 'reason-text-expanded' : ''}} {{item._blurred?'blur-text':''}}">{{item.reason}}</text>
           <view class="reason-expand-hint">
             <text class="reason-expand-text">{{item._reasonExpanded ? '收起' : '展开'}}</text>
           </view>
         </view>
 
         <!-- 机会信号 -->
-        <view wx:if="{{item.opportunity_signals && item.opportunity_signals.length > 0}}" class="opp-signals">
+        <view wx:if="{{item.opportunity_signals && item.opportunity_signals.length > 0}}" class="opp-signals {{item._blurred?'blur-text':''}}">
           <text wx:for="{{item.opportunity_signals}}" wx:key="*this" class="opp-signal-tag">{{item}}</text>
         </view>
 
         <!-- 冷门好校标签 -->
-        <view wx:if="{{item.is_hidden_gem && item.top_gem}}" class="gem-block">
+        <view wx:if="{{item.is_hidden_gem && item.top_gem}}" class="gem-block {{item._blurred?'blur-text':''}}">
           <text class="gem-label">💎 {{item.top_gem.gem_type_label}}</text>
           <text class="gem-desc">{{item.top_gem.gem_description}}</text>
         </view>
 
         <!-- 大年小年 -->
-        <view wx:if="{{item.big_small_year && item.big_small_year.prediction}}" class="year-tag" style="color:{{item._yearColor}};background:{{item._yearBg}}">
+        <view wx:if="{{item.big_small_year && item.big_small_year.prediction}}" class="year-tag {{item._blurred?'blur-text':''}}" style="color:{{item._yearColor}};background:{{item._yearBg}}">
           {{item._yearIcon}} {{item.big_small_year.prediction}}
+        </view>
+
+        <!-- 打码提示 -->
+        <view wx:if="{{item._blurred}}" class="blur-hint">
+          <text class="blur-hint-icon">🔒</text>
+          <text class="blur-hint-text">解锁查看完整数据与推荐理由</text>
         </view>
 
         <!-- 操作按钮 -->
@@ -154,17 +162,36 @@
       </view>
     </block>
 
-    <!-- 锁定折叠提示（未付费且有3张以上锁定卡时显示） -->
-    <view wx:if="{{!isPaid && currentLockedCount > 3}}" class="locked-fold-tip" bindtap="onPay">
+    <!-- 锁定折叠提示（未付费/试看且有3张以上锁定卡时显示） -->
+    <view wx:if="{{!isPaid && currentLockedCount > 3}}" class="locked-fold-tip" bindtap="onFoldTap">
       <text class="locked-fold-icon">🔒</text>
       <text class="locked-fold-text">还有 {{currentLockedCount - 3}} 所院校未显示</text>
-      <text class="locked-fold-cta">¥1.99 解锁后查看全部</text>
+      <text class="locked-fold-cta">¥39 解锁查看全部</text>
     </view>
 
-    <!-- 空状态 -->
-    <view wx:if="{{currentList.length===0}}" class="empty">
+    <!-- 全局无结果 -->
+    <view wx:if="{{totalCount===0 && noResultText}}" class="empty">
       <text class="empty-icon">🔍</text>
-      <text class="empty-text">该分类暂无匹配结果</text>
+      <text class="empty-text">{{noResultText}}</text>
+    </view>
+
+    <!-- 当前 tab 内无结果 -->
+    <view wx:if="{{totalCount>0 && currentList.length===0 && noResultText}}" class="empty">
+      <text class="empty-icon">📭</text>
+      <text class="empty-text">{{noResultText}}</text>
+    </view>
+  </view>
+
+  <!-- ── 季会员推广卡片 ── -->
+  <view wx:if="{{showSeasonPromo}}" class="season-promo-card" bindtap="onSeasonBannerTap">
+    <view class="season-promo-left">
+      <text class="season-promo-tag">推荐</text>
+      <text class="season-promo-title">2026 填报季会员</text>
+      <text class="season-promo-desc">期内无限次重新查询 · 位次微调随时重查 · 志愿表收藏 · PDF 随时下载</text>
+    </view>
+    <view class="season-promo-right">
+      <text class="season-promo-price">¥99</text>
+      <text class="season-promo-btn">开通</text>
     </view>
   </view>
 
@@ -204,6 +231,19 @@
     <text class="footer-feedback-arrow">›</text>
   </view>
 
+</view>
+
+<!-- ── 支付确认弹窗 ── -->
+<view wx:if="{{showPayConfirm}}" class="confirm-mask">
+  <view class="confirm-modal">
+    <text class="confirm-title">{{confirmTitle}}</text>
+    <text class="confirm-price">{{confirmPrice}}</text>
+    <text class="confirm-desc">{{confirmDesc}}</text>
+    <view class="confirm-btns">
+      <view class="confirm-btn confirm-cancel" bindtap="closePayConfirm">取消</view>
+      <view class="confirm-btn confirm-ok" bindtap="onConfirmPay">确认支付</view>
+    </view>
+  </view>
 </view>
 
 <!-- ── 支付后等待 Webhook 倒计时蒙层 ── -->

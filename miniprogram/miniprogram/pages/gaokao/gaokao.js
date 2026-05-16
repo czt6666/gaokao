@@ -3,6 +3,7 @@
 
 const FORM_KEY = 'gaokao_form_v3';
 const CONSTRAINT_KEY = 'gaokao_constraints';
+const SUBJECT_KEY = 'gaokao_subject';
 
 const PROVINCES = [
   '北京','河北','四川','贵州','安徽','广西','江西','云南','山西','重庆',
@@ -81,7 +82,8 @@ Page({
 
     // 偏好约束
     constraintExpanded: false,
-    constraintMajor: '',
+    constraintMajorInput: '',
+    constraintMajors: [],
     constraintCities: [],
     constraintNature: [],
     constraintLevels: [],
@@ -113,6 +115,7 @@ Page({
     } catch (e) {}
 
     this._loadConstraints(options);
+    this._loadSubject();
   },
 
   onShow() {
@@ -144,8 +147,14 @@ Page({
     }
 
     if (constraints) {
+      // 兼容旧格式：major 可能是字符串（空格分隔）
+      let majors = constraints.majors || [];
+      if (!majors.length && constraints.major && typeof constraints.major === 'string') {
+        majors = constraints.major.split(/\s+/).filter(Boolean);
+      }
       this.setData({
-        constraintMajor: constraints.major || '',
+        constraintMajorInput: '',
+        constraintMajors: majors,
         constraintCities: constraints.cities || [],
         constraintNature: constraints.nature || [],
         constraintLevels: constraints.levels || [],
@@ -166,14 +175,42 @@ Page({
   },
 
   _saveConstraints() {
-    const { constraintMajor, constraintCities, constraintNature, constraintLevels } = this.data;
+    const { constraintMajors, constraintCities, constraintNature, constraintLevels } = this.data;
     try {
       wx.setStorageSync(CONSTRAINT_KEY, JSON.stringify({
-        major: constraintMajor,
+        majors: constraintMajors,
         cities: constraintCities,
         nature: constraintNature,
         levels: constraintLevels,
       }));
+    } catch (e) {}
+  },
+
+  _saveSubject() {
+    const { examMode, first312, second312, subjects333, oldSubject } = this.data;
+    try {
+      wx.setStorageSync(SUBJECT_KEY, JSON.stringify({
+        examMode,
+        first312,
+        second312,
+        subjects333,
+        oldSubject,
+      }));
+    } catch (e) {}
+  },
+
+  _loadSubject() {
+    try {
+      const raw = wx.getStorageSync(SUBJECT_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (!saved || saved.examMode !== this.data.examMode) return;
+      this.setData({
+        first312: saved.first312 || '',
+        second312: saved.second312 || [],
+        subjects333: saved.subjects333 || [],
+        oldSubject: saved.oldSubject || '',
+      });
     } catch (e) {}
   },
 
@@ -209,7 +246,9 @@ Page({
 
   toggleFirst312(e) {
     const v = e.currentTarget.dataset.value;
-    this.setData({ first312: v, subjectError: '' });
+    this.setData({ first312: v, subjectError: '' }, () => {
+      this._saveSubject();
+    });
   },
 
   toggleSecond312(e) {
@@ -228,6 +267,8 @@ Page({
     this.setData({
       second312: arr,
       subjectError: arr.length === 2 ? '' : `请再选 2 科（已选 ${arr.length} 科）`,
+    }, () => {
+      this._saveSubject();
     });
   },
 
@@ -247,12 +288,16 @@ Page({
     this.setData({
       subjects333: arr,
       subjectError: arr.length === 3 ? '' : `请选 3 科（已选 ${arr.length} 科）`,
+    }, () => {
+      this._saveSubject();
     });
   },
 
   toggleOldSubject(e) {
     const v = e.currentTarget.dataset.value;
-    this.setData({ oldSubject: v, subjectError: '' });
+    this.setData({ oldSubject: v, subjectError: '' }, () => {
+      this._saveSubject();
+    });
   },
 
   // ── 偏好约束 ──
@@ -262,8 +307,33 @@ Page({
 
   onConstraintMajorInput(e) {
     let v = e.detail.value || '';
-    if (v.length > 50) v = v.slice(0, 50);
-    this.setData({ constraintMajor: v }, () => {
+    if (v.length > 20) v = v.slice(0, 20);
+    this.setData({ constraintMajorInput: v });
+  },
+
+  addMajorTag() {
+    const v = (this.data.constraintMajorInput || '').trim();
+    if (!v) return;
+    const arr = this.data.constraintMajors.slice();
+    if (arr.includes(v)) {
+      this.setData({ constraintMajorInput: '' });
+      return;
+    }
+    if (arr.length >= 5) {
+      wx.showToast({ title: '最多5个关键词', icon: 'none' });
+      return;
+    }
+    arr.push(v);
+    this.setData({ constraintMajors: arr, constraintMajorInput: '' }, () => {
+      this._saveConstraints();
+    });
+  },
+
+  removeMajorTag(e) {
+    const idx = e.currentTarget.dataset.index;
+    const arr = this.data.constraintMajors.slice();
+    arr.splice(idx, 1);
+    this.setData({ constraintMajors: arr }, () => {
       this._saveConstraints();
     });
   },
@@ -286,7 +356,7 @@ Page({
     const {
       mode, rankInput, scoreInput, provinceIdx,
       examMode, first312, second312, subjects333, oldSubject,
-      constraintMajor, constraintCities, constraintNature, constraintLevels,
+      constraintMajors, constraintCities, constraintNature, constraintLevels,
       gkLoading,
     } = this.data;
     if (gkLoading) return;
@@ -340,8 +410,8 @@ Page({
 
     // 组装约束参数（URL query 格式）
     const constraintParams = {};
-    if (constraintMajor && constraintMajor.trim()) {
-      constraintParams.c_major = constraintMajor.trim().slice(0, 50);
+    if (constraintMajors.length) {
+      constraintParams.c_major = constraintMajors.join(' ').slice(0, 100);
     }
     if (constraintCities.length) {
       constraintParams.c_city = constraintCities.join(',');

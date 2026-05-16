@@ -1,6 +1,24 @@
 // pages/gaokao-results/gaokao-results.js
 // 艺圆智探 · 志愿推荐结果页
 // v3 — PDF云代理、支付倒计时、推荐裂变、免费次数抵扣
+//
+// ━━━ WXML 需配合的修改 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// 1. 锁定卡片按钮绑定：
+//    <button data-locked-idx="{{item._lockedIdx}}" bindtap="onCardUnlock">...</button>
+//    第 3 所（_lockedIdx===2）且未付费时自动弹出 ¥9.9 试看，其余弹出 ¥39 完整报告
+//
+// 2. 底部横幅文案绑定：
+//    <view>{{payBannerText}}</view>
+//    未付费 → "¥9.9 起解锁"；试看 → "升级完整报告 ¥39"
+//
+// 3. 季会员推广卡片：
+//    <view wx:if="{{showSeasonPromo}}" bindtap="onSeasonPromoTap">...</view>
+//
+// 4. 无结果提示：
+//    <view wx:if="{{noResultText}}">{{noResultText}}</view>
+//
+// 5. 当前列表为空时（tab 内无数据）：
+//    <view wx:if="{{currentList.length === 0 && noResultText}}">{{noResultText}}</view>
 
 const FORM_KEY = 'gaokao_form_v3';
 
@@ -33,14 +51,17 @@ function yearColor(status) {
   if (status.includes('小年')) return { color: '#059669', bg: 'rgba(5,150,105,0.08)', icon: '✅' };
   return { color: '#8E8E93', bg: 'rgba(142,142,147,0.1)', icon: '' };
 }
-function enrichList(list) {
+function enrichList(list, isPaid) {
   if (!list) return [];
   var lockedIdx = 0;
+  var visibleIdx = 0;   // 前 2 所可见卡片打码（仅未付费时生效）
   return list.map(function(item, idx) {
     var prob = item.probability;
     var bsy  = item.big_small_year || {};
     var yc   = yearColor(bsy.prediction);
     var li   = item.locked ? lockedIdx++ : -1;
+    var blurred = (!isPaid && !item.locked && visibleIdx < 2) ? true : false;
+    if (!item.locked) visibleIdx++;
     return Object.assign({}, item, {
       idx:        idx,
       _probColor: probColor(prob),
@@ -53,6 +74,7 @@ function enrichList(list) {
       _yearIcon:  yc.icon,
       _lockedIdx: li,
       _reasonExpanded: false,
+      _blurred:   blurred,
     });
   });
 }
@@ -62,6 +84,8 @@ Page({
     query:              {},
     activeTab:          'stable',
     isPaid:             false,
+    isTrial:            false,
+    existingProductType: '',   // 用户已购产品类型（trial_report / single_report / season_2026）
     showPayBanner:      false,
     surgeList:          [],
     stableList:         [],
@@ -87,6 +111,14 @@ Page({
     hasFreeCredit:      false,    // 是否有可用的免费次数
     creditId:           '',       // 免费次数对应的记录 ID
     currentLockedCount: 0,
+    showSeasonPromo:    false,
+    noResultText:       '',
+    // 支付确认弹窗
+    showPayConfirm:     false,
+    pendingProductType: '',
+    confirmTitle:       '',
+    confirmPrice:       '',
+    confirmDesc:        '',
   },
 
   onShareAppMessage: function() {
@@ -154,19 +186,31 @@ Page({
       if (stored) this._orderNo = stored;
     }
 
-    var surgeList  = enrichList(result.surge);
-    var stableList = enrichList(result.stable);
-    var safeList   = enrichList(result.safe);
-    var gemsList   = enrichList(result.hidden_gems);
-
     var isPaid     = result.is_paid === true || !!this._orderNo;
+    var surgeList  = enrichList(result.surge, isPaid);
+    var stableList = enrichList(result.stable, isPaid);
+    var safeList   = enrichList(result.safe, isPaid);
+    var gemsList   = enrichList(result.hidden_gems, isPaid);
+    var isTrial    = result.is_trial === true;
     var totalCount = result.total_matched || (surgeList.length + stableList.length + safeList.length + gemsList.length);
     var surgeLockedCount = surgeList.filter(function(i) { return i.locked; }).length;
 
-    // 付费引导文案（含具体省份+位次，提高转化）
-    var bannerText = '¥1.99 解锁';
-    if (query && query.province && query.rank) {
-      bannerText = '¥1.99 解锁「' + query.province + '·' + query.rank + '位」完整报告';
+    // 读取用户已购产品类型（从 app.globalData.userStatus，由 _refreshUserStatus 拉取）
+    var appStatus = app.globalData && app.globalData.userStatus;
+    var existingProductType = '';
+    if (appStatus && appStatus.subscriptionType) {
+      existingProductType = appStatus.subscriptionType;
+    }
+
+    // 付费引导文案：根据已购状态动态展示
+    var bannerText = '';
+    if (!isPaid && !isTrial) {
+      bannerText = '¥9.9 起解锁';
+      if (query && query.province && query.rank) {
+        bannerText = '¥9.9 起解锁「' + query.province + '·' + query.rank + '位」报告';
+      }
+    } else if (isTrial) {
+      bannerText = '升级完整报告 ¥39';
     }
 
     // 把约束条件整理成数组，供 WXML 循环渲染
@@ -182,6 +226,8 @@ Page({
     this.setData({
       query:              query || {},
       isPaid:             isPaid,
+      isTrial:            isTrial,
+      existingProductType: existingProductType,
       showPayBanner:      !isPaid && totalCount > 5,
       payBannerText:      bannerText,
       constraintTags:     constraintTags,
@@ -197,7 +243,12 @@ Page({
       currentList:        stableList,
       activeTab:          'stable',
       currentLockedCount: surgeLockedCount,
+      showSeasonPromo:    (!isPaid || isTrial) && totalCount > 0 && existingProductType !== 'season_2026',
+      noResultText:       totalCount === 0 ? this._getNoResultText(query) : '',
     });
+
+    // 刷新当前 tab 的 noResultText
+    this._updateNoResultText(stableList, 'stable');
 
     // 若本地有 order_no 但后端数据仍锁定，补拉完整数据
     if (this._orderNo && !result.is_paid) {
@@ -211,6 +262,9 @@ Page({
     if (!isPaid) {
       this._checkFreeCredit();
     }
+
+    // 进入结果页时刷新会员状态（确保 subscription_type / days_remaining 最新）
+    if (app.refreshUserStatus) app.refreshUserStatus();
 
     // 处理裂变 token（通过分享链接进入时，在首次付费时兑换）
     var pendingToken = app.globalData && app.globalData.pendingReferralToken;
@@ -266,6 +320,24 @@ Page({
     });
   },
 
+  // ── 无结果提示文案（与 web 前端保持一致）──────────────────────
+  _getNoResultText: function(query) {
+    var qc = query && query.constraints || {};
+    var province = query && query.province || '';
+    if (qc.c_major) return '未找到匹配的结果，请输入正确的专业名称';
+    if (qc.c_city || qc.c_nature || qc.c_tier) return '未找到匹配的结果，请扩大筛选范围';
+    return province + '数据建设中';
+  },
+
+  _updateNoResultText: function(list, tab) {
+    if (list && list.length > 0) {
+      this.setData({ noResultText: '' });
+      return;
+    }
+    var text = tab === 'gems' ? '该位次区间暂无冷门推荐' : '暂无匹配数据';
+    this.setData({ noResultText: text });
+  },
+
   setTab: function(e) {
     var tab = e.currentTarget.dataset.tab;
     var map = { surge: 'surgeList', stable: 'stableList', safe: 'safeList', gems: 'gemsList' };
@@ -273,6 +345,7 @@ Page({
     var list        = this.data[map[tab]];
     var lockedCount = list.filter(function(i) { return i.locked; }).length;
     this.setData({ activeTab: tab, currentList: list, currentLockedCount: lockedCount });
+    this._updateNoResultText(list, tab);
   },
 
   toggleReason: function(e) {
@@ -391,16 +464,104 @@ Page({
     });
   },
 
-  // ── 付费解锁 ¥1.99 ───────────────────────────────────────────
-  onPay: function() {
+  // ── 根据当前状态与点击位置，判断应购买的产品 ─────────────────
+  // lockedIdx: 当前 tab 中锁定项的索引（从 0 开始）
+  _resolveProductType: function(lockedIdx) {
+    var isPaid  = this.data.isPaid;
+    var isTrial = this.data.isTrial;
+    var existing = this.data.existingProductType;
+
+    // 已付费或季会员 → 无需再购买
+    if (isPaid && !isTrial) return null;
+
+    // 试看用户 → 只能升级完整报告
+    if (isTrial) return 'single_report';
+
+    // 未付费用户：点击第 3 所（lockedIdx === 2）→ 试看；其余 → 完整报告
+    // 注意：lockedIdx 从 0 开始，所以第 3 所是 index 2
+    if (!isPaid && !isTrial) {
+      if (lockedIdx === 2) return 'trial_report';
+      return 'single_report';
+    }
+
+    return 'single_report';
+  },
+
+  // ── 获取产品展示文案 ─────────────────────────────────────────
+  _getPayLabel: function(productType) {
+    var labels = {
+      trial_report:  '¥9.9 解锁前三所',
+      single_report: '¥39 解锁完整报告',
+      season_2026:   '¥99 开通季会员',
+    };
+    return labels[productType] || '解锁';
+  },
+
+  // ── 支付确认弹窗 ────────────────────────────────────────────
+  _openPayConfirm: function(productType) {
+    var map = {
+      trial_report:  { title: '试看报告',        price: '¥9.9',  desc: '解锁冲/稳/保/冷门宝藏各前3所，含录取概率、就业薪资' },
+      single_report: { title: '单次完整报告',    price: '¥39',  desc: '本次查询全部' + this.data.totalCount + '所院校完整分析（含安全线、风险提醒、近3年趋势、在读生口碑、PDF下载）。本次查询永久解锁' },
+      season_2026:   { title: '2026填报季会员',  price: '¥99',  desc: '包含单次完整报告全部内容 + 期内无限次重新查询 + 位次微调随时重查 + 志愿表收藏 + 院校对比 + PDF随时下载。有效期至2026-09-01' },
+    };
+    var info = map[productType] || map['single_report'];
+    this.setData({
+      showPayConfirm:     true,
+      pendingProductType: productType,
+      confirmTitle:       info.title,
+      confirmPrice:       info.price,
+      confirmDesc:        info.desc,
+    });
+  },
+
+  closePayConfirm: function() {
+    this.setData({ showPayConfirm: false, pendingProductType: '' });
+  },
+
+  onConfirmPay: function() {
+    var productType = this.data.pendingProductType;
+    this.closePayConfirm();
+    this._executePay(productType);
+  },
+
+  // ── 点击锁定卡片解锁 ─────────────────────────────────────────
+  onCardUnlock: function(e) {
+    var lockedIdx = e.currentTarget.dataset.lockedIdx;
+    // 第一所（index 0）→ 试看 ¥9.9；其他 → 完整报告 ¥39
+    var productType = (lockedIdx === 0) ? 'trial_report' : 'single_report';
+    this._openPayConfirm(productType);
+  },
+
+  // ── 点击单次完整报告横幅 ─────────────────────────────────────
+  onSingleBannerTap: function() {
+    this._openPayConfirm('single_report');
+  },
+
+  // ── 点击季会员推广横幅 ───────────────────────────────────────
+  onSeasonBannerTap: function() {
+    this._openPayConfirm('season_2026');
+  },
+
+  // ── 点击折叠提示 ─────────────────────────────────────────────
+  onFoldTap: function() {
+    this._openPayConfirm('single_report');
+  },
+
+  // ── 实际执行支付 ─────────────────────────────────────────────
+  _executePay: function(productType) {
     var self  = this;
     var app   = getApp();
     var query = this.data.query;
 
+    // 季会员已在有效期内 → 无需再付费
+    if (self.data.existingProductType === 'season_2026' && self.data.isPaid) {
+      wx.showToast({ title: '您已是季会员，可直接查看完整报告', icon: 'none' });
+      return;
+    }
+
     // 检查登录状态是否就绪（openid 为空时支付必失败）
     if (!app.globalData || !app.globalData.openid) {
       wx.showToast({ title: '正在初始化，请稍等几秒后重试', icon: 'none', duration: 2000 });
-      // 触发重新登录
       if (app._silentLogin) app._silentLogin();
       return;
     }
@@ -410,7 +571,7 @@ Page({
     wx.cloud.callFunction({
       name: 'createPayment',
       data: {
-        product_type: 'single_report',
+        product_type: productType,
         province:     query.province  || '',
         rank_input:   query.rank      || 0,
         subject:      query.subject   || '',
@@ -435,9 +596,21 @@ Page({
             // 持久化 order_no
             self._orderNo = orderNo;
             try { wx.setStorageSync(_payKey(query.province, query.rank, query.subject), orderNo); } catch (e) {}
-            if (app.globalData) app.globalData.isPaid = true;
 
-            // 兑换裂变 token（若是通过分享链接首次付费）
+            // 根据购买产品更新本地状态
+            var isTrialPurchase = (productType === 'trial_report');
+            if (isTrialPurchase) {
+              if (app.globalData) app.globalData.isPaid = false;
+              self.setData({ isTrial: true, isPaid: false });
+            } else {
+              if (app.globalData) app.globalData.isPaid = true;
+              self.setData({ isPaid: true, isTrial: false });
+            }
+
+            // 刷新用户会员状态
+            if (app.refreshUserStatus) app.refreshUserStatus();
+
+            // 兑换裂变 token
             var pendingToken = self._pendingReferralToken;
             if (pendingToken) {
               wx.cloud.callFunction({
@@ -445,7 +618,6 @@ Page({
                 data: { type: 'redeemReferral', referral_token: pendingToken },
                 success: function(r) {
                   console.log('[Referral] redeem:', r.result && r.result.success);
-                  // 清除 pending token，避免重复兑换
                   self._pendingReferralToken = '';
                   if (app.globalData) app.globalData.pendingReferralToken = '';
                 },
@@ -453,9 +625,8 @@ Page({
               });
             }
 
-            // 更新 UI 并启动 5 秒倒计时（等待 Webhook 到达）
+            // 更新 UI 并启动 5 秒倒计时
             self.setData({
-              isPaid:           true,
               showPayBanner:    false,
               showPayCountdown: true,
               payCountdown:     5,
@@ -468,14 +639,14 @@ Page({
               wx.showToast({ title: '已取消支付', icon: 'none' });
             } else {
               wx.showToast({ title: '支付失败，请重试', icon: 'none' });
-              console.error('[onPay] fail:', err);
+              console.error('[_executePay] fail:', err);
             }
           },
         });
       },
       fail: function(err) {
         wx.hideLoading();
-        console.error('[onPay] createPayment fail:', err);
+        console.error('[_executePay] createPayment fail:', err);
         wx.showToast({ title: '网络异常，请重试', icon: 'none' });
       },
     });
@@ -566,10 +737,11 @@ Page({
         wx.hideLoading();
         if (res.result && res.result.success && res.result.data) {
           var data       = res.result.data;
-          var surgeList  = enrichList(data.surge);
-          var stableList = enrichList(data.stable);
-          var safeList   = enrichList(data.safe);
-          var gemsList   = enrichList(data.hidden_gems);
+          var isPaid2    = data.is_paid === true || !!self._orderNo;
+          var surgeList  = enrichList(data.surge, isPaid2);
+          var stableList = enrichList(data.stable, isPaid2);
+          var safeList   = enrichList(data.safe, isPaid2);
+          var gemsList   = enrichList(data.hidden_gems, isPaid2);
           var tab        = self.data.activeTab;
           var map = { surge: surgeList, stable: stableList, safe: safeList, gems: gemsList };
           var totalCount = data.total_matched || (surgeList.length + stableList.length + safeList.length + gemsList.length);
@@ -589,16 +761,20 @@ Page({
           // 幂等存入云端
           self._saveReportToCloud(orderNo);
 
+          var activeList = map[tab] || stableList;
           self.setData({
             surgeList: surgeList, stableList: stableList,
             safeList: safeList,   gemsList: gemsList,
             surgeCount:  surgeList.length,  stableCount: stableList.length,
             safeCount:   safeList.length,   gemsCount:   gemsList.length,
             totalCount:  totalCount,
-            currentList: map[tab] || stableList,
-            isPaid:      true,
-            showPayBanner: false,
+            currentList: activeList,
+            isPaid:      data.is_paid || false,
+            isTrial:     data.is_trial || false,
+            showPayBanner: (!data.is_paid || data.is_trial) && totalCount > 5,
+            showSeasonPromo: (!data.is_paid || data.is_trial) && totalCount > 0 && self.data.existingProductType !== 'season_2026',
           });
+          self._updateNoResultText(activeList, tab);
         } else {
           // 后端返回了但数据为空/失败 → 重试
           if (retry < 2) {

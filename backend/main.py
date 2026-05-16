@@ -390,6 +390,9 @@ def school_detail(
 
     major_records = defaultdict(list)
     for r in records:
+        # 院校最低分是学校级底线占位行，不作为独立专业展示
+        if not r.major_name or "院校最低分" in r.major_name:
+            continue
         major_records[r.major_name].append({
             "year": r.year,
             "min_rank": r.min_rank,

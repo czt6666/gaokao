@@ -121,7 +121,8 @@ export default function Home() {
 
   // ── 偏好约束 ──
   const [showConstraints, setShowConstraints] = useState(false);
-  const [cMajor, setCMajor] = useState("");
+  const [cMajorInput, setCMajorInput] = useState("");
+  const [cMajors, setCMajors] = useState<string[]>([]);
   const [cCityLevels, setCCityLevels] = useState<string[]>([]);
   const [cNature, setCNature] = useState<string[]>([]);
   const [cTiers, setCTiers] = useState<string[]>([]);
@@ -147,7 +148,12 @@ export default function Home() {
       const savedCons = localStorage.getItem("gaokao_constraints");
       if (savedCons) {
         const c = JSON.parse(savedCons);
-        if (c.cMajor !== undefined) setCMajor(c.cMajor);
+        if (c.cMajors !== undefined) {
+          setCMajors(Array.isArray(c.cMajors) ? c.cMajors : (typeof c.cMajors === "string" ? c.cMajors.split(/\s+/).filter(Boolean) : []));
+        } else if (c.cMajor !== undefined && typeof c.cMajor === "string") {
+          // 兼容旧格式
+          setCMajors(c.cMajor.split(/\s+/).filter(Boolean));
+        }
         if (c.cCityLevels !== undefined) setCCityLevels(c.cCityLevels);
         if (c.cNature !== undefined) setCNature(c.cNature);
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
@@ -180,10 +186,10 @@ export default function Home() {
     if (!constraintInitRef.current) { constraintInitRef.current = true; return; }
     try {
       localStorage.setItem("gaokao_constraints", JSON.stringify({
-        cMajor, cCityLevels, cNature, cTiers, showConstraints
+        cMajors, cCityLevels, cNature, cTiers, showConstraints
       }));
     } catch {}
-  }, [cMajor, cCityLevels, cNature, cTiers, showConstraints]);
+  }, [cMajors, cCityLevels, cNature, cTiers, showConstraints]);
 
   // 省份变化自动缓存（跳过首次挂载）
   useEffect(() => {
@@ -242,7 +248,7 @@ export default function Home() {
 
     try {
       // 约束参数长度限制（防止 URL 过长导致 414）
-      const cMajorTrimmed = cMajor.trim().slice(0, 50);
+      const cMajorTrimmed = cMajors.join(" ").slice(0, 200);
       const constraintQs = (() => {
         const parts: string[] = [];
         if (cMajorTrimmed) parts.push(`c_major=${encodeURIComponent(cMajorTrimmed)}`);
@@ -283,6 +289,22 @@ export default function Home() {
 
   const scrollToQuery = () => {
     queryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const addMajorTag = () => {
+    const v = cMajorInput.trim();
+    if (!v) return;
+    if (cMajors.includes(v)) {
+      setCMajorInput("");
+      return;
+    }
+    if (cMajors.length >= 5) return;
+    setCMajors(prev => [...prev, v]);
+    setCMajorInput("");
+  };
+
+  const removeMajorTag = (index: number) => {
+    setCMajors(prev => prev.filter((_, i) => i !== index));
   };
 
   const status = PROVINCE_STATUS[province];
@@ -613,7 +635,7 @@ export default function Home() {
                 fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
               }}>{showConstraints ? "−" : "+"}</span>
               添加偏好约束
-              {(cMajor || cCityLevels.length || cNature.length || cTiers.length) ? (
+              {(cMajors.length || cCityLevels.length || cNature.length || cTiers.length) ? (
                 <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
               ) : null}
             </button>
@@ -625,18 +647,71 @@ export default function Home() {
               }}>
                 {/* 专业关键词 */}
                 <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业（空格隔开）</label>
-                  <input
-                    type="text"
-                    value={cMajor}
-                    onChange={e => setCMajor(e.target.value)}
-                    placeholder="如：计算机 医学 师范…多个用空格分隔"
-                    style={{
-                      width: "100%", padding: "10px 12px", borderRadius: 10,
-                      border: "1px solid var(--color-separator)", fontSize: 14,
-                      background: "var(--color-bg)", color: "var(--color-text-primary)", outline: "none",
-                    }}
-                  />
+                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业</label>
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    <input
+                      type="text"
+                      value={cMajorInput}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setCMajorInput(v.length > 20 ? v.slice(0, 20) : v);
+                      }}
+                      onKeyDown={(e) => { if (e.key === "Enter") addMajorTag(); }}
+                      placeholder="输入关键词，如：计算机"
+                      className="apple-input"
+                      style={{ flex: 1, fontSize: 14, padding: "10px 12px" }}
+                    />
+                    <button
+                      onClick={addMajorTag}
+                      disabled={!cMajorInput.trim()}
+                      style={{
+                        padding: "10px 20px",
+                        borderRadius: 10,
+                        border: "none",
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        background: cMajorInput.trim() ? "var(--color-navy)" : "var(--color-bg-secondary)",
+                        color: cMajorInput.trim() ? "#fff" : "var(--color-text-tertiary)",
+                        transition: "all .15s",
+                        flexShrink: 0,
+                      }}
+                    >确定</button>
+                  </div>
+                  {cMajors.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
+                      {cMajors.map((tag, i) => (
+                        <span
+                          key={tag + i}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                            padding: "4px 10px",
+                            borderRadius: 6,
+                            background: "var(--color-bg)",
+                            border: "1px solid var(--color-separator)",
+                            fontSize: 13,
+                            color: "var(--color-text-primary)",
+                          }}
+                        >
+                          {tag}
+                          <button
+                            onClick={() => removeMajorTag(i)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              fontSize: 14,
+                              color: "var(--color-text-tertiary)",
+                              lineHeight: 1,
+                              padding: "0 2px",
+                            }}
+                          >×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* 城市等级 */}

@@ -25,6 +25,11 @@ App({
     try {
       this.globalData.isPaid = wx.getStorageSync('is_paid') === '1';
     } catch (e) {}
+    // 恢复完整会员状态
+    try {
+      var storedStatus = wx.getStorageSync('user_status');
+      if (storedStatus) this.globalData.userStatus = JSON.parse(storedStatus);
+    } catch (e) {}
 
     // ── 捕获裂变分享 token（通过分享链接进入）──────────────────
     const query = (options && options.query) || {};
@@ -109,24 +114,71 @@ App({
 
   // ── 后端登录：通过 miniLogin 云函数在后端创建用户 ──────────────
   _backendLogin() {
+    var self = this;
     wx.cloud.callFunction({
       name: 'miniLogin',
       success: (res) => {
         const result = res.result;
         if (result && result.success) {
-          this.globalData.backendToken = result.token;
-          this.globalData.backendUserId = result.user_id;
+          self.globalData.backendToken = result.token;
+          self.globalData.backendUserId = result.user_id;
           if (result.is_paid) {
-            this.globalData.isPaid = true;
+            self.globalData.isPaid = true;
             try { wx.setStorageSync('is_paid', '1'); } catch (e) {}
           }
           console.log('[Backend] 登录成功, user_id:', result.user_id, 'is_paid:', result.is_paid);
+          // 登录成功后立即拉取完整会员状态（订阅类型、到期时间等）
+          self._refreshUserStatus();
         }
       },
       fail: (err) => {
         console.warn('[Backend] miniLogin 失败:', err);
       },
     });
+  },
+
+  // ── 刷新用户会员状态（订阅类型、到期时间、推荐统计）─────────────
+  _refreshUserStatus() {
+    var self = this;
+    var token = self.globalData.backendToken;
+    if (!token) return;
+    wx.cloud.callFunction({
+      name: 'gaokaoQuery',
+      data: { type: 'getUserStatus', auth_token: token },
+      success: function(res) {
+        var r = res.result;
+        if (r && r.success) {
+          var status = {
+            userId:             r.user_id,
+            isPaid:             r.is_paid,
+            subscriptionType:   r.subscription_type   || '',
+            subscriptionLabel:  r.subscription_label  || '',
+            subscriptionEndAt:  r.subscription_end_at || null,
+            daysRemaining:      r.days_remaining,
+            referralCode:       r.referral_code       || '',
+            referralCount:      r.referral_count      || 0,
+            referralRewardDays: r.referral_reward_days || 0,
+          };
+          self.globalData.userStatus = status;
+          self.globalData.isPaid = status.isPaid;
+          try { wx.setStorageSync('user_status', JSON.stringify(status)); } catch (e) {}
+          console.log('[UserStatus] 刷新成功', status.subscriptionType, status.daysRemaining != null ? status.daysRemaining + '天' : '永久');
+        } else if (r && r.code === 401) {
+          // Token 过期，清除本地状态
+          self.globalData.backendToken = '';
+          self.globalData.userStatus = null;
+          try { wx.removeStorageSync('user_status'); } catch (e) {}
+        }
+      },
+      fail: function(err) {
+        console.warn('[UserStatus] 刷新失败:', err);
+      },
+    });
+  },
+
+  // ── 供页面调用的刷新会员状态入口（支付后、进入结果页时调用）──
+  refreshUserStatus() {
+    this._refreshUserStatus();
   },
 
   // ── 保存用户信息（登录/填写画像后调用）──────────────────────
@@ -180,6 +232,7 @@ App({
     backendToken:  '',    // JWT token from backend
     backendUserId: null,  // user.id in backend DB
     isPaid:        false, // 是否已付费
+    userStatus:    null,  // 完整会员状态：{ subscriptionType, subscriptionEndAt, daysRemaining, referralCount... }
     // 裂变系统
     pendingReferralToken: '',  // 通过分享链接进入时携带的 referral token
 

@@ -137,7 +137,7 @@ module.exports = {
       <!-- 收起状态 -->
       <view wx:if="{{!constraintExpanded}}" class="constraint-toggle-btn" bindtap="toggleConstraintPanel">
         <text class="constraint-toggle-text">+ 添加偏好约束</text>
-        <text wx:if="{{constraintMajor || constraintCities.length || constraintNature.length || constraintLevels.length}}" class="constraint-active-badge">（已选）</text>
+        <text wx:if="{{constraintMajors.length || constraintCities.length || constraintNature.length || constraintLevels.length}}" class="constraint-active-badge">（已选）</text>
       </view>
 
       <!-- 展开状态 -->
@@ -149,15 +149,30 @@ module.exports = {
 
         <!-- 感兴趣的专业 -->
         <view class="constraint-group">
-          <text class="constraint-label">感兴趣的专业（空格分隔多个关键词）</text>
-          <view class="constraint-input-wrap">
-            <input
-              class="constraint-input"
-              value="{{constraintMajor}}"
-              placeholder="例如：计算机 人工智能"
-              placeholder-class="constraint-input-ph"
-              bindinput="onConstraintMajorInput"
-            />
+          <text class="constraint-label">感兴趣的专业</text>
+          <view class="major-input-row">
+            <view class="major-input-wrap">
+              <input
+                class="major-input"
+                value="{{constraintMajorInput}}"
+                placeholder="输入关键词，如：计算机"
+                placeholder-class="constraint-input-ph"
+                bindinput="onConstraintMajorInput"
+                confirm-type="done"
+                bindconfirm="addMajorTag"
+              />
+            </view>
+            <view class="major-add-btn {{constraintMajorInput ? 'major-add-btn-active' : ''}}" bindtap="addMajorTag">确定</view>
+          </view>
+          <view class="major-tag-list" wx:if="{{constraintMajors.length}}">
+            <view
+              wx:for="{{constraintMajors}}"
+              wx:key="*this"
+              class="major-tag"
+            >
+              <text class="major-tag-text">{{item}}</text>
+              <view class="major-tag-close" bindtap="removeMajorTag" data-index="{{index}}">×</view>
+            </view>
           </view>
         </view>
 
@@ -224,7 +239,7 @@ module.exports = {
       <text class="submit-btn-text">{{gkLoading?'分析中…':'立即查询'}}</text>
     </view>
 
-    <text class="hint-text">免费查询 · 完整报告 ¥1.99 解锁</text>
+    <text class="hint-text">免费查询 · 完整报告 ¥39 解锁</text>
   </view>
 
   <!-- 志愿表入口（有志愿时才显示） -->

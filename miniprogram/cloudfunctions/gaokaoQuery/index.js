@@ -108,35 +108,77 @@ function appendConstraints(path, event) {
 }
 
 // ── 精简学校字段 ─────────────────────────────────────────────────
+// 字段必须与小程序前端 WXML / enrichList 引用对齐，缺一个就少显示一块。
+// 估算的总载荷约 ~150KB（4 类 × 50 所），在 cloudFunction 1MB 限制内。
 function trimSchool(item) {
   const prob = typeof item.probability === 'number'
     ? Math.round(item.probability) / 100
     : null;
+  const emp = item.employment || null;
+  const bsy = item.big_small_year || null;
   return {
+    // ── 基础信息 ──────────────────────────────────────────────
     school_name:         item.school_name,
     major_name:          item.major_name,
     city:                item.city,
+    tier:                item.tier              || '',     // 985 / 211 / 双一流 / 普通
     is_985:              item.is_985,
     is_211:              item.is_211,
+    city_level:          item.city_level        || '',
+    rank_2025:           item.rank_2025         || 0,      // 软科排名
+    flagship_majors:     item.flagship_majors   || '',
+
+    // ── 概率与置信度 ──────────────────────────────────────────
     probability:         prob,
-    avg_min_rank_3yr:    item.avg_min_rank_3yr,
+    prob_low:            item.prob_low,
+    prob_high:           item.prob_high,
+    confidence:          item.confidence         || '',
+
+    // ── 录取分数与位次（关键：last_year_min_score 用于分数差/估算用户分） ──
+    last_year_min_score: item.last_year_min_score || 0,
+    last_year_min_rank:  item.last_year_min_rank  || 0,
+    avg_min_rank_3yr:    item.avg_min_rank_3yr   || 0,
     rank_diff:           item.rank_diff,
-    employment:          item.employment ? { avg_salary: item.employment.avg_salary } : null,
-    big_small_year:      item.big_small_year
-      ? { prediction: buildYearPrediction(item.big_small_year) } : null,
+    recent_data:         Array.isArray(item.recent_data)
+      ? item.recent_data.map(function(r) {
+          return { year: r.year, min_rank: r.min_rank, min_score: r.min_score };
+        })
+      : [],
+
+    // ── 大小年 / 波动 / 建议 ──────────────────────────────────
+    big_small_year:      bsy ? {
+      prediction: buildYearPrediction(bsy),
+      status:     bsy.status     || '',
+      heat_trend: bsy.heat_trend || '',
+      reason:     bsy.reason     || '',
+    } : null,
+    volatility_warning:  item.volatility_warning || '',
+    suggested_action:    item.suggested_action   || '',
+
+    // ── 标签 / 推荐高亮 ───────────────────────────────────────
     is_hidden_gem:       item.is_hidden_gem,
     top_gem:             item.top_gem ? {
-      gem_type_label:  item.top_gem.gem_type_label,
-      gem_description: item.top_gem.gem_description,
+      gem_type:        item.top_gem.gem_type        || '',
+      gem_type_label:  item.top_gem.gem_type_label  || '',
+      gem_description: item.top_gem.gem_description || '',
     } : null,
     swarm_discovery:     item.swarm_discovery,
+    is_top_pick:         item.is_top_pick       || false,
+    top_pick_rank:       item.top_pick_rank     || 0,      // 1 = 本档首选；2-3 = 智能精选
+    top_pick_headline:   item.top_pick_headline || null,
+    feature_tags:        Array.isArray(item.feature_tags) ? item.feature_tags : [],
+
+    // ── 就业（用于卡片底部三栏） ──────────────────────────────
+    employment: emp ? {
+      avg_salary:              emp.avg_salary              || 0,
+      school_employment_rate:  emp.school_employment_rate  || 0,
+      school_postgrad_rate:    emp.school_postgrad_rate    || 0,
+    } : null,
+
+    // ── 控制字段 ──────────────────────────────────────────────
     locked:              item.locked              || false,
     reason:              item.reason              || null,
     opportunity_signals: item.opportunity_signals || [],
-    is_top_pick:         item.is_top_pick         || false,
-    top_pick_headline:   item.top_pick_headline   || null,
-    flagship_majors:     item.flagship_majors     || '',
-    city_level:          item.city_level          || '',
     quality_score:       item.quality_score       || 0,
   };
 }

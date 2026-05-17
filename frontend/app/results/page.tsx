@@ -289,8 +289,15 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
                   {item.last_year_min_score}<span style={{ fontSize: 11, fontWeight: 400, color: "var(--color-text-tertiary)", marginLeft: 2 }}>分</span>
                 </div>
                 {scoreDiff !== null && (
-                  <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: scoreDiff > 0 ? "#059669" : "#DC2626" }}>
-                    {scoreDiff > 0 ? "+" : ""}{scoreDiff} 分
+                  <div style={{
+                    fontSize: 11, marginTop: 1, fontWeight: 600,
+                    color: scoreDiff === 0 ? "#8E8E93" : scoreDiff > 0 ? "#059669" : "#4B5563",
+                  }}>
+                    {scoreDiff === 0
+                      ? "0 分"
+                      : scoreDiff > 0
+                        ? `+${scoreDiff} 分`
+                        : `-${Math.abs(scoreDiff)} 分`}
                   </div>
                 )}
               </div>
@@ -307,9 +314,21 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
               </div>
               {(() => {
                 const diff = (item.avg_min_rank_3yr ?? 0) - Number(rank);
+                if (diff === 0) {
+                  return (
+                    <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: "#8E8E93" }}>
+                      0 位
+                    </div>
+                  );
+                }
                 return (
-                  <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: diff > 0 ? "#059669" : "#DC2626" }}>
-                    {diff > 0 ? `领先 ${diff.toLocaleString()} 位` : `落后 ${Math.abs(diff).toLocaleString()} 位`}
+                  <div style={{
+                    fontSize: 11, marginTop: 1, fontWeight: 600,
+                    color: diff > 0 ? "#059669" : "#4B5563",
+                  }}>
+                    {diff > 0
+                      ? `+${diff.toLocaleString()} 位`
+                      : `-${Math.abs(diff).toLocaleString()} 位`}
                   </div>
                 );
               })()}
@@ -1243,7 +1262,7 @@ function ResultsContent() {
         </div>
       )}
 
-      <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 20px 80px" }}>
+      <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 12px 80px" }}>
 
         {/* Summary Banner */}
         {(data?.total_matched ?? 0) > 0 && (
@@ -1487,13 +1506,15 @@ function ResultsContent() {
                 // locked
                 if (!data?.is_paid && !data?.is_trial) {
                   if (i === 2) {
-                    // 第3所：跟原来一样的 LockedSchoolCard，按钮为 9.9 解锁前三所
+                    // 第3所：LockedSchoolCard，按钮为 9.9 解锁前三所
                     lockedBeyondCount++;
                     if (!lockedExpanded && lockedBeyondCount > 3) continue;
                     renderedItems.push(
                       <LockedSchoolCard key={`locked-${key}`} item={item} onUnlock={() => doUnlock("trial_report")} unlockLabel="¥9.9 解锁前三所" />
                     );
-                  } else if (i >= 4) {
+                  } else if (i >= 3) {
+                    // 第4所及之后：39 解锁完整报告
+                    // 原来写的是 i >= 4，导致 i === 3（第4所）被吞掉，与小程序保持一致后修正
                     lockedBeyondCount++;
                     if (!lockedExpanded && lockedBeyondCount > 3) continue;
                     renderedItems.push(

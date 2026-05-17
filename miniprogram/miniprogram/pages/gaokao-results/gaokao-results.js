@@ -1,24 +1,18 @@
 // pages/gaokao-results/gaokao-results.js
 // 艺圆智探 · 志愿推荐结果页
-// v3 — PDF云代理、支付倒计时、推荐裂变、免费次数抵扣
+// v4 — 渐进式解锁与网页 results/page.tsx 对齐
 //
-// ━━━ WXML 需配合的修改 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// 1. 锁定卡片按钮绑定：
-//    <button data-locked-idx="{{item._lockedIdx}}" bindtap="onCardUnlock">...</button>
-//    第 3 所（_lockedIdx===2）且未付费时自动弹出 ¥9.9 试看，其余弹出 ¥39 完整报告
+// 关键约定：
+// 1. 解锁按钮文案 / 产品类型 / hint 都在 enrichList → buildUnlock 里按 (idx, isFullPaid, isTrial)
+//    一次性算好，WXML 直接读 item._unlockLabel / item._unlockProductType。
+//    bug 历史：旧版用 _lockedIdx === 0 判断"第一张锁定卡"，trial 用户付完 9.9
+//    后第 4 所仍是 _lockedIdx=0，错显示"9.9 解锁前三所"。
 //
-// 2. 底部横幅文案绑定：
-//    <view>{{payBannerText}}</view>
-//    未付费 → "¥9.9 起解锁"；试看 → "升级完整报告 ¥39"
+// 2. isPaid 在 data 里仍是"含 trial 的旧语义"（避免动到下游分支），
+//    enrichList 接收的是计算好的 isFullPaid = isPaid && !isTrial。
+//    WXML 里凡是"只对完整付费用户展示"的判断都写成 isPaid && !isTrial。
 //
-// 3. 季会员推广卡片：
-//    <view wx:if="{{showSeasonPromo}}" bindtap="onSeasonPromoTap">...</view>
-//
-// 4. 无结果提示：
-//    <view wx:if="{{noResultText}}">{{noResultText}}</view>
-//
-// 5. 当前列表为空时（tab 内无数据）：
-//    <view wx:if="{{currentList.length === 0 && noResultText}}">{{noResultText}}</view>
+// 3. 折叠：未完整付费 + 当前 tab 锁定卡 > 3 时，只渲染前 3 张并显示折叠提示（_lockedIdx < 3）。
 
 const FORM_KEY = 'gaokao_form_v3';
 
@@ -51,17 +45,129 @@ function yearColor(status) {
   if (status.includes('小年')) return { color: '#059669', bg: 'rgba(5,150,105,0.08)', icon: '✅' };
   return { color: '#8E8E93', bg: 'rgba(142,142,147,0.1)', icon: '' };
 }
-function enrichList(list, isPaid) {
+// 概率档位标签 / 颜色（与网页 results/page.tsx 保持一致）
+function probTier(prob) {
+  if (prob == null) return { label: '—', color: '#8E8E93' };
+  var p = prob * 100;
+  if (p >= 80) return { label: '保底', color: '#059669' };
+  if (p >= 55) return { label: '稳妥', color: '#1A2744' };
+  return { label: '冲刺', color: '#D97706' };
+}
+
+// 近年均位次与考生位次的差额（纯 +/- 数学符号）
+//   diff > 0：考生位次靠前 → +X 位，绿色（正向）
+//   diff < 0：考生位次靠后 → -X 位，navy 中性色（不刺眼）
+//   diff == 0：0 位，灰色
+function rankDiffInfo(item, userRank) {
+  if (!item || !item.avg_min_rank_3yr || !userRank) return null;
+  var diff = item.avg_min_rank_3yr - Number(userRank);
+  if (!isFinite(diff)) return null;
+  if (diff === 0) return { text: '0 位', color: '#8E8E93' };
+  var abs = Math.abs(diff).toLocaleString();
+  return diff > 0
+    ? { text: '+' + abs + ' 位', color: '#059669' }
+    : { text: '-' + abs + ' 位', color: '#4B5563' };
+}
+
+// 考生分数与去年最低分的差额（纯 +/- 数学符号）
+//   diff > 0：高于去年线 → +X 分，绿色
+//   diff < 0：低于去年线 → -X 分，navy 中性色
+//   diff == 0：0 分，灰色
+function scoreDiffInfo(item, userScore) {
+  if (!item || !item.last_year_min_score || !userScore) return null;
+  var diff = Number(userScore) - Number(item.last_year_min_score);
+  if (!isFinite(diff)) return null;
+  if (diff === 0) return { text: '0 分', color: '#8E8E93' };
+  return diff > 0
+    ? { text: '+' + diff + ' 分', color: '#059669' }
+    : { text: '-' + Math.abs(diff) + ' 分', color: '#4B5563' };
+}
+
+// 按位次查询时，从 result 数据反推用户分数：
+//   取所有 unlocked items 中 avg_min_rank_3yr 与用户位次最接近的 5 所，
+//   用其 last_year_min_score 的中位数作为估算分数。
+//   这样按位次查询的用户也能看到「分数差」展示。
+function estimateUserScore(query, result) {
+  if (!query) return 0;
+  // 用户主动输入了分数（按分数查询/模考估算）→ 直接用，不估算
+  if (query.mockScore) return Number(query.mockScore);
+  if (!query.rank || !result) return 0;
+  var userRank = Number(query.rank);
+  if (!isFinite(userRank) || userRank <= 0) return 0;
+  var all = [].concat(result.surge || [], result.stable || [], result.safe || []);
+  var pts = [];
+  for (var i = 0; i < all.length; i++) {
+    var it = all[i];
+    if (it && !it.locked && it.last_year_min_score && it.avg_min_rank_3yr) {
+      pts.push({ rank: it.avg_min_rank_3yr, score: it.last_year_min_score });
+    }
+  }
+  if (pts.length === 0) return 0;
+  pts.sort(function(a, b) { return Math.abs(a.rank - userRank) - Math.abs(b.rank - userRank); });
+  var nearest = pts.slice(0, 5).map(function(p) { return p.score; }).sort(function(a, b) { return a - b; });
+  return nearest[Math.floor(nearest.length / 2)];
+}
+
+// 近 3 年位次趋势柱状图：把 recent_data 转成可渲染的柱高百分比
+//   高度反比例（位次小 = 高柱），并对趋势着色
+// 注意：后端 recent_data 按年份**降序**排列（最新在前），
+//       slice(0,3) 取最近 3 年，再 reverse() 让时间轴左→右为旧→新。
+function rankTrend(item) {
+  var rd = item && item.recent_data;
+  if (!Array.isArray(rd) || rd.length < 2) return null;
+  var rows = rd.filter(function(x) { return x && x.min_rank; });
+  if (rows.length < 2) return null;
+  rows = rows.slice(0, 3).reverse();   // 最近 3 年，且按时间正序展示
+  var ranks = rows.map(function(x) { return x.min_rank; });
+  var maxR  = Math.max.apply(null, ranks);
+  var minR  = Math.min.apply(null, ranks);
+  var range = Math.max(1, maxR - minR);
+  // 趋势：rows[0] 是最早年份，rows[last] 是最新年份
+  // 位次变小（数字下降）= 难度上升 = up；位次变大 = 难度下降 = down
+  var first = rows[0].min_rank, last = rows[rows.length - 1].min_rank;
+  var trend = first === last ? 'flat' : (last < first ? 'up' : 'down');
+  return rows.map(function(x) {
+    // 柱高百分比：位次最小（最难）= 100%，位次最大（最易）= 35%
+    var pct = 35 + Math.round((maxR - x.min_rank) / range * 65);
+    return { year: x.year, rank: x.min_rank, heightPct: pct, trend: trend };
+  });
+}
+
+// 渐进式解锁的按钮文案（与网页 results/page.tsx 保持一致）
+// 未付费：前 2 所完整 → 第 3 所(idx=2) ¥9.9 → 第 4 所及之后(idx>=3) ¥39
+// 试看(已付 9.9)：前 3 所完整 → 第 4 所及之后(idx>=3) ¥39
+function buildUnlock(idx, isFullPaid, isTrial) {
+  // 完整付费 / 季会员：理论上不会出现 locked，兜底走 39
+  if (isFullPaid) {
+    return { productType: 'single_report', label: '¥39 解锁完整报告', hint: '解锁查看完整分析与推荐理由' };
+  }
+  // 试看：剩余全部 39 升级
+  if (isTrial) {
+    return { productType: 'single_report', label: '¥39 升级完整报告', hint: '本次查询全部院校永久解锁' };
+  }
+  // 未付费：第 3 所是 9.9 试看入口，其余 39 完整报告
+  if (idx === 2) {
+    return { productType: 'trial_report', label: '¥9.9 解锁前三所', hint: '含录取概率、就业薪资、推荐理由' };
+  }
+  return { productType: 'single_report', label: '¥39 解锁完整报告', hint: '本次查询全部院校永久解锁' };
+}
+
+function enrichList(list, isFullPaid, isTrial, userRank, userScore) {
   if (!list) return [];
   var lockedIdx = 0;
-  var visibleIdx = 0;   // 前 2 所可见卡片打码（仅未付费时生效）
   return list.map(function(item, idx) {
     var prob = item.probability;
     var bsy  = item.big_small_year || {};
     var yc   = yearColor(bsy.prediction);
     var li   = item.locked ? lockedIdx++ : -1;
-    var blurred = (!isPaid && !item.locked && visibleIdx < 2) ? true : false;
-    if (!item.locked) visibleIdx++;
+    var tier = probTier(prob);
+    var rd   = rankDiffInfo(item, userRank);
+    var sd   = scoreDiffInfo(item, userScore);
+    var trd  = rankTrend(item);
+    var unl  = buildUnlock(idx, isFullPaid, isTrial);
+    // employment 三栏可显示性（与网页一致：付费用户展示真实值，未付费打码 + 解锁按钮）
+    var emp = item.employment || null;
+    var hasEmp = !!(emp && emp.avg_salary);
     return Object.assign({}, item, {
       idx:        idx,
       _probColor: probColor(prob),
@@ -74,7 +180,30 @@ function enrichList(list, isPaid) {
       _yearIcon:  yc.icon,
       _lockedIdx: li,
       _reasonExpanded: false,
-      _blurred:   blurred,
+      _probTierLabel: tier.label,
+      _probTierColor: tier.color,
+      _rankDiffText:  rd ? rd.text  : '',
+      _rankDiffColor: rd ? rd.color : '#8E8E93',
+      _scoreDiffText:  sd ? sd.text  : '',
+      _scoreDiffColor: sd ? sd.color : '#8E8E93',
+      // 近 3 年位次趋势柱图（仅 unlocked item 有 recent_data）
+      _rankTrend:      trd || [],
+      _rankTrendLabel: trd
+        ? (trd[0].trend === 'up'   ? '位次连年上涨 · 难度走高'
+        :  trd[0].trend === 'down' ? '位次连年回落 · 机会窗口'
+        :                            '近年位次相对稳定')
+        : '',
+      _hasEmployment: hasEmp,
+      _empRatePct: hasEmp && emp.school_employment_rate ? (emp.school_employment_rate * 100).toFixed(1) : '',
+      _postgradPct: hasEmp && emp.school_postgrad_rate ? (emp.school_postgrad_rate * 100).toFixed(1) : '',
+      _unlockProductType: unl.productType,
+      _unlockLabel: unl.label,
+      _unlockHint:  unl.hint,
+      // 锁定卡价值预览标签：与网页 LockedSchoolCard 第 569-590 行一致
+      _lockTagEmpRate:   hasEmp && emp.school_employment_rate && emp.school_employment_rate > 0.9 ? Math.round(emp.school_employment_rate * 100) + '%' : '',
+      _lockTagCity:      (item.city_level === '一线' || item.city_level === '新一线') ? item.city_level + '城市' : '',
+      _lockTagGem:       (item.top_gem && item.top_gem.gem_type_label) ? item.top_gem.gem_type_label : '',
+      _lockTagFlagship:  item.flagship_majors ? '王牌专业' : '',
     });
   });
 }
@@ -119,6 +248,8 @@ Page({
     confirmTitle:       '',
     confirmPrice:       '',
     confirmDesc:        '',
+    // WXML 用到的兜底字段，避免首次渲染时 undefined.length / undefined 访问
+    constraintTags:     [],
   },
 
   onShareAppMessage: function() {
@@ -186,14 +317,23 @@ Page({
       if (stored) this._orderNo = stored;
     }
 
+    // 注意区分：
+    //   isPaid    = 该订单已通过付费校验（含 trial）— 历史语义，保留以兼容下游 UI 判断
+    //   isTrial   = 仅购买了 ¥9.9 试看
+    //   isFullPaid= 真正完整付费（单次完整报告 / 季会员），用于判定是否还需要 39 升级按钮
     var isPaid     = result.is_paid === true || !!this._orderNo;
-    var surgeList  = enrichList(result.surge, isPaid);
-    var stableList = enrichList(result.stable, isPaid);
-    var safeList   = enrichList(result.safe, isPaid);
-    var gemsList   = enrichList(result.hidden_gems, isPaid);
     var isTrial    = result.is_trial === true;
+    var isFullPaid = isPaid && !isTrial;
+    var userRank   = (query && query.rank) || 0;
+    // 用户分数：按分数查询用 mockScore；按位次查询时从 result 反推估算分（中位数）
+    var userScore  = estimateUserScore(query, result);
+    var surgeList  = enrichList(result.surge,       isFullPaid, isTrial, userRank, userScore);
+    var stableList = enrichList(result.stable,      isFullPaid, isTrial, userRank, userScore);
+    var safeList   = enrichList(result.safe,        isFullPaid, isTrial, userRank, userScore);
+    var gemsList   = enrichList(result.hidden_gems, isFullPaid, isTrial, userRank, userScore);
     var totalCount = result.total_matched || (surgeList.length + stableList.length + safeList.length + gemsList.length);
-    var surgeLockedCount = surgeList.filter(function(i) { return i.locked; }).length;
+    // 默认 tab 为 stable，currentLockedCount 应对应 stableList
+    var defaultLockedCount = stableList.filter(function(i) { return i.locked; }).length;
 
     // 读取用户已购产品类型（从 app.globalData.userStatus，由 _refreshUserStatus 拉取）
     var appStatus = app.globalData && app.globalData.userStatus;
@@ -242,7 +382,7 @@ Page({
       totalCount:         totalCount,
       currentList:        stableList,
       activeTab:          'stable',
-      currentLockedCount: surgeLockedCount,
+      currentLockedCount: defaultLockedCount,
       showSeasonPromo:    (!isPaid || isTrial) && totalCount > 0 && existingProductType !== 'season_2026',
       noResultText:       totalCount === 0 ? this._getNoResultText(query) : '',
     });
@@ -464,27 +604,15 @@ Page({
     });
   },
 
-  // ── 根据当前状态与点击位置，判断应购买的产品 ─────────────────
-  // lockedIdx: 当前 tab 中锁定项的索引（从 0 开始）
-  _resolveProductType: function(lockedIdx) {
+  // ── 根据当前用户状态 + 卡片全局 idx 判断应购买的产品 ─────────
+  // 已与 enrichList/buildUnlock 一致；卡片上直接读 item._unlockProductType
+  _resolveProductTypeByIdx: function(itemIdx) {
     var isPaid  = this.data.isPaid;
     var isTrial = this.data.isTrial;
-    var existing = this.data.existingProductType;
-
-    // 已付费或季会员 → 无需再购买
-    if (isPaid && !isTrial) return null;
-
-    // 试看用户 → 只能升级完整报告
-    if (isTrial) return 'single_report';
-
-    // 未付费用户：点击第 3 所（lockedIdx === 2）→ 试看；其余 → 完整报告
-    // 注意：lockedIdx 从 0 开始，所以第 3 所是 index 2
-    if (!isPaid && !isTrial) {
-      if (lockedIdx === 2) return 'trial_report';
-      return 'single_report';
-    }
-
-    return 'single_report';
+    if (isPaid && !isTrial) return null;            // 完整付费，无需再买
+    if (isTrial)            return 'single_report'; // 试看：剩余 39 升级
+    if (itemIdx === 2)      return 'trial_report';  // 未付费 第 3 所：9.9
+    return 'single_report';                          // 未付费 第 4 所及之后：39
   },
 
   // ── 获取产品展示文案 ─────────────────────────────────────────
@@ -525,10 +653,13 @@ Page({
   },
 
   // ── 点击锁定卡片解锁 ─────────────────────────────────────────
+  // dataset.productType 由 WXML 从 item._unlockProductType 直接读取，
+  // 已经过 enrichList → buildUnlock 计算（考虑 isFullPaid / isTrial / 全局 idx），
+  // 无需再用 lockedIdx 倒推。
   onCardUnlock: function(e) {
-    var lockedIdx = e.currentTarget.dataset.lockedIdx;
-    // 第一所（index 0）→ 试看 ¥9.9；其他 → 完整报告 ¥39
-    var productType = (lockedIdx === 0) ? 'trial_report' : 'single_report';
+    var productType = e.currentTarget.dataset.productType
+      || this._resolveProductTypeByIdx(Number(e.currentTarget.dataset.itemIdx))
+      || 'single_report';
     this._openPayConfirm(productType);
   },
 
@@ -736,17 +867,22 @@ Page({
         clearTimeout(reloadTimer);
         wx.hideLoading();
         if (res.result && res.result.success && res.result.data) {
-          var data       = res.result.data;
-          var isPaid2    = data.is_paid === true || !!self._orderNo;
-          var surgeList  = enrichList(data.surge, isPaid2);
-          var stableList = enrichList(data.stable, isPaid2);
-          var safeList   = enrichList(data.safe, isPaid2);
-          var gemsList   = enrichList(data.hidden_gems, isPaid2);
+          var data        = res.result.data;
+          var isPaid2     = data.is_paid === true || !!self._orderNo;
+          var isTrial2    = data.is_trial === true;
+          var isFullPaid2 = isPaid2 && !isTrial2;
+          var userRank2   = (self.data.query && self.data.query.rank) || 0;
+          var userScore2  = estimateUserScore(self.data.query, data);
+          var surgeList  = enrichList(data.surge,       isFullPaid2, isTrial2, userRank2, userScore2);
+          var stableList = enrichList(data.stable,      isFullPaid2, isTrial2, userRank2, userScore2);
+          var safeList   = enrichList(data.safe,        isFullPaid2, isTrial2, userRank2, userScore2);
+          var gemsList   = enrichList(data.hidden_gems, isFullPaid2, isTrial2, userRank2, userScore2);
           var tab        = self.data.activeTab;
           var map = { surge: surgeList, stable: stableList, safe: safeList, gems: gemsList };
           var totalCount = data.total_matched || (surgeList.length + stableList.length + safeList.length + gemsList.length);
 
-          // 更新 globalData（供存报告时读取完整数据）
+          // 更新 globalData（供存报告/重进页面时读取完整数据）
+          // 必须保留 is_trial，否则试看用户切走后回来会被识别为完整付费
           var app = getApp();
           if (app.globalData) {
             app.globalData.gaokaoResult = {
@@ -755,13 +891,16 @@ Page({
               safe:         data.safe         || [],
               hidden_gems:  data.hidden_gems  || [],
               total_matched: totalCount,
-              is_paid:      true,
+              is_paid:      data.is_paid === true,
+              is_trial:     data.is_trial === true,
+              trial_limit:  data.trial_limit || null,
             };
           }
           // 幂等存入云端
           self._saveReportToCloud(orderNo);
 
           var activeList = map[tab] || stableList;
+          var activeLockedCount = activeList.filter(function(i) { return i.locked; }).length;
           self.setData({
             surgeList: surgeList, stableList: stableList,
             safeList: safeList,   gemsList: gemsList,
@@ -769,6 +908,7 @@ Page({
             safeCount:   safeList.length,   gemsCount:   gemsList.length,
             totalCount:  totalCount,
             currentList: activeList,
+            currentLockedCount: activeLockedCount,
             isPaid:      data.is_paid || false,
             isTrial:     data.is_trial || false,
             showPayBanner: (!data.is_paid || data.is_trial) && totalCount > 5,

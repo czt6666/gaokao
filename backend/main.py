@@ -345,7 +345,7 @@ def recommend(
 
     try:
         result = _run_recommend_core(province=province, rank=rank, subject=subject,
-                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid,
+                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=True,
                                      constraints=constraints or None, trial_limit=trial_limit)
         result["is_trial"] = trial_limit is not None
         result["trial_limit"] = trial_limit

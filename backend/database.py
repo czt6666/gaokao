@@ -260,6 +260,12 @@ class UserEvent(Base):
     page            = Column(String(100), default="")
     province        = Column(String(10), default="")
     rank_input      = Column(Integer, nullable=True)
+    subject         = Column(String(50), default="")        # 选科
+    exam_mode       = Column(String(20), default="")        # 考试模式
+    c_major         = Column(String(50), default="")        # 筛选专业
+    c_city          = Column(String(20), default="")        # 筛选城市
+    c_nature        = Column(String(20), default="")        # 筛选性质
+    c_tier          = Column(String(20), default="")        # 筛选档次
     created_at      = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     ip              = Column(String(45), default="")
     user_agent      = Column(Text, default="")
@@ -396,6 +402,14 @@ def _ensure_schema():
                 ("c_tier",     "VARCHAR(20) DEFAULT ''"),
                 ("mock_score", "INTEGER"),
             ],
+            "user_events": [
+                ("subject",    "VARCHAR(50) DEFAULT ''"),
+                ("exam_mode",  "VARCHAR(20) DEFAULT ''"),
+                ("c_major",    "VARCHAR(50) DEFAULT ''"),
+                ("c_city",     "VARCHAR(20) DEFAULT ''"),
+                ("c_nature",   "VARCHAR(20) DEFAULT ''"),
+                ("c_tier",     "VARCHAR(20) DEFAULT ''"),
+            ],
         }
         for table, cols in plans.items():
             existing = _cols(table)
@@ -408,6 +422,20 @@ def _ensure_schema():
                         print(f"[migrate] {table}.{name} added")
                     except Exception as e:
                         print(f"[migrate] {table}.{name} failed: {e}")
+
+        # 给 user_events 追加高频过滤索引（SQLite CREATE INDEX IF NOT EXISTS 幂等）
+        index_sqls = [
+            "CREATE INDEX IF NOT EXISTS ix_user_events_user_created ON user_events(user_id, created_at)",
+            "CREATE INDEX IF NOT EXISTS ix_user_events_province_created ON user_events(province, created_at)",
+            "CREATE INDEX IF NOT EXISTS ix_user_events_type_created ON user_events(event_type, created_at)",
+            "CREATE INDEX IF NOT EXISTS ix_user_events_rank ON user_events(rank_input)",
+        ]
+        for sql in index_sqls:
+            try:
+                cur.execute(sql)
+            except Exception as e:
+                print(f"[migrate] index skipped: {e}")
+
         conn.commit()
         conn.close()
     except Exception as e:

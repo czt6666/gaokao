@@ -351,6 +351,8 @@ def _order_row(o):
         "c_nature":   o.c_nature or "",
         "c_tier":     o.c_tier or "",
         "mock_score": o.mock_score or 0,
+        "product_type": o.product_type or "",
+        "transaction_id": o.transaction_id or "",
     }
 
 
@@ -395,9 +397,16 @@ def list_users(
     if paid_only:
         q = q.filter(User.is_paid == 1)
     if q_search:
-        q = q.filter(
-            User.phone.contains(q_search) | User.province.contains(q_search)
-        )
+        from sqlalchemy import or_
+        try:
+            search_id = int(q_search)
+            q = q.filter(
+                or_(User.id == search_id, User.phone.contains(q_search), User.province.contains(q_search))
+            )
+        except ValueError:
+            q = q.filter(
+                User.phone.contains(q_search) | User.province.contains(q_search)
+            )
     total = q.count()
     users = q.order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
 
@@ -417,6 +426,229 @@ def list_users(
         "page":  page,
         "items": [_user_row(u, paid_map, query_map) for u in users]
     }
+
+
+# ── 事件/查询记录列表（含丰富过滤）──────────────────────────────
+@router.get("/events", dependencies=[Depends(_verify_admin)])
+def list_events(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
+    user_id: int = Query(None),
+    phone: str = Query(""),
+    wechat_openid: str = Query(""),
+    wechat_mini_openid: str = Query(""),
+    province: str = Query(""),
+    event_type: str = Query(""),
+    rank_min: int = Query(None),
+    rank_max: int = Query(None),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+    subject: str = Query(""),
+    exam_mode: str = Query(""),
+    c_major: str = Query(""),
+    c_city: str = Query(""),
+    c_nature: str = Query(""),
+    c_tier: str = Query(""),
+    db: Session = Depends(get_db)
+):
+    """查询/事件记录列表，支持用户、省份、位次区间、时间范围等多维度过滤"""
+    from sqlalchemy import or_
+    q = db.query(UserEvent).outerjoin(User, UserEvent.user_id == User.id)
+
+    if user_id:
+        q = q.filter(UserEvent.user_id == user_id)
+    if phone:
+        q = q.filter(User.phone.contains(phone))
+    if wechat_openid:
+        q = q.filter(User.wechat_openid.contains(wechat_openid))
+    if wechat_mini_openid:
+        q = q.filter(User.wechat_mini_openid.contains(wechat_mini_openid))
+    if province:
+        q = q.filter(UserEvent.province == province)
+    if event_type:
+        q = q.filter(UserEvent.event_type == event_type)
+    if rank_min is not None:
+        q = q.filter(UserEvent.rank_input >= rank_min)
+    if rank_max is not None:
+        q = q.filter(UserEvent.rank_input <= rank_max)
+    if date_from:
+        try:
+            dt_from = datetime.datetime.strptime(date_from, "%Y-%m-%d")
+            q = q.filter(UserEvent.created_at >= dt_from)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.datetime.strptime(date_to, "%Y-%m-%d") + datetime.timedelta(days=1)
+            q = q.filter(UserEvent.created_at < dt_to)
+        except ValueError:
+            pass
+    if subject:
+        q = q.filter(UserEvent.subject == subject)
+    if exam_mode:
+        q = q.filter(UserEvent.exam_mode == exam_mode)
+    if c_major:
+        q = q.filter(UserEvent.c_major.contains(c_major))
+    if c_city:
+        q = q.filter(UserEvent.c_city.contains(c_city))
+    if c_nature:
+        q = q.filter(UserEvent.c_nature.contains(c_nature))
+    if c_tier:
+        q = q.filter(UserEvent.c_tier.contains(c_tier))
+
+    total = q.count()
+    events = q.order_by(UserEvent.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+
+    # 批量拉取用户基本信息（避免 N+1）
+    uids = {e.user_id for e in events if e.user_id}
+    user_map = {u.id: u for u in db.query(User).filter(User.id.in_(uids)).all()} if uids else {}
+
+    def _event_row(e):
+        u = user_map.get(e.user_id)
+        return {
+            "id": e.id,
+            "user_id": e.user_id,
+            "phone": (u.phone or "") if u else "",
+            "wechat_openid": (u.wechat_openid or "") if u else "",
+            "wechat_mini_openid": (u.wechat_mini_openid or "") if u else "",
+            "user_source": _user_source(u) if u else "",
+            "event_type": e.event_type,
+            "province": e.province or "",
+            "rank_input": e.rank_input,
+            "subject": e.subject or "",
+            "exam_mode": e.exam_mode or "",
+            "c_major": e.c_major or "",
+            "c_city": e.c_city or "",
+            "c_nature": e.c_nature or "",
+            "c_tier": e.c_tier or "",
+            "event_data": e.event_data or "",
+            "page": e.page or "",
+            "ip": e.ip or "",
+            "created_at": e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+        }
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [_event_row(e) for e in events]
+    }
+
+
+# ── 事件/查询记录导出 CSV ─────────────────────────────────────
+@router.get("/export/events", dependencies=[Depends(_verify_admin)])
+def export_events_csv(
+    user_id: int = Query(None),
+    phone: str = Query(""),
+    province: str = Query(""),
+    event_type: str = Query(""),
+    rank_min: int = Query(None),
+    rank_max: int = Query(None),
+    date_from: str = Query(""),
+    date_to: str = Query(""),
+    subject: str = Query(""),
+    exam_mode: str = Query(""),
+    c_major: str = Query(""),
+    c_city: str = Query(""),
+    c_nature: str = Query(""),
+    c_tier: str = Query(""),
+    db: Session = Depends(get_db)
+):
+    """导出查询/事件记录为 CSV（最多 50000 条）"""
+    from sqlalchemy import or_
+    q = db.query(UserEvent).outerjoin(User, UserEvent.user_id == User.id)
+
+    if user_id:
+        q = q.filter(UserEvent.user_id == user_id)
+    if phone:
+        q = q.filter(User.phone.contains(phone))
+    if province:
+        q = q.filter(UserEvent.province == province)
+    if event_type:
+        q = q.filter(UserEvent.event_type == event_type)
+    if rank_min is not None:
+        q = q.filter(UserEvent.rank_input >= rank_min)
+    if rank_max is not None:
+        q = q.filter(UserEvent.rank_input <= rank_max)
+    if date_from:
+        try:
+            dt_from = datetime.datetime.strptime(date_from, "%Y-%m-%d")
+            q = q.filter(UserEvent.created_at >= dt_from)
+        except ValueError:
+            pass
+    if date_to:
+        try:
+            dt_to = datetime.datetime.strptime(date_to, "%Y-%m-%d") + datetime.timedelta(days=1)
+            q = q.filter(UserEvent.created_at < dt_to)
+        except ValueError:
+            pass
+    if subject:
+        q = q.filter(UserEvent.subject == subject)
+    if exam_mode:
+        q = q.filter(UserEvent.exam_mode == exam_mode)
+    if c_major:
+        q = q.filter(UserEvent.c_major.contains(c_major))
+    if c_city:
+        q = q.filter(UserEvent.c_city.contains(c_city))
+    if c_nature:
+        q = q.filter(UserEvent.c_nature.contains(c_nature))
+    if c_tier:
+        q = q.filter(UserEvent.c_tier.contains(c_tier))
+
+    events = q.order_by(UserEvent.created_at.desc()).limit(50000).all()
+
+    uids = {e.user_id for e in events if e.user_id}
+    user_map = {u.id: u for u in db.query(User).filter(User.id.in_(uids)).all()} if uids else {}
+
+    buf = io.StringIO()
+    w = csv.writer(buf)
+    w.writerow(["事件ID", "用户ID", "手机号", "微信网页", "微信小程序", "来源", "事件类型", "省份", "位次",
+                "选科", "考试模式", "筛选专业", "筛选城市", "筛选性质", "筛选档次",
+                "页面", "IP", "事件数据", "创建时间"])
+    for e in events:
+        u = user_map.get(e.user_id)
+        w.writerow([
+            e.id,
+            e.user_id or "",
+            (u.phone or "") if u else "",
+            (u.wechat_openid or "") if u else "",
+            (u.wechat_mini_openid or "") if u else "",
+            _user_source(u) if u else "",
+            e.event_type,
+            e.province or "",
+            e.rank_input or "",
+            e.subject or "",
+            e.exam_mode or "",
+            e.c_major or "",
+            e.c_city or "",
+            e.c_nature or "",
+            e.c_tier or "",
+            e.page or "",
+            e.ip or "",
+            e.event_data or "",
+            e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+        ])
+    buf.seek(0)
+    return StreamingResponse(
+        iter([buf.getvalue().encode("utf-8-sig")]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f"attachment; filename=events_{datetime.date.today()}.csv"}
+    )
+
+
+def _user_source(u) -> str:
+    """判断用户来源类型：手机号 / 微信网页 / 微信小程序 / 组合"""
+    has_phone = bool(u.phone)
+    has_web = bool(u.wechat_openid)
+    has_mini = bool(u.wechat_mini_openid)
+    parts = []
+    if has_phone:
+        parts.append("手机号")
+    if has_web:
+        parts.append("微信网页")
+    if has_mini:
+        parts.append("微信小程序")
+    return " + ".join(parts) if parts else "未知"
 
 
 def _user_row(u, paid_map=None, query_map=None):
@@ -442,6 +674,7 @@ def _user_row(u, paid_map=None, query_map=None):
         "paid_orders":        paid_map.get(u.id, 0),
         "query_count":        query_map.get(u.id, 0),
         "wechat":             "已绑定" if u.wechat_openid else "未绑定",
+        "user_source":        _user_source(u),
         "created_at":         u.created_at.strftime("%Y-%m-%d %H:%M") if u.created_at else "",
         "last_active":        u.last_active_at.strftime("%Y-%m-%d %H:%M") if u.last_active_at else "",
     }
@@ -510,6 +743,84 @@ def revoke_paid(user_id: int, db: Session = Depends(get_db)):
     user.subscription_end_at = None
     db.commit()
     return {"ok": True, "message": f"已撤销用户 {user.phone or user_id} 的付费权限"}
+
+
+@router.get("/users/{user_id}/detail", dependencies=[Depends(_verify_admin)])
+def user_detail(user_id: int, db: Session = Depends(get_db)):
+    """用户详情：基本信息 + 查询记录 + 订单 + 交互记录"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="用户不存在")
+
+    # 查询记录
+    queries = db.query(UserEvent).filter(
+        UserEvent.user_id == user_id,
+        UserEvent.event_type == "query_submit"
+    ).order_by(UserEvent.created_at.desc()).limit(200).all()
+
+    # 所有订单
+    orders = db.query(Order).filter(Order.user_id == user_id).order_by(Order.created_at.desc()).limit(200).all()
+
+    # 交互记录（排除查询，避免重复）
+    events = db.query(UserEvent).filter(
+        UserEvent.user_id == user_id,
+        UserEvent.event_type != "query_submit"
+    ).order_by(UserEvent.created_at.desc()).limit(200).all()
+
+    paid_map = {}
+    for o in db.query(Order).filter(Order.user_id == user_id, Order.status == "paid").all():
+        paid_map[o.user_id] = paid_map.get(o.user_id, 0) + 1
+
+    query_map = {}
+    for row in db.query(UserEvent.user_id, func.count(UserEvent.id).label("cnt")).filter(
+        UserEvent.user_id == user_id, UserEvent.event_type == "query_submit"
+    ).group_by(UserEvent.user_id).all():
+        query_map[row.user_id] = row.cnt
+
+    def fmt_dt(dt):
+        return dt.strftime("%Y-%m-%d %H:%M:%S") if dt else ""
+
+    return {
+        "user": _user_row(user, paid_map, query_map),
+        "queries": [
+            {
+                "id": e.id,
+                "province": e.province or "",
+                "rank_input": e.rank_input,
+                "event_data": e.event_data or "",
+                "page": e.page or "",
+                "created_at": fmt_dt(e.created_at),
+                "ip": e.ip or "",
+            }
+            for e in queries
+        ],
+        "orders": [
+            {
+                "order_no": o.order_no,
+                "amount": round(o.amount / 100, 2),
+                "status": o.status,
+                "pay_method": o.pay_method or "",
+                "product_type": o.product_type or "",
+                "province": o.province or "",
+                "rank_input": o.rank_input,
+                "created_at": fmt_dt(o.created_at),
+                "pay_time": fmt_dt(o.pay_time),
+                "transaction_id": o.transaction_id or "",
+            }
+            for o in orders
+        ],
+        "events": [
+            {
+                "id": e.id,
+                "event_type": e.event_type,
+                "event_data": e.event_data or "",
+                "page": e.page or "",
+                "created_at": fmt_dt(e.created_at),
+                "ip": e.ip or "",
+            }
+            for e in events
+        ],
+    }
 
 
 @router.post("/orders/{order_no}/refund", dependencies=[Depends(_verify_admin)])

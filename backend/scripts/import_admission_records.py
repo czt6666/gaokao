@@ -27,6 +27,7 @@
   - 容错处理: 单条行解析失败仅跳过该行，不影响整体导入
   - 全量写入: 31省全部读完才结束，最后统计各省行数
 """
+
 import argparse
 import json
 import os
@@ -51,21 +52,21 @@ from major_note_expr import NoteExpressionEngine
 # ═══════════════════════════════════════════════════════════════
 
 COLUMN_ALIASES = {
-    "year":            ["年份"],
-    "school_code":     ["院校代码"],
-    "school_name":     ["院校名称"],
-    "major_name":      ["专业"],
-    "major_group":     ["所属专业组", "专业组"],
-    "batch":           ["批次"],
-    "subject_req":     ["选科要求"],
-    "admit_count":     ["录取人数", "招生人数"],
-    "min_score":       ["最低分数", "最低分"],
-    "min_rank":        ["最低位次", "最低分位"],
+    "year": ["年份"],
+    "school_code": ["院校代码"],
+    "school_name": ["院校名称"],
+    "major_name": ["专业"],
+    "major_group": ["所属专业组", "专业组"],
+    "batch": ["批次"],
+    "subject_req": ["选科要求"],
+    "admit_count": ["录取人数", "招生人数"],
+    "min_score": ["最低分数", "最低分"],
+    "min_rank": ["最低位次", "最低分位"],
     "school_province": ["学校所在", "所在省"],
-    "school_nature":   ["学校性质", "公私性质"],
-    "is_985":          ["是否985"],
-    "is_211":          ["是否211"],
-    "major_note":      ["专业备注"],
+    "school_nature": ["学校性质", "公私性质"],
+    "is_985": ["是否985"],
+    "is_211": ["是否211"],
+    "major_note": ["专业备注"],
 }
 
 # 必要列：缺少任意一个则跳过该省份
@@ -73,9 +74,17 @@ REQUIRED_FIELDS = ["year", "school_name", "major_name", "batch"]
 
 # 可选列：缺少时仅打印警告，不影响导入
 OPTIONAL_FIELDS = [
-    "min_score", "min_rank", "admit_count", "school_province",
-    "school_nature", "is_985", "is_211", "major_note", "major_group",
-    "school_code", "subject_req",
+    "min_score",
+    "min_rank",
+    "admit_count",
+    "school_province",
+    "school_nature",
+    "is_985",
+    "is_211",
+    "major_note",
+    "major_group",
+    "school_code",
+    "subject_req",
 ]
 
 
@@ -89,6 +98,7 @@ _NOTE_ENGINE = NoteExpressionEngine()
 # ═══════════════════════════════════════════════════════════════
 # 工具函数
 # ═══════════════════════════════════════════════════════════════
+
 
 def find_col_index(headers: list[str], aliases: list[str]) -> Optional[int]:
     """在表头中查找匹配的列索引（关键词包含匹配）"""
@@ -150,7 +160,10 @@ def get_cell(row: tuple, col_map: dict[str, int], field: str, default=None):
 # 单省份导入
 # ═══════════════════════════════════════════════════════════════
 
-def import_province(conn: sqlite3.Connection, path: str, province: str) -> tuple[int, int]:
+
+def import_province(
+    conn: sqlite3.Connection, path: str, province: str
+) -> tuple[int, int]:
     """
     导入单个省份的Excel。
     返回: (成功写入行数, 跳过的错误/空行数)
@@ -279,11 +292,22 @@ def import_province(conn: sqlite3.Connection, path: str, province: str) -> tuple
 # 主流程
 # ═══════════════════════════════════════════════════════════════
 
+
 def main():
     parser = argparse.ArgumentParser(description="Import 31-province admission records")
-    parser.add_argument("--db", default="backend/gaokao.db", help="SQLite database path")
-    parser.add_argument("--mapping", default="province_22-25_files.json", help="Province file mapping JSON")
-    parser.add_argument("--dry-run", action="store_true", help="Preview column mapping only, do not write")
+    parser.add_argument(
+        "--db", default="backend/gaokao.db", help="SQLite database path"
+    )
+    parser.add_argument(
+        "--mapping",
+        default="province_22-25_files.json",
+        help="Province file mapping JSON",
+    )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview column mapping only, do not write",
+    )
     args = parser.parse_args()
 
     # 读取省份映射
@@ -324,7 +348,9 @@ def main():
             try:
                 wb = openpyxl.load_workbook(path, read_only=True, data_only=True)
                 ws = wb.active
-                raw_headers = [cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))]
+                raw_headers = [
+                    cell.value for cell in next(ws.iter_rows(min_row=1, max_row=1))
+                ]
                 headers = [str(h).strip() if h else "" for h in raw_headers]
                 col_map = build_col_map(headers)
                 print(f"  [DRY] 列数={len(headers)}, 映射={col_map}")
@@ -345,10 +371,10 @@ def main():
     conn.close()
 
     elapsed = time.time() - start_time
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"总计: 写入 {total_inserted} 行, 跳过 {total_skipped} 行")
-    print(f"耗时: {elapsed:.1f}s ({elapsed/60:.1f}min)")
-    print(f"{'='*60}")
+    print(f"耗时: {elapsed:.1f}s ({elapsed / 60:.1f}min)")
+    print(f"{'=' * 60}")
 
 
 if __name__ == "__main__":

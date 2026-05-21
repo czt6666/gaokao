@@ -241,6 +241,12 @@ export default function Home() {
       province,
       rankInput: mode === "rank" ? Number(rank) : 0,
       eventData: { mode, subject: subjectStr, exam_mode: examMode, mock_score: mode === "score" ? mockScore : undefined },
+      subject: subjectStr,
+      examMode,
+      cMajor: cMajors.join(" ").slice(0, 200),
+      cCity: cCityLevels.join(","),
+      cNature: cNature.join(","),
+      cTier: cTiers.join(","),
     });
 
     const controller = new AbortController();

@@ -39,6 +39,12 @@ export function track(
     page?: string;
     province?: string;
     rankInput?: number;
+    subject?: string;
+    examMode?: string;
+    cMajor?: string;
+    cCity?: string;
+    cNature?: string;
+    cTier?: string;
   } = {}
 ): void {
   try {
@@ -56,6 +62,12 @@ export function track(
         province: opts.province || "",
         rank_input: opts.rankInput || 0,
         session_id: getSessionId(),
+        subject: opts.subject || "",
+        exam_mode: opts.examMode || "",
+        c_major: opts.cMajor || "",
+        c_city: opts.cCity || "",
+        c_nature: opts.cNature || "",
+        c_tier: opts.cTier || "",
       }),
       // fire-and-forget: don't await, don't block UI
       keepalive: true,

@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>水卢高报引擎 · 宣传内容总览</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+body{
+  background:#06060D;
+  min-height:100vh;
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  color:#fff;
+  padding:48px 40px 80px;
+}
+
+.page-header{
+  border-bottom:1px solid rgba(255,255,255,0.08);
+  padding-bottom:36px;
+  margin-bottom:52px;
+}
+
+.page-header .brand{
+  font-size:14px;
+  color:rgba(255,255,255,0.3);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  margin-bottom:14px;
+}
+
+.page-header h1{
+  font-size:44px;
+  font-weight:800;
+  color:#fff;
+  line-height:1.2;
+  margin-bottom:12px;
+}
+
+.page-header .subtitle{
+  font-size:18px;
+  color:rgba(255,255,255,0.4);
+  line-height:1.7;
+}
+
+.section-title{
+  font-size:13px;
+  color:rgba(255,255,255,0.3);
+  letter-spacing:4px;
+  text-transform:uppercase;
+  margin-bottom:28px;
+}
+
+.cards-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:24px;
+  margin-bottom:60px;
+}
+
+.card{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:20px;
+  overflow:hidden;
+  text-decoration:none;
+  display:block;
+  transition:all .25s;
+  cursor:pointer;
+}
+
+.card:hover{
+  background:rgba(255,255,255,0.06);
+  border-color:rgba(255,255,255,0.14);
+  transform:translateY(-3px);
+}
+
+.card-preview{
+  height:200px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+  overflow:hidden;
+}
+
+.card-preview .preview-num{
+  font-size:100px;
+  font-weight:900;
+  opacity:.15;
+  line-height:1;
+  position:absolute;
+  right:20px;
+  bottom:-10px;
+}
+
+.card-preview .preview-title{
+  font-size:26px;
+  font-weight:700;
+  text-align:center;
+  line-height:1.4;
+  padding:20px;
+  position:relative;
+  z-index:1;
+}
+
+.card-preview .preview-hook{
+  position:absolute;
+  bottom:16px;
+  left:20px;
+  font-size:13px;
+  opacity:.6;
+  font-weight:400;
+}
+
+.card-body{
+  padding:24px 26px;
+}
+
+.card-body .card-series{
+  font-size:11px;
+  letter-spacing:3px;
+  text-transform:uppercase;
+  margin-bottom:10px;
+  opacity:.5;
+}
+
+.card-body .card-name{
+  font-size:20px;
+  font-weight:700;
+  margin-bottom:10px;
+  line-height:1.3;
+}
+
+.card-body .card-meta{
+  font-size:13px;
+  color:rgba(255,255,255,0.4);
+  display:flex;
+  gap:16px;
+  align-items:center;
+}
+
+.card-body .card-cta{
+  margin-top:16px;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  font-weight:600;
+  padding:8px 18px;
+  border-radius:100px;
+  border:1px solid;
+}
+
+/* Color variants */
+.card.c1 .card-preview{background:linear-gradient(135deg,#120808,#0F0A07);}
+.card.c1 .card-preview .preview-num{color:#FF4500;}
+.card.c1 .card-preview .preview-title{color:#fff;}
+.card.c1 .card-body .card-series{color:#FF4500;}
+.card.c1 .card-body .card-cta{color:#FF4500;border-color:rgba(255,69,0,0.4);background:rgba(255,69,0,0.08);}
+.card.c1:hover .card-body .card-cta{background:rgba(255,69,0,0.18);}
+
+.card.c2 .card-preview{background:linear-gradient(135deg,#0D0C08,#0A0B07);}
+.card.c2 .card-preview .preview-num{color:#FF6D00;}
+.card.c2 .card-preview .preview-title{color:#fff;}
+.card.c2 .card-body .card-series{color:#FF6D00;}
+.card.c2 .card-body .card-cta{color:#FF6D00;border-color:rgba(255,109,0,0.4);background:rgba(255,109,0,0.08);}
+.card.c2:hover .card-body .card-cta{background:rgba(255,109,0,0.18);}
+
+.card.c3 .card-preview{background:linear-gradient(135deg,#110809,#0B0708);}
+.card.c3 .card-preview .preview-num{color:#FF3D00;}
+.card.c3 .card-preview .preview-title{color:#fff;}
+.card.c3 .card-body .card-series{color:#FF3D00;}
+.card.c3 .card-body .card-cta{color:#FF3D00;border-color:rgba(255,61,0,0.4);background:rgba(255,61,0,0.08);}
+.card.c3:hover .card-body .card-cta{background:rgba(255,61,0,0.18);}
+
+/* How-to section */
+.howto{
+  background:rgba(255,255,255,0.03);
+  border:1px solid rgba(255,255,255,0.08);
+  border-radius:20px;
+  padding:40px 44px;
+  margin-bottom:60px;
+}
+
+.howto h2{
+  font-size:22px;font-weight:700;margin-bottom:24px;
+  color:rgba(255,255,255,0.8);
+}
+
+.step-list{
+  display:flex;flex-direction:column;gap:20px;
+}
+
+.step-item{
+  display:flex;gap:20px;align-items:flex-start;
+  padding-bottom:20px;
+  border-bottom:1px solid rgba(255,255,255,0.06);
+}
+.step-item:last-child{border-bottom:none;padding-bottom:0;}
+
+.step-circle{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,69,0,0.12);border:1.5px solid rgba(255,69,0,0.35);
+  display:flex;align-items:center;justify-content:center;
+  font-size:15px;font-weight:700;color:#FF4500;
+  flex-shrink:0;
+}
+
+.step-text{font-size:16px;color:rgba(255,255,255,0.65);line-height:1.6;}
+.step-text strong{color:#fff;}
+
+/* Footer note */
+.footer-note{
+  text-align:center;
+  font-size:14px;
+  color:rgba(255,255,255,0.2);
+  line-height:1.8;
+}
+
+.priority-badge{
+  display:inline-flex;align-items:center;
+  font-size:11px;font-weight:600;letter-spacing:2px;
+  padding:4px 12px;border-radius:100px;
+  margin-right:10px;
+}
+.p0{background:rgba(255,23,68,0.15);color:#FF5252;border:1px solid rgba(255,23,68,0.3);}
+</style>
+</head>
+<body>
+
+<div class="page-header">
+  <div class="brand">水卢高报引擎 · 宣传内容</div>
+  <h1>P0 优先内容<br>抖音图文 · 3组共18张</h1>
+  <div class="subtitle">
+    <span class="priority-badge p0">P0 优先</span>
+    高考前（5月-6月初）发出 · 深色背景橙红系 · 每组6张图
+  </div>
+</div>
+
+<!-- CARDS -->
+<div class="section-title">三组图文内容</div>
+
+<div class="cards-grid">
+
+  <a class="card c1" href="p0_01_jigou.html" target="_blank">
+    <div class="card-preview">
+      <div class="preview-num">01</div>
+      <div class="preview-title">花了¥15,000<br>买了个3天速成<br>规划师</div>
+      <div class="preview-hook">核心钩子：3天培训上岗，收你1万5</div>
+    </div>
+    <div class="card-body">
+      <div class="card-series">P0-01 · 机构割韭菜大起底</div>
+      <div class="card-name">拆穿机构暴利套路<br>信息差才是最贵的学费</div>
+      <div class="card-meta">
+        <span>6张图</span>
+        <span>·</span>
+        <span>信息差角度</span>
+      </div>
+      <div class="card-cta">打开查看 →</div>
+    </div>
+  </a>
+
+  <a class="card c2" href="p0_02_dalei.html" target="_blank">
+    <div class="card-preview">
+      <div class="preview-num">02</div>
+      <div class="preview-title">620分考进985<br>被分到了<br>地理信息系</div>
+      <div class="preview-hook">核心钩子：大类招生的分流陷阱</div>
+    </div>
+    <div class="card-body">
+      <div class="card-series">P0-02 · 大类招生真实踩坑</div>
+      <div class="card-name">100人进门<br>只有20人进热门专业</div>
+      <div class="card-meta">
+        <span>6张图</span>
+        <span>·</span>
+        <span>避坑角度</span>
+      </div>
+      <div class="card-cta">打开查看 →</div>
+    </div>
+  </a>
+
+  <a class="card c3" href="p0_03_xinxicha.html" target="_blank">
+    <div class="card-preview">
+      <div class="preview-num">03</div>
+      <div class="preview-title">1355万人赶考<br>考完才是<br>真正的坑</div>
+      <div class="preview-hook">核心钩子：信息差 · 1428个专业被砍</div>
+    </div>
+    <div class="card-body">
+      <div class="card-series">P0-03 · 1355万人·信息差</div>
+      <div class="card-name">把信息差<br>免费拆给你看</div>
+      <div class="card-meta">
+        <span>6张图</span>
+        <span>·</span>
+        <span>政策变化角度</span>
+      </div>
+      <div class="card-cta">打开查看 →</div>
+    </div>
+  </a>
+
+</div>
+
+<!-- HOW TO USE -->
+<div class="section-title">使用说明</div>
+
+<div class="howto">
+  <h2>📱 如何把 HTML 变成抖音图文</h2>
+  <div class="step-list">
+    <div class="step-item">
+      <div class="step-circle">1</div>
+      <div class="step-text">
+        <strong>打开任意一个 HTML 文件</strong><br>
+        浏览器里用 ← → 键或点击按钮翻页，每张图对应抖音图文的一张图片
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle">2</div>
+      <div class="step-text">
+        <strong>截图每一张（共6张）</strong><br>
+        Mac：⌘+Shift+4，Windows：Win+Shift+S；截取海报区域（深色背景的部分）
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle">3</div>
+      <div class="step-text">
+        <strong>发布到抖音图文</strong><br>
+        选"图文"格式，上传6张图，标题用各组的核心钩子，文案可根据内容自由发挥
+      </div>
+    </div>
+    <div class="step-item">
+      <div class="step-circle">4</div>
+      <div class="step-text">
+        <strong>结尾统一引导</strong><br>
+        文案最后一行固定加：搜索「水卢高报引擎」
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="footer-note">
+  水卢高报引擎 · 宣传内容 P0 批次 · 2026年5月<br>
+  免费工具 · 数据来自官方 · 不承诺包录取 · 仅供参考
+</div>
+
+</body>
+</html>

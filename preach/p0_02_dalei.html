@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>大类招生真实踩坑 · 6图 | 水卢高报引擎</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+:root{
+  --accent:#FF6D00;
+  --accent2:#FF9100;
+  --gold:#FFD060;
+  --danger:#FF1744;
+  --ok:#00E676;
+  --bg:#070A0E;
+  --surface:rgba(255,255,255,0.04);
+  --border:rgba(255,255,255,0.08);
+  --t1:#FFFFFF;
+  --t2:#AABBCC;
+  --t3:#4A5A6A;
+}
+
+body{
+  background:#000;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  font-family:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+  overflow:hidden;
+  user-select:none;
+}
+
+.chrome{
+  width:100vw;height:100vh;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+}
+
+.top-bar{
+  width:100%;padding:10px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  flex-shrink:0;
+}
+.series-label{font-size:12px;color:rgba(255,255,255,0.3);letter-spacing:2px;}
+.hint{font-size:11px;color:rgba(255,255,255,0.2);letter-spacing:1px;}
+
+.slide-stage{
+  flex:1;display:flex;align-items:center;justify-content:center;
+  width:100%;position:relative;min-height:0;
+}
+
+#scaleRoot{
+  position:absolute;transform-origin:top left;
+  width:1080px;height:1920px;
+}
+
+.slide{
+  position:absolute;top:0;left:0;
+  width:1080px;height:1920px;
+  background:var(--bg);display:none;overflow:hidden;
+}
+.slide.active{display:block;}
+
+.nav-bar{
+  flex-shrink:0;display:flex;align-items:center;
+  gap:14px;padding:12px 20px 16px;
+}
+.nav-btn{
+  width:42px;height:42px;border-radius:50%;
+  border:1px solid rgba(255,109,0,0.35);
+  background:rgba(255,109,0,0.08);
+  color:#FF6D00;font-size:17px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .2s;outline:none;
+}
+.nav-btn:hover{background:rgba(255,109,0,0.2);}
+.nav-btn:disabled{opacity:.25;cursor:not-allowed;}
+.dots{display:flex;gap:7px;align-items:center;}
+.dot{width:7px;height:7px;border-radius:4px;background:rgba(255,255,255,0.2);cursor:pointer;transition:all .3s;}
+.dot.active{width:22px;background:#FF6D00;}
+.counter{font-size:12px;color:rgba(255,255,255,0.3);min-width:36px;text-align:center;letter-spacing:1px;}
+
+/* SHARED */
+.brand{position:absolute;top:46px;right:54px;font-size:26px;color:rgba(255,255,255,0.18);font-weight:400;letter-spacing:1px;}
+.slide-num{position:absolute;bottom:52px;right:54px;font-size:24px;color:rgba(255,255,255,0.18);font-weight:300;}
+.bottom-bar{position:absolute;bottom:0;left:0;right:0;height:5px;background:rgba(255,255,255,0.05);}
+.bottom-bar-fill{height:100%;background:var(--accent);}
+
+/* ====== SLIDE 1 : HOOK ====== */
+#s1{
+  background:
+    radial-gradient(ellipse 800px 600px at 50% -15%,rgba(255,109,0,0.12) 0%,transparent 60%),
+    linear-gradient(170deg,#0C0A08 0%,#070A0E 60%);
+}
+
+#s1 .case-badge{
+  position:absolute;
+  top:150px;left:60px;
+  display:inline-flex;align-items:center;gap:14px;
+  background:rgba(255,23,68,0.12);
+  border:1.5px solid rgba(255,23,68,0.4);
+  border-radius:12px;
+  padding:16px 30px;
+  font-size:30px;
+  color:#FF5252;
+  font-weight:500;
+  letter-spacing:3px;
+}
+
+#s1 .score-line{
+  position:absolute;
+  top:360px;left:60px;
+}
+#s1 .score-pre{font-size:60px;color:rgba(255,255,255,0.4);font-weight:300;}
+#s1 .score-num{
+  font-size:300px;font-weight:900;
+  color:var(--gold);line-height:.9;
+  letter-spacing:-8px;
+}
+#s1 .score-unit{font-size:70px;color:rgba(255,255,255,0.4);font-weight:300;margin-left:8px;}
+
+#s1 .arrow-area{
+  position:absolute;
+  top:920px;left:60px;right:60px;
+  display:flex;flex-direction:column;gap:24px;
+}
+#s1 .arrow-chip{
+  display:flex;align-items:center;gap:24px;
+}
+#s1 .chip-label{
+  font-size:64px;color:var(--t1);font-weight:700;
+}
+#s1 .chip-arrow{
+  font-size:48px;color:var(--accent);
+}
+
+#s1 .result-box{
+  position:absolute;
+  top:1220px;left:60px;right:60px;
+  background:rgba(255,23,68,0.08);
+  border:1.5px solid rgba(255,23,68,0.3);
+  border-radius:20px;
+  padding:44px 54px;
+}
+#s1 .result-box .result-pre{font-size:34px;color:rgba(255,82,82,0.8);margin-bottom:14px;}
+#s1 .result-box .result-text{
+  font-size:76px;font-weight:800;
+  color:#FF5252;line-height:1.2;
+}
+
+#s1 .bottom-copy{
+  position:absolute;
+  bottom:120px;left:60px;right:60px;
+  border-top:1px solid rgba(255,255,255,0.08);
+  padding-top:34px;
+  font-size:36px;color:rgba(255,255,255,0.35);line-height:1.7;
+}
+
+/* ====== SLIDE 2 : EXPLAIN ====== */
+#s2{background:var(--bg);}
+
+#s2 .header{position:absolute;top:110px;left:60px;right:60px;}
+#s2 .header .eyebrow{font-size:30px;color:var(--accent);letter-spacing:4px;font-weight:500;}
+#s2 .header .title{margin-top:18px;font-size:78px;color:var(--t1);font-weight:800;line-height:1.2;}
+
+#s2 .flow{
+  position:absolute;
+  top:460px;left:60px;right:60px;
+}
+
+#s2 .flow-box{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:20px;
+  padding:44px 54px;
+  margin-bottom:32px;
+}
+
+#s2 .flow-box .fb-label{font-size:28px;color:var(--accent);letter-spacing:3px;margin-bottom:14px;font-weight:500;}
+#s2 .flow-box .fb-title{font-size:60px;color:var(--t1);font-weight:700;}
+#s2 .flow-box .fb-sub{margin-top:12px;font-size:34px;color:var(--t3);}
+
+#s2 .flow-arrow{
+  text-align:center;font-size:60px;color:var(--accent);
+  margin-bottom:32px;line-height:1;opacity:.7;
+}
+
+#s2 .split-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+#s2 .split-item{
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:34px 30px;
+}
+#s2 .split-item.hot{border-color:rgba(255,109,0,0.4);background:rgba(255,109,0,0.06);}
+#s2 .split-item .si-label{font-size:26px;color:var(--t3);margin-bottom:10px;}
+#s2 .split-item .si-name{font-size:40px;color:var(--t1);font-weight:700;}
+#s2 .split-item.hot .si-name{color:var(--accent);}
+
+#s2 .key-warn{
+  position:absolute;
+  bottom:140px;left:60px;right:60px;
+  font-size:42px;color:var(--t2);
+  line-height:1.7;
+  border-left:5px solid var(--accent);
+  padding-left:30px;
+}
+
+/* ====== SLIDE 3 : DATA ====== */
+#s3{background:var(--bg);}
+
+#s3 .header{position:absolute;top:110px;left:60px;right:60px;}
+#s3 .header .eyebrow{font-size:30px;color:var(--accent);letter-spacing:4px;font-weight:500;}
+#s3 .header .title{margin-top:18px;font-size:78px;color:var(--t1);font-weight:800;line-height:1.2;}
+
+#s3 .center-metric{
+  position:absolute;
+  top:490px;left:0;right:0;
+  text-align:center;
+}
+#s3 .center-metric .pre{font-size:38px;color:var(--t2);letter-spacing:3px;}
+#s3 .center-metric .pct{font-size:340px;font-weight:900;color:var(--accent);line-height:.9;}
+#s3 .center-metric .pct-sym{font-size:140px;color:var(--accent2);}
+#s3 .center-metric .note{margin-top:20px;font-size:38px;color:var(--t3);}
+
+#s3 .bar-visual{
+  position:absolute;
+  top:1120px;left:60px;right:60px;
+}
+
+#s3 .bar-label-row{
+  display:flex;justify-content:space-between;
+  font-size:32px;color:var(--t3);
+  margin-bottom:16px;
+}
+
+#s3 .bar-track{
+  height:60px;
+  border-radius:30px;
+  background:rgba(255,255,255,0.06);
+  overflow:hidden;
+  margin-bottom:40px;
+}
+#s3 .bar-fill{height:100%;border-radius:30px;}
+#s3 .bar-fill.hot{background:linear-gradient(90deg,var(--accent),var(--accent2));width:20%;}
+#s3 .bar-fill.cold{background:rgba(255,255,255,0.12);width:80%;}
+
+#s3 .bar-legend{
+  display:flex;gap:40px;font-size:30px;color:var(--t3);
+}
+#s3 .bar-legend span{display:flex;align-items:center;gap:12px;}
+#s3 .bar-legend .dot-hot{width:16px;height:16px;border-radius:50%;background:var(--accent);display:inline-block;}
+#s3 .bar-legend .dot-cold{width:16px;height:16px;border-radius:50%;background:rgba(255,255,255,0.2);display:inline-block;}
+
+#s3 .quote-block{
+  position:absolute;
+  bottom:140px;left:60px;right:60px;
+  background:linear-gradient(135deg,rgba(255,109,0,0.1),rgba(255,109,0,0.02));
+  border-left:6px solid var(--accent);
+  border-radius:0 20px 20px 0;
+  padding:44px 50px;
+}
+#s3 .quote-block .q-text{font-size:52px;color:var(--t1);font-weight:700;line-height:1.5;}
+
+/* ====== SLIDE 4 : REALITY ====== */
+#s4{background:var(--bg);}
+
+#s4 .header{position:absolute;top:110px;left:60px;right:60px;}
+#s4 .header .eyebrow{font-size:30px;color:var(--accent);letter-spacing:4px;font-weight:500;}
+#s4 .header .title{margin-top:18px;font-size:74px;color:var(--t1);font-weight:800;line-height:1.2;}
+
+#s4 .crowd-vis{
+  position:absolute;
+  top:450px;left:60px;right:60px;
+}
+
+#s4 .crowd-total{
+  font-size:54px;color:var(--t2);margin-bottom:30px;
+  line-height:1.5;
+}
+#s4 .crowd-total strong{color:var(--t1);font-size:66px;}
+
+#s4 .crowd-dots{
+  display:flex;flex-wrap:wrap;gap:12px;
+  margin-bottom:50px;
+}
+#s4 .person-dot{
+  width:32px;height:32px;border-radius:50%;
+}
+#s4 .person-dot.hot{background:var(--accent);}
+#s4 .person-dot.cold{background:rgba(255,255,255,0.1);}
+
+#s4 .result-cards{display:flex;gap:24px;}
+#s4 .r-card{
+  flex:1;border-radius:20px;padding:40px 36px;
+}
+#s4 .r-card.win{
+  background:rgba(255,109,0,0.1);
+  border:1.5px solid rgba(255,109,0,0.35);
+}
+#s4 .r-card.lose{
+  background:rgba(255,255,255,0.03);
+  border:1px solid var(--border);
+}
+#s4 .r-card .r-num{font-size:100px;font-weight:900;line-height:1;}
+#s4 .r-card.win .r-num{color:var(--accent);}
+#s4 .r-card.lose .r-num{color:rgba(255,255,255,0.25);}
+#s4 .r-card .r-unit{font-size:42px;color:var(--t2);margin:6px 0;}
+#s4 .r-card .r-desc{font-size:34px;line-height:1.5;}
+#s4 .r-card.win .r-desc{color:var(--t1);}
+#s4 .r-card.lose .r-desc{color:var(--t3);}
+
+#s4 .big-insight{
+  position:absolute;
+  bottom:140px;left:60px;right:60px;
+  text-align:center;
+}
+#s4 .big-insight .bi-text{
+  font-size:66px;font-weight:800;color:var(--t1);
+  line-height:1.3;
+}
+#s4 .big-insight .bi-sub{
+  margin-top:20px;font-size:38px;color:var(--t3);
+}
+
+/* ====== SLIDE 5 : AVOID TRAPS ====== */
+#s5{background:var(--bg);}
+
+#s5 .header{position:absolute;top:110px;left:60px;right:60px;}
+#s5 .header .eyebrow{font-size:30px;color:var(--accent);letter-spacing:4px;font-weight:500;}
+#s5 .header .title{margin-top:18px;font-size:76px;color:var(--t1);font-weight:800;line-height:1.2;}
+
+#s5 .qa-list{
+  position:absolute;
+  top:430px;left:60px;right:60px;
+}
+
+#s5 .qa-item{
+  display:flex;gap:30px;align-items:flex-start;
+  padding:40px 0;
+  border-bottom:1px solid var(--border);
+}
+#s5 .qa-item:last-child{border-bottom:none;}
+
+#s5 .qa-num{
+  width:64px;height:64px;border-radius:50%;
+  background:rgba(255,109,0,0.12);
+  border:2px solid rgba(255,109,0,0.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:32px;font-weight:800;color:var(--accent);
+  flex-shrink:0;
+}
+
+#s5 .qa-content .qa-q{
+  font-size:48px;color:var(--t1);font-weight:700;line-height:1.3;
+}
+#s5 .qa-content .qa-why{
+  margin-top:12px;font-size:34px;color:var(--t3);line-height:1.5;
+}
+
+#s5 .warning-bar{
+  position:absolute;
+  bottom:120px;left:60px;right:60px;
+  background:rgba(255,23,68,0.07);
+  border:1.5px solid rgba(255,23,68,0.25);
+  border-radius:16px;
+  padding:40px 50px;
+}
+#s5 .warning-bar .w-text{
+  font-size:42px;color:#FF5252;font-weight:600;line-height:1.5;
+}
+
+/* ====== SLIDE 6 : CTA ====== */
+#s6{
+  background:
+    radial-gradient(ellipse 900px 900px at 50% 110%,rgba(255,109,0,0.15) 0%,transparent 65%),
+    radial-gradient(ellipse 700px 500px at 50% -10%,rgba(255,145,0,0.08) 0%,transparent 60%),
+    #070A0E;
+}
+
+#s6 .top-line{
+  position:absolute;top:0;left:0;right:0;height:5px;
+  background:linear-gradient(90deg,var(--accent),var(--accent2));
+}
+
+#s6 .center-block{
+  position:absolute;top:50%;left:50%;
+  transform:translate(-50%,-52%);
+  width:900px;text-align:center;
+}
+
+#s6 .big-tag{
+  display:inline-block;font-size:28px;
+  color:var(--accent);
+  border:1.5px solid rgba(255,109,0,0.4);
+  border-radius:100px;padding:10px 36px;
+  letter-spacing:4px;font-weight:500;margin-bottom:60px;
+}
+
+#s6 .main-text{
+  font-size:84px;color:var(--t1);font-weight:800;line-height:1.25;margin-bottom:24px;
+}
+#s6 .main-text .gray{color:rgba(255,255,255,0.38);}
+
+#s6 .search-box{
+  margin-top:70px;
+  background:rgba(255,255,255,0.04);
+  border:2px solid rgba(255,109,0,0.5);
+  border-radius:20px;
+  padding:40px 60px;
+  display:flex;align-items:center;justify-content:center;gap:24px;
+}
+#s6 .search-icon{font-size:48px;opacity:.7;}
+#s6 .search-text{font-size:66px;font-weight:800;color:var(--t1);letter-spacing:2px;}
+#s6 .search-text .brand-name{color:var(--accent);}
+
+#s6 .trust-line{
+  margin-top:60px;font-size:36px;color:var(--t3);
+  display:flex;justify-content:center;gap:32px;align-items:center;
+}
+#s6 .trust-line span{display:flex;align-items:center;gap:10px;}
+#s6 .trust-line .dot-sep{width:5px;height:5px;border-radius:50%;background:var(--t3);}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="top-bar">
+    <span class="series-label">P0-02 · 大类招生真实踩坑 · 6图图文</span>
+    <span class="hint">← → 切换</span>
+  </div>
+
+  <div class="slide-stage">
+    <div id="scaleRoot">
+
+      <!-- ===== SLIDE 1 : HOOK ===== -->
+      <div class="slide active" id="s1">
+        <div class="brand">水卢高报引擎</div>
+
+        <div class="case-badge">📋 真实案例</div>
+
+        <div class="score-line">
+          <div class="score-pre">考了</div>
+          <div class="score-num">620<span class="score-unit">分</span></div>
+        </div>
+
+        <div class="arrow-area">
+          <div class="arrow-chip">
+            <span class="chip-label">报了某985工科大学</span>
+          </div>
+          <div class="arrow-chip">
+            <span class="chip-arrow">↓ 大一结束</span>
+          </div>
+          <div class="arrow-chip">
+            <span class="chip-label">专业分流</span>
+          </div>
+        </div>
+
+        <div class="result-box">
+          <div class="result-pre">最终被分到了</div>
+          <div class="result-text">地理信息科学系</div>
+        </div>
+
+        <div class="bottom-copy">
+          大类招生：进门容易，<span style="color:var(--accent);">分流才是真正的坑</span><br>
+          → 滑动看完，提前避开这个坑
+        </div>
+
+        <div class="slide-num">1 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:16.6%"></div></div>
+      </div>
+
+      <!-- ===== SLIDE 2 : EXPLAIN ===== -->
+      <div class="slide" id="s2">
+        <div class="brand">水卢高报引擎</div>
+
+        <div class="header">
+          <div class="eyebrow">基础知识</div>
+          <div class="title">什么是<br>大类招生？</div>
+        </div>
+
+        <div class="flow" style="top:460px;">
+          <div class="flow-box">
+            <div class="fb-label">高考报志愿时</div>
+            <div class="fb-title">工学大类（大门）</div>
+            <div class="fb-sub">进去之前不知道最终去哪个专业</div>
+          </div>
+
+          <div class="flow-arrow">↓</div>
+
+          <div class="split-grid">
+            <div class="split-item hot">
+              <div class="si-label">热门专业</div>
+              <div class="si-name">计算机科学</div>
+            </div>
+            <div class="split-item hot">
+              <div class="si-label">热门专业</div>
+              <div class="si-name">电子信息</div>
+            </div>
+            <div class="split-item">
+              <div class="si-label">其他专业</div>
+              <div class="si-name">地理信息</div>
+            </div>
+            <div class="split-item">
+              <div class="si-label">其他专业</div>
+              <div class="si-name">测绘工程</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="key-warn">
+          分流时间：大一或大二末<br>
+          分流标准：<span style="color:var(--accent);">学校说了算</span>
+        </div>
+
+        <div class="slide-num">2 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:33.3%"></div></div>
+      </div>
+
+      <!-- ===== SLIDE 3 : DATA ===== -->
+      <div class="slide" id="s3">
+        <div class="brand">水卢高报引擎</div>
+
+        <div class="header">
+          <div class="eyebrow">数据揭露</div>
+          <div class="title">热门专业的<br>分流比例有多低</div>
+        </div>
+
+        <div class="center-metric">
+          <div class="pre">部分院校热门专业大类内分流比例</div>
+          <div class="pct"><span class="pct-sym">&lt;</span>20<span style="font-size:120px">%</span></div>
+          <div class="note">100人进大类，不到20人能进热门专业</div>
+        </div>
+
+        <div class="bar-visual">
+          <div class="bar-label-row">
+            <span>进热门专业</span>
+            <span>被分配到其他专业</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill hot"></div>
+          </div>
+          <div class="bar-legend">
+            <span><span class="dot-hot"></span>约20人 拿到心仪专业</span>
+            <span><span class="dot-cold"></span>约80人 被分配</span>
+          </div>
+        </div>
+
+        <div class="quote-block">
+          <div class="q-text">你填的是「门」<br>不是「房间」</div>
+        </div>
+
+        <div class="slide-num">3 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:50%"></div></div>
+      </div>
+
+      <!-- ===== SLIDE 4 : REALITY ===== -->
+      <div class="slide" id="s4">
+        <div class="brand">水卢高报引擎</div>
+
+        <div class="header">
+          <div class="eyebrow">真实结局</div>
+          <div class="title">100人进大类<br>结局大不同</div>
+        </div>
+
+        <div class="crowd-vis">
+          <div class="crowd-total">
+            100人 同时报考 <strong>工学大类</strong>
+          </div>
+
+          <!-- 10x10 dot grid -->
+          <div class="crowd-dots" id="dotGrid"></div>
+
+          <div class="result-cards">
+            <div class="r-card win">
+              <div class="r-num">20</div>
+              <div class="r-unit">人</div>
+              <div class="r-desc">进入心仪<br>热门专业</div>
+            </div>
+            <div class="r-card lose">
+              <div class="r-num">80</div>
+              <div class="r-unit">人</div>
+              <div class="r-desc">被分流到<br>其他方向</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="big-insight">
+          <div class="bi-text">分流失败<br>≠ 你不够努力</div>
+          <div class="bi-sub">名额有限，规则在人家手里</div>
+        </div>
+
+        <div class="slide-num">4 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:66.6%"></div></div>
+      </div>
+
+      <!-- ===== SLIDE 5 : AVOID TRAPS ===== -->
+      <div class="slide" id="s5">
+        <div class="brand">水卢高报引擎</div>
+
+        <div class="header">
+          <div class="eyebrow">必须提前问</div>
+          <div class="title">报大类之前<br>这4个问题先搞清楚</div>
+        </div>
+
+        <div class="qa-list">
+          <div class="qa-item">
+            <div class="qa-num">1</div>
+            <div class="qa-content">
+              <div class="qa-q">这个大类包含哪些具体专业？</div>
+              <div class="qa-why">别进门才发现根本没有你想学的</div>
+            </div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-num">2</div>
+            <div class="qa-content">
+              <div class="qa-q">热门专业的分流名额有多少？</div>
+              <div class="qa-why">20人和80人进同一个大类，命运不同</div>
+            </div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-num">3</div>
+            <div class="qa-content">
+              <div class="qa-q">分流标准是成绩还是志愿？</div>
+              <div class="qa-why">有的学校抢，有的学校排名定，差别很大</div>
+            </div>
+          </div>
+          <div class="qa-item">
+            <div class="qa-num">4</div>
+            <div class="qa-content">
+              <div class="qa-q">分流失败有没有补救机会？</div>
+              <div class="qa-why">有些学校可以转专业，有些不行</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="warning-bar">
+          <div class="w-text">不问清楚，620分也能填进坑里</div>
+        </div>
+
+        <div class="slide-num">5 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:83.3%"></div></div>
+      </div>
+
+      <!-- ===== SLIDE 6 : CTA ===== -->
+      <div class="slide" id="s6">
+        <div class="brand">水卢高报引擎</div>
+        <div class="top-line"></div>
+
+        <div class="center-block">
+          <div class="big-tag">数据驱动 · 提前避坑</div>
+
+          <div class="main-text">
+            报志愿之前<br>
+            <span class="gray">先</span>看数据
+          </div>
+
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <span class="search-text">搜索「<span class="brand-name">水卢高报引擎</span>」</span>
+          </div>
+
+          <div class="trust-line">
+            <span>历年位次数据</span>
+            <span class="dot-sep"></span>
+            <span>专业分流信息</span>
+            <span class="dot-sep"></span>
+            <span>完全免费</span>
+          </div>
+        </div>
+
+        <div class="slide-num">6 / 6</div>
+        <div class="bottom-bar"><div class="bottom-bar-fill" style="width:100%"></div></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="nav-bar">
+    <button class="nav-btn" id="prevBtn" onclick="go(-1)" disabled>←</button>
+    <div class="dots" id="dotsContainer"></div>
+    <button class="nav-btn" id="nextBtn" onclick="go(1)">→</button>
+    <span class="counter" id="counter">1 / 6</span>
+  </div>
+</div>
+
+<script>
+const TOTAL=6;let cur=0;
+const slides=document.querySelectorAll('.slide');
+const dotsC=document.getElementById('dotsContainer');
+const prevBtn=document.getElementById('prevBtn');
+const nextBtn=document.getElementById('nextBtn');
+const counter=document.getElementById('counter');
+
+// Build dot grid (slide 4)
+const grid=document.getElementById('dotGrid');
+if(grid){
+  for(let i=0;i<100;i++){
+    const d=document.createElement('div');
+    d.className='person-dot '+(i<20?'hot':'cold');
+    grid.appendChild(d);
+  }
+}
+
+for(let i=0;i<TOTAL;i++){
+  const d=document.createElement('div');
+  d.className='dot'+(i===0?' active':'');
+  d.onclick=()=>jump(i);
+  dotsC.appendChild(d);
+}
+
+function jump(n){
+  slides[cur].classList.remove('active');
+  dotsC.children[cur].classList.remove('active');
+  cur=n;
+  slides[cur].classList.add('active');
+  dotsC.children[cur].classList.add('active');
+  counter.textContent=(cur+1)+' / '+TOTAL;
+  prevBtn.disabled=(cur===0);
+  nextBtn.disabled=(cur===TOTAL-1);
+}
+
+function go(dir){jump(Math.max(0,Math.min(TOTAL-1,cur+dir)));}
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowRight'||e.key==='ArrowDown') go(1);
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp') go(-1);
+});
+
+let tx=0;
+document.addEventListener('touchstart',e=>tx=e.touches[0].clientX,{passive:true});
+document.addEventListener('touchend',e=>{
+  const dx=e.changedTouches[0].clientX-tx;
+  if(Math.abs(dx)>60) go(dx<0?1:-1);
+},{passive:true});
+
+function scale(){
+  const stage=document.querySelector('.slide-stage');
+  const sw=stage.clientWidth,sh=stage.clientHeight;
+  const s=Math.min(sw/1080,sh/1920)*0.97;
+  const root=document.getElementById('scaleRoot');
+  root.style.transform='scale('+s+')';
+  root.style.left=((sw-1080*s)/2)+'px';
+  root.style.top=((sh-1920*s)/2)+'px';
+}
+
+window.addEventListener('resize',scale);
+scale();
+</script>
+</body>
+</html>

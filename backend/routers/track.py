@@ -16,6 +16,12 @@ class TrackEvent(BaseModel):
     province: str = ""
     rank_input: int = 0
     session_id: str = ""
+    subject: str = ""
+    exam_mode: str = ""
+    c_major: str = ""
+    c_city: str = ""
+    c_nature: str = ""
+    c_tier: str = ""
 
 
 @router.post("/track")
@@ -35,6 +41,12 @@ async def track(ev: TrackEvent, request: Request, db: Session = Depends(get_db))
         page=ev.page,
         province=ev.province,
         rank_input=ev.rank_input or None,
+        subject=ev.subject,
+        exam_mode=ev.exam_mode,
+        c_major=ev.c_major,
+        c_city=ev.c_city,
+        c_nature=ev.c_nature,
+        c_tier=ev.c_tier,
         ip=request.client.host if request.client else "",
         user_agent=request.headers.get("user-agent", ""),
     )

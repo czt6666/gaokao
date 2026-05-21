@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 const STORAGE_KEY = "admin_token";
 
 // 后端返回 UTC 时间，统一转换为北京时间展示
@@ -23,11 +23,42 @@ interface Order {
   order_no: string; amount: number; status: string; pay_method: string;
   province: string; rank_input: number; created_at: string; pay_time: string; user_id: number;
   c_major: string; c_city: string; c_nature: string; c_tier: string; mock_score: number;
+  product_type: string; transaction_id: string;
 }
 interface UserRow {
-  id: number; phone: string; province: string; is_paid: number; wechat: string;
+  id: number; phone: string; province: string; is_paid: number; wechat: string; user_source: string;
   paid_orders: number; query_count: number; created_at: string; last_active: string;
   subscription_type: string; subscription_end: string; days_remaining: number; referral_code: string;
+}
+interface UserQueryRecord { id: number; province: string; rank_input: number; event_data: string; page: string; created_at: string; ip: string; }
+interface UserOrderRecord { order_no: string; amount: number; status: string; pay_method: string; product_type: string; province: string; rank_input: number; created_at: string; pay_time: string; transaction_id: string; }
+interface UserEventRecord { id: number; event_type: string; event_data: string; page: string; created_at: string; ip: string; }
+interface UserDetail {
+  user: UserRow;
+  queries: UserQueryRecord[];
+  orders: UserOrderRecord[];
+  events: UserEventRecord[];
+}
+interface EventItem {
+  id: number;
+  user_id: number | null;
+  phone: string;
+  wechat_openid: string;
+  wechat_mini_openid: string;
+  user_source: string;
+  event_type: string;
+  province: string;
+  rank_input: number | null;
+  subject: string;
+  exam_mode: string;
+  c_major: string;
+  c_city: string;
+  c_nature: string;
+  c_tier: string;
+  event_data: string;
+  page: string;
+  ip: string;
+  created_at: string;
 }
 interface RevenueBreakdown { product_type: string; count: number; amount: number; }
 interface ReferralRow { referral_code: string; phone: string; referral_count: number; paid_referrals: number; conv_rate: number; }
@@ -144,7 +175,7 @@ function HourlyBars({ data }: { data: HourlyData[] }) {
 export default function AdminPage() {
   const [tokenInput, setTokenInput] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "viral" | "insights" | "referral" | "feedback">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "events" | "viral" | "insights" | "referral" | "feedback">("dashboard");
   const [insights, setInsights] = useState<any>(null);
 
   const [stats, setStats] = useState<TodayStats | null>(null);
@@ -179,6 +210,35 @@ export default function AdminPage() {
   const [error, setError] = useState("");
   const [grantMsg, setGrantMsg] = useState("");
   const [confirmDialog, setConfirmDialog] = useState<{ msg: string; onConfirm: () => void } | null>(null);
+
+  const [userDetail, setUserDetail] = useState<UserDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailTab, setDetailTab] = useState<"queries" | "orders" | "events">("queries");
+
+  const [orderDetail, setOrderDetail] = useState<Order | null>(null);
+
+  // Events / query records state
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [eventTotal, setEventTotal] = useState(0);
+  const [eventPage, setEventPage] = useState(1);
+  const [eventFilters, setEventFilters] = useState({
+    user_id: "",
+    phone: "",
+    wechat_openid: "",
+    wechat_mini_openid: "",
+    province: "",
+    event_type: "",
+    rank_min: "",
+    rank_max: "",
+    date_from: "",
+    date_to: "",
+    subject: "",
+    exam_mode: "",
+    c_major: "",
+    c_city: "",
+    c_nature: "",
+    c_tier: "",
+  });
 
   const tokenRef = useRef("");
 
@@ -266,6 +326,35 @@ export default function AdminPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, activeTab, userPage, userPaidOnly, userSearch]);
 
+  // Events / query records
+  useEffect(() => {
+    if (!authed || activeTab !== "events") return;
+    const f = eventFilters;
+    const qs = new URLSearchParams();
+    qs.set("page", String(eventPage));
+    qs.set("page_size", "20");
+    if (f.user_id) qs.set("user_id", f.user_id);
+    if (f.phone) qs.set("phone", f.phone);
+    if (f.wechat_openid) qs.set("wechat_openid", f.wechat_openid);
+    if (f.wechat_mini_openid) qs.set("wechat_mini_openid", f.wechat_mini_openid);
+    if (f.province) qs.set("province", f.province);
+    if (f.event_type) qs.set("event_type", f.event_type);
+    if (f.rank_min) qs.set("rank_min", f.rank_min);
+    if (f.rank_max) qs.set("rank_max", f.rank_max);
+    if (f.date_from) qs.set("date_from", f.date_from);
+    if (f.date_to) qs.set("date_to", f.date_to);
+    if (f.subject) qs.set("subject", f.subject);
+    if (f.exam_mode) qs.set("exam_mode", f.exam_mode);
+    if (f.c_major) qs.set("c_major", f.c_major);
+    if (f.c_city) qs.set("c_city", f.c_city);
+    if (f.c_nature) qs.set("c_nature", f.c_nature);
+    if (f.c_tier) qs.set("c_tier", f.c_tier);
+    apiFetch(`/api/admin/events?${qs.toString()}`)
+      .then(d => { setEvents(d.items); setEventTotal(d.total); })
+      .catch(e => setError(e.message));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, activeTab, eventPage, eventFilters]);
+
   // Viral tab
   useEffect(() => {
     if (!authed || activeTab !== "viral") return;
@@ -349,6 +438,20 @@ export default function AdminPage() {
         } catch { setError("操作失败"); }
       },
     });
+  };
+
+  const handleViewUserDetail = async (userId: number) => {
+    setDetailLoading(true);
+    setUserDetail(null);
+    setDetailTab("queries");
+    try {
+      const data = await apiFetch(`/api/admin/users/${userId}/detail`);
+      setUserDetail(data);
+    } catch (e: any) {
+      setError(`加载用户详情失败：${e.message}`);
+    } finally {
+      setDetailLoading(false);
+    }
   };
 
   const handleRefund = (orderNo: string) => {
@@ -453,6 +556,205 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* ── 用户详情弹窗 ── */}
+      {userDetail && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9998, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setUserDetail(null)}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 800, width: "90%", maxHeight: "85vh", boxShadow: "0 8px 40px rgba(0,0,0,0.18)", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            {detailLoading ? (
+              <div style={{ padding: 40, textAlign: "center", color: "#6E6E73" }}>加载中…</div>
+            ) : (
+              <>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                  <div>
+                    <div style={{ fontSize: 17, fontWeight: 700 }}>用户 #{userDetail.user.id}</div>
+                    <div style={{ fontSize: 12, color: "#6E6E73", marginTop: 4 }}>
+                      {userDetail.user.phone || "—"} · {userDetail.user.user_source} · {userDetail.user.province || "—"}
+                    </div>
+                  </div>
+                  <button onClick={() => setUserDetail(null)} style={{ background: "none", border: "none", fontSize: 20, color: "#8E8E93", cursor: "pointer" }}>×</button>
+                </div>
+
+                {/* 标签切换 */}
+                <div style={{ display: "flex", gap: 8, marginBottom: 16, borderBottom: "1px solid #E5E5EA", paddingBottom: 8 }}>
+                  {[
+                    { key: "queries" as const, label: `查询记录 (${userDetail.queries.length})` },
+                    { key: "orders" as const, label: `订单 (${userDetail.orders.length})` },
+                    { key: "events" as const, label: `交互 (${userDetail.events.length})` },
+                  ].map(t => (
+                    <button key={t.key} onClick={() => setDetailTab(t.key)} style={{
+                      padding: "4px 12px", borderRadius: 980, fontSize: 12, border: "none",
+                      background: detailTab === t.key ? "#0071E3" : "#F5F5F7",
+                      color: detailTab === t.key ? "#fff" : "#6E6E73", cursor: "pointer",
+                    }}>{t.label}</button>
+                  ))}
+                </div>
+
+                {/* 内容区 */}
+                <div style={{ overflowY: "auto", flex: 1 }}>
+                  {detailTab === "queries" && (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#F5F5F7" }}>
+                          {["时间", "省份", "位次", "选科", "页面", "IP"].map(h => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDetail.queries.map((q, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{toBJ(q.created_at)}</td>
+                            <td style={{ padding: "8px 10px" }}>{q.province || "—"}</td>
+                            <td style={{ padding: "8px 10px" }}>{q.rank_input?.toLocaleString() || "—"}</td>
+                            <td style={{ padding: "8px 10px" }}>{(() => { try { return JSON.parse(q.event_data).subject || "—"; } catch { return "—"; } })()}</td>
+                            <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{q.page || "—"}</td>
+                            <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{q.ip || "—"}</td>
+                          </tr>
+                        ))}
+                        {!userDetail.queries.length && (
+                          <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无查询记录</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {detailTab === "orders" && (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#F5F5F7" }}>
+                          {["订单号", "金额", "状态", "产品", "省份", "位次", "创建时间", "支付时间"].map(h => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDetail.orders.map((o, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                            <td style={{ padding: "8px 10px", fontFamily: "monospace", fontSize: 11, color: "#6e6e73" }}>{o.order_no}</td>
+                            <td style={{ padding: "8px 10px", color: "#34C759", fontWeight: 600 }}>¥{o.amount}</td>
+                            <td style={{ padding: "8px 10px" }}>
+                              <span style={{ padding: "2px 6px", borderRadius: 980, fontSize: 11,
+                                background: o.status === "paid" ? "#EDFBF2" : o.status === "refunded" ? "#FFF0EF" : "#F5F5F7",
+                                color: o.status === "paid" ? "#34C759" : o.status === "refunded" ? "#FF3B30" : "#6E6E73"
+                              }}>{o.status}</span>
+                            </td>
+                            <td style={{ padding: "8px 10px" }}>{o.product_type || "—"}</td>
+                            <td style={{ padding: "8px 10px" }}>{o.province || "—"}</td>
+                            <td style={{ padding: "8px 10px" }}>{o.rank_input?.toLocaleString() || "—"}</td>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#6E6E73" }}>{toBJ(o.created_at)}</td>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap", color: "#6E6E73" }}>{toBJ(o.pay_time)}</td>
+                          </tr>
+                        ))}
+                        {!userDetail.orders.length && (
+                          <tr><td colSpan={8} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无订单</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+
+                  {detailTab === "events" && (
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                      <thead>
+                        <tr style={{ background: "#F5F5F7" }}>
+                          {["时间", "类型", "页面", "数据", "IP"].map(h => (
+                            <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {userDetail.events.map((e, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                            <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{toBJ(e.created_at)}</td>
+                            <td style={{ padding: "8px 10px" }}>
+                              <span style={{ padding: "2px 6px", borderRadius: 4, background: "#F5F5F7", fontSize: 11 }}>{e.event_type}</span>
+                            </td>
+                            <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{e.page || "—"}</td>
+                            <td style={{ padding: "8px 10px", color: "#6e6e73", fontSize: 11, maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.event_data || "—"}</td>
+                            <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{e.ip || "—"}</td>
+                          </tr>
+                        ))}
+                        {!userDetail.events.length && (
+                          <tr><td colSpan={5} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无交互记录</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 订单详情弹窗 ── */}
+      {orderDetail && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9997, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={() => setOrderDetail(null)}>
+          <div style={{ background: "#fff", borderRadius: 16, padding: "24px 28px", maxWidth: 520, width: "90%", boxShadow: "0 8px 40px rgba(0,0,0,0.18)" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20 }}>
+              <div>
+                <div style={{ fontSize: 17, fontWeight: 700 }}>订单详情</div>
+                <div style={{ fontSize: 12, color: "#6E6E73", marginTop: 4, fontFamily: "monospace" }}>{orderDetail.order_no}</div>
+              </div>
+              <button onClick={() => setOrderDetail(null)} style={{ background: "none", border: "none", fontSize: 20, color: "#8E8E93", cursor: "pointer" }}>×</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px 16px", fontSize: 13, marginBottom: 20 }}>
+              {[
+                { label: "订单号", value: orderDetail.order_no },
+                { label: "用户ID", value: orderDetail.user_id ?? "—" },
+                { label: "金额", value: `¥${orderDetail.amount}` },
+                { label: "状态", value: (
+                  <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11,
+                    background: orderDetail.status === "paid" ? "#EDFBF2" : orderDetail.status === "refunded" ? "#FFF0EF" : "#F5F5F7",
+                    color: orderDetail.status === "paid" ? "#34C759" : orderDetail.status === "refunded" ? "#FF3B30" : "#6E6E73"
+                  }}>{orderDetail.status}</span>
+                )},
+                { label: "产品类型", value: orderDetail.product_type || "—" },
+                { label: "支付方式", value: orderDetail.pay_method || "—" },
+                { label: "省份", value: orderDetail.province || "—" },
+                { label: "位次", value: orderDetail.rank_input?.toLocaleString() || "—" },
+                { label: "分数", value: orderDetail.mock_score || "—" },
+                { label: "微信支付流水", value: orderDetail.transaction_id || "—" },
+                { label: "创建时间", value: toBJ(orderDetail.created_at) },
+                { label: "支付时间", value: toBJ(orderDetail.pay_time) },
+              ].map((item, i) => (
+                <div key={i}>
+                  <div style={{ fontSize: 11, color: "#6E6E73", marginBottom: 3 }}>{item.label}</div>
+                  <div style={{ color: "#1D1D1F", fontWeight: 500 }}>{item.value}</div>
+                </div>
+              ))}
+            </div>
+
+            {(orderDetail.c_major || orderDetail.c_city || orderDetail.c_nature || orderDetail.c_tier) && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, color: "#6E6E73", marginBottom: 6 }}>筛选条件</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {orderDetail.c_major && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#E8F4FD", color: "#0071E3", fontSize: 12 }}>专业: {orderDetail.c_major}</span>}
+                  {orderDetail.c_city && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#EDFBF2", color: "#34C759", fontSize: 12 }}>城市: {orderDetail.c_city}</span>}
+                  {orderDetail.c_nature && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#FFF9E6", color: "#FF9500", fontSize: 12 }}>性质: {orderDetail.c_nature}</span>}
+                  {orderDetail.c_tier && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#F5F5F7", color: "#6E6E73", fontSize: 12 }}>档次: {orderDetail.c_tier}</span>}
+                </div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", gap: 10 }}>
+              {orderDetail.user_id && (
+                <button onClick={() => { setOrderDetail(null); handleViewUserDetail(orderDetail.user_id); }}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid #0071E3", background: "#fff", color: "#0071E3", fontSize: 14, cursor: "pointer", fontWeight: 600 }}>
+                  查看用户详情 →
+                </button>
+              )}
+              {orderDetail.status === "paid" && (
+                <button onClick={() => { setOrderDetail(null); handleRefund(orderDetail.order_no); }}
+                  style={{ flex: 1, padding: "10px", borderRadius: 10, border: "1px solid #FF3B30", background: "#fff", color: "#FF3B30", fontSize: 14, cursor: "pointer" }}>
+                  退款
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Top nav ── */}
       <div style={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E5E5EA", position: "sticky", top: 0, zIndex: 100 }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -465,6 +767,7 @@ export default function AdminPage() {
               <Tab id="insights" label="算法洞察" />
               <Tab id="orders" label="订单" />
               <Tab id="users" label="用户" />
+              <Tab id="events" label="查询记录" />
               <Tab id="viral" label="传播追踪" />
               <Tab id="referral" label="分销订阅" />
               <Tab id="feedback" label={`反馈 ${feedbackTotal > 0 ? `(${feedbackTotal})` : ""}`} />
@@ -906,12 +1209,18 @@ export default function AdminPage() {
                       <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(o.created_at)}</td>
                       <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(o.pay_time)}</td>
                       <td style={{ padding: "10px 16px" }}>
-                        {o.status === "paid" && (
-                          <button onClick={() => handleRefund(o.order_no)}
-                            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid #FF3B30", background: "transparent", color: "#FF3B30", cursor: "pointer" }}>
-                            退款
+                        <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => setOrderDetail(o)}
+                            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid #5856D6", background: "transparent", color: "#5856D6", cursor: "pointer" }}>
+                            详情
                           </button>
-                        )}
+                          {o.status === "paid" && (
+                            <button onClick={() => handleRefund(o.order_no)}
+                              style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid #FF3B30", background: "transparent", color: "#FF3B30", cursor: "pointer" }}>
+                              退款
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -957,7 +1266,7 @@ export default function AdminPage() {
               <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                 <div style={{ fontSize: 15, fontWeight: 600 }}>用户列表</div>
                 <input
-                  placeholder="搜索手机号"
+                  placeholder="搜索手机号 / ID"
                   value={userSearch}
                   onChange={e => { setUserSearch(e.target.value); setUserPage(1); }}
                   style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, width: 180, outline: "none" }}
@@ -979,7 +1288,7 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: "#F5F5F7" }}>
-                    {["ID", "手机号", "微信", "付费状态", "套餐", "到期/剩余", "查询次数", "付费订单", "注册时间", "操作"].map(h => (
+                    {["ID", "手机号", "来源", "付费状态", "套餐", "到期/剩余", "查询次数", "付费订单", "注册时间", "操作"].map(h => (
                       <th key={h} style={{ padding: "10px 14px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -990,7 +1299,7 @@ export default function AdminPage() {
                       <td style={{ padding: "10px 14px", color: "#aeaeb2", fontSize: 11 }}>{u.id}</td>
                       <td style={{ padding: "10px 14px", fontFamily: "monospace", fontSize: 12 }}>{u.phone || "—"}</td>
                       <td style={{ padding: "10px 14px" }}>
-                        <span style={{ fontSize: 11, color: u.wechat === "已绑定" ? "#34C759" : "#aeaeb2" }}>{u.wechat}</span>
+                        <span style={{ fontSize: 11, color: "#6E6E73" }}>{u.user_source}</span>
                       </td>
                       <td style={{ padding: "10px 14px" }}>
                         <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11,
@@ -1014,6 +1323,10 @@ export default function AdminPage() {
                       <td style={{ padding: "10px 14px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(u.created_at)}</td>
                       <td style={{ padding: "10px 14px" }}>
                         <div style={{ display: "flex", gap: 4 }}>
+                          <button onClick={() => handleViewUserDetail(u.id)}
+                            style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid #5856D6", background: "transparent", color: "#5856D6", cursor: "pointer" }}>
+                            详情
+                          </button>
                           {!u.is_paid ? (
                             <button onClick={() => handleGrantPaid(u.id, u.phone)}
                               style={{ fontSize: 11, padding: "3px 8px", borderRadius: 6, border: "1px solid #0071E3", background: "transparent", color: "#0071E3", cursor: "pointer" }}>
@@ -1062,6 +1375,157 @@ export default function AdminPage() {
             })()}
           </>
         )}
+        {/* ── Events / Query Records ── */}
+        {activeTab === "events" && (
+          <>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+              <div style={{ fontSize: 15, fontWeight: 600 }}>查询记录</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ fontSize: 12, color: "#6E6E73" }}>共 {eventTotal} 条</div>
+                <button onClick={() => {
+                  const f = eventFilters;
+                  const qs = new URLSearchParams();
+                  if (f.user_id) qs.set("user_id", f.user_id);
+                  if (f.phone) qs.set("phone", f.phone);
+                  if (f.province) qs.set("province", f.province);
+                  if (f.event_type) qs.set("event_type", f.event_type);
+                  if (f.rank_min) qs.set("rank_min", f.rank_min);
+                  if (f.rank_max) qs.set("rank_max", f.rank_max);
+                  if (f.date_from) qs.set("date_from", f.date_from);
+                  if (f.date_to) qs.set("date_to", f.date_to);
+                  if (f.subject) qs.set("subject", f.subject);
+                  if (f.exam_mode) qs.set("exam_mode", f.exam_mode);
+                  if (f.c_major) qs.set("c_major", f.c_major);
+                  if (f.c_city) qs.set("c_city", f.c_city);
+                  if (f.c_nature) qs.set("c_nature", f.c_nature);
+                  if (f.c_tier) qs.set("c_tier", f.c_tier);
+                  exportCsv(`/api/admin/export/events?${qs.toString()}`, `events_${new Date().toISOString().slice(0,10)}.csv`);
+                }}
+                  style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", fontSize: 12, cursor: "pointer", color: "#0071E3" }}>
+                  ⬇ 导出CSV
+                </button>
+              </div>
+            </div>
+
+            {/* Filters */}
+            <div style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, padding: "16px 20px", marginBottom: 16 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "10px 12px" }}>
+                <input placeholder="用户ID" value={eventFilters.user_id} onChange={e => { setEventFilters(f => ({ ...f, user_id: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="手机号" value={eventFilters.phone} onChange={e => { setEventFilters(f => ({ ...f, phone: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="微信网页openid" value={eventFilters.wechat_openid} onChange={e => { setEventFilters(f => ({ ...f, wechat_openid: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="微信小程序openid" value={eventFilters.wechat_mini_openid} onChange={e => { setEventFilters(f => ({ ...f, wechat_mini_openid: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="省份" value={eventFilters.province} onChange={e => { setEventFilters(f => ({ ...f, province: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <select value={eventFilters.event_type} onChange={e => { setEventFilters(f => ({ ...f, event_type: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none", background: "#fff" }}>
+                  <option value="">全部事件</option>
+                  <option value="query_submit">查询提交</option>
+                  <option value="page_view">页面访问</option>
+                  <option value="school_click">学校点击</option>
+                  <option value="export_click">导出点击</option>
+                  <option value="add_to_form">加入志愿表</option>
+                  <option value="compare_add">对比添加</option>
+                  <option value="pay_click">支付点击</option>
+                  <option value="pay_success">支付成功</option>
+                  <option value="unlock_click">解锁点击</option>
+                </select>
+                <input placeholder="位次 ≥" value={eventFilters.rank_min} onChange={e => { setEventFilters(f => ({ ...f, rank_min: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="位次 ≤" value={eventFilters.rank_max} onChange={e => { setEventFilters(f => ({ ...f, rank_max: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="开始日期 (YYYY-MM-DD)" value={eventFilters.date_from} onChange={e => { setEventFilters(f => ({ ...f, date_from: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="结束日期 (YYYY-MM-DD)" value={eventFilters.date_to} onChange={e => { setEventFilters(f => ({ ...f, date_to: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="选科" value={eventFilters.subject} onChange={e => { setEventFilters(f => ({ ...f, subject: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="考试模式" value={eventFilters.exam_mode} onChange={e => { setEventFilters(f => ({ ...f, exam_mode: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="筛选专业" value={eventFilters.c_major} onChange={e => { setEventFilters(f => ({ ...f, c_major: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="筛选城市" value={eventFilters.c_city} onChange={e => { setEventFilters(f => ({ ...f, c_city: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="筛选性质" value={eventFilters.c_nature} onChange={e => { setEventFilters(f => ({ ...f, c_nature: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+                <input placeholder="筛选档次" value={eventFilters.c_tier} onChange={e => { setEventFilters(f => ({ ...f, c_tier: e.target.value })); setEventPage(1); }}
+                  style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
+              </div>
+            </div>
+
+            <div style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+                <thead>
+                  <tr style={{ background: "#F5F5F7" }}>
+                    {["ID", "用户ID", "手机号", "来源", "事件", "省份", "位次", "选科", "考试模式", "约束条件", "时间", "IP"].map(h => (
+                      <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {events.map(ev => (
+                    <tr key={ev.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                      <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.id}</td>
+                      <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.user_id ?? "—"}</td>
+                      <td style={{ padding: "8px 10px", fontFamily: "monospace", fontSize: 11 }}>{ev.phone || "—"}</td>
+                      <td style={{ padding: "8px 10px", fontSize: 11, color: "#6E6E73" }}>{ev.user_source}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <span style={{ padding: "2px 6px", borderRadius: 4, background: "#F5F5F7", fontSize: 11 }}>{ev.event_type}</span>
+                      </td>
+                      <td style={{ padding: "8px 10px" }}>{ev.province || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{ev.rank_input?.toLocaleString() || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{ev.subject || "—"}</td>
+                      <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{ev.exam_mode || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+                          {ev.c_major && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#E8F4FD", color: "#0071E3", fontSize: 10 }}>专:{ev.c_major}</span>}
+                          {ev.c_city && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#EDFBF2", color: "#34C759", fontSize: 10 }}>城:{ev.c_city}</span>}
+                          {ev.c_nature && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#FFF9E6", color: "#FF9500", fontSize: 10 }}>性:{ev.c_nature}</span>}
+                          {ev.c_tier && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#F5F5F7", color: "#6E6E73", fontSize: 10 }}>档:{ev.c_tier}</span>}
+                          {!ev.c_major && !ev.c_city && !ev.c_nature && !ev.c_tier && <span style={{ color: "#aeaeb2" }}>—</span>}
+                        </div>
+                      </td>
+                      <td style={{ padding: "8px 10px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(ev.created_at)}</td>
+                      <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.ip || "—"}</td>
+                    </tr>
+                  ))}
+                  {!events.length && (
+                    <tr><td colSpan={12} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无事件数据</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {(() => {
+              const totalPages = Math.ceil(eventTotal / 20);
+              if (totalPages <= 1) return null;
+              const pages: (number | "…")[] = [];
+              if (eventPage > 3) { pages.push(1); if (eventPage > 4) pages.push("…"); }
+              for (let p = Math.max(1, eventPage - 2); p <= Math.min(totalPages, eventPage + 2); p++) pages.push(p);
+              if (eventPage < totalPages - 2) { if (eventPage < totalPages - 3) pages.push("…"); pages.push(totalPages); }
+              return (
+                <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 16, alignItems: "center" }}>
+                  <button onClick={() => setEventPage(p => Math.max(1, p - 1))} disabled={eventPage === 1}
+                    style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #E5E5EA", background: "#fff", cursor: eventPage === 1 ? "default" : "pointer", color: eventPage === 1 ? "#ccc" : "#1D1D1F", fontSize: 13 }}>‹</button>
+                  {pages.map((p, i) => p === "…" ? (
+                    <span key={`e${i}`} style={{ fontSize: 13, color: "#ccc", padding: "0 4px" }}>…</span>
+                  ) : (
+                    <button key={p} onClick={() => setEventPage(p as number)} style={{
+                      padding: "6px 12px", borderRadius: 6, border: "1px solid #E5E5EA",
+                      background: eventPage === p ? "#0071E3" : "#fff",
+                      color: eventPage === p ? "#fff" : "#1D1D1F", cursor: "pointer", fontSize: 13
+                    }}>{p}</button>
+                  ))}
+                  <button onClick={() => setEventPage(p => Math.min(Math.ceil(eventTotal / 20), p + 1))} disabled={eventPage === Math.ceil(eventTotal / 20)}
+                    style={{ padding: "6px 10px", borderRadius: 6, border: "1px solid #E5E5EA", background: "#fff", cursor: eventPage === Math.ceil(eventTotal / 20) ? "default" : "pointer", color: eventPage === Math.ceil(eventTotal / 20) ? "#ccc" : "#1D1D1F", fontSize: 13 }}>›</button>
+                </div>
+              );
+            })()}
+          </>
+        )}
+
         {/* ── Feedback ── */}
         {activeTab === "feedback" && (
           <>

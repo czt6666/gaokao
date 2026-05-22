@@ -3,5 +3,10 @@ Allow: /
 Disallow: /admin
 Disallow: /login
 Disallow: /api/
+Disallow: /dashboard
+Disallow: /ai-chat
+Disallow: /privacy
+Disallow: /terms
+Disallow: /crisis-pr
 
 Sitemap: https://www.theyuanxi.cn/sitemap.xml

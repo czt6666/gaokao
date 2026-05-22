@@ -14,7 +14,6 @@ const staticRoutes: MetadataRoute.Sitemap = [
   { url: `${BASE_URL}/major-trend`, lastModified: new Date(), changeFrequency: "weekly", priority: 0.8 },
   { url: `${BASE_URL}/pricing`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.8 },
   { url: `${BASE_URL}/shuchu`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
-  { url: `${BASE_URL}/v`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.5 },
   { url: `${BASE_URL}/version`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.3 },
   { url: `${BASE_URL}/crisis-pr`, lastModified: new Date(), changeFrequency: "monthly", priority: 0.6 },
   { url: `${BASE_URL}/privacy`, lastModified: new Date(), changeFrequency: "yearly", priority: 0.3 },

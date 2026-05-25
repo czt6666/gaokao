@@ -30,6 +30,7 @@ from routers import auth as auth_router, payment as payment_router, track as tra
 from routers import report as report_router, admin as admin_router
 from routers import tracking as tracking_router
 from routers import agent as agent_router
+from routers import commission as commission_router
 from routers.auth import _verify_token as _auth_verify_token
 
 from services.recommend_core import _run_recommend_core
@@ -43,6 +44,7 @@ app.include_router(report_router.router)
 app.include_router(admin_router.router)
 app.include_router(tracking_router.router)
 app.include_router(agent_router.router)
+app.include_router(commission_router.router)
 
 _SITE_URL = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
 _ALLOWED_ORIGINS = [
@@ -243,6 +245,9 @@ def recommend(
     c_city: str = Query("", description="目标城市等级，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
+    batch_filter: str = Query("", description="批次类型筛选，逗号分隔（undergraduate,junior_college,advance_batch,special_type,art,sports,preparatory,other）"),
+    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔。不传=默认排除所有已知限制；空字符串=不排除任何限制"),
+    score: int | None = Query(None, description="考生分数（用于分数分桶，优先于位次分桶）"),
     db: Session = Depends(get_db)
 ):
     """主推荐接口（wrapper，调用核心逻辑）"""
@@ -276,10 +281,10 @@ def recommend(
         if paid_order:
             # 省份必须匹配（空字符串=历史兼容，视为匹配）
             province_match = (paid_order.province == "" or paid_order.province == province)
-            # 位次在同一 1000-bucket 内视为同次查询（允许用户微调位次重查）
+            # 位次微调容差 ±50 视为同次查询
             rank_match = (
                 paid_order.rank_input is None or
-                abs((paid_order.rank_input // 1000) - (rank // 1000)) <= 1
+                abs(paid_order.rank_input - rank) <= 50
             )
             # 选科必须匹配（空字符串=历史兼容订单，视为匹配）
             subject_match = (paid_order.subject == "" or paid_order.subject == subject)
@@ -308,20 +313,20 @@ def recommend(
                     u = db.query(User).filter(User.phone == phone).first()
                 if u:
                     # JWT路径：查该用户是否有与当前 province+rank+subject 匹配的 paid order
-                    rank_bucket_lo = (rank // 1000) * 1000 - 1000
-                    rank_bucket_hi = (rank // 1000) * 1000 + 1999
+                    # 位次微调容差 ±50 视为同次查询
                     matching_order = db.query(Order).filter(
                         Order.user_id == u.id,
                         Order.status == "paid",
                         Order.province == province,
                         Order.subject == subject,
-                        Order.rank_input >= rank_bucket_lo,
-                        Order.rank_input <= rank_bucket_hi,
+                        Order.rank_input >= rank - 50,
+                        Order.rank_input <= rank + 50,
                     ).first()
                     if matching_order:
                         is_paid = True
                     # 订阅制会员：未过期内无限次查询（不依赖单笔订单匹配）
-                    if not is_paid and u.is_paid and u.subscription_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+                    # 只要有 is_paid + 未过期的 subscription_end_at 即视为有效
+                    if not is_paid and u.is_paid:
                         now = datetime.datetime.utcnow()
                         if u.subscription_end_at and u.subscription_end_at > now:
                             is_paid = True
@@ -343,10 +348,34 @@ def recommend(
         if paid_order and paid_order.product_type == "trial_report":
             trial_limit = 3
 
+    _DEFAULT_SPECIAL = [
+        "special:experiment", "special:national_special", "special:local_special",
+        "special:oriented", "special:free_teacher", "special:sino_foreign",
+    ]
+    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+    if exclude_restrictions is None:
+        # 无参数 = 默认排除所有特殊计划
+        _exclude_restrictions = _DEFAULT_SPECIAL
+    elif exclude_restrictions == "":
+        _exclude_restrictions = []
+    else:
+        _parsed = [x.strip() for x in exclude_restrictions.split(",") if x.strip()]
+        if "special:none" in _parsed:
+            # 显式允许所有特殊计划
+            _exclude_restrictions = [r for r in _parsed if r != "special:none"]
+        elif not any(r.startswith("special:") for r in _parsed):
+            # 参数中不含 special:*（如只传了 gender），默认加上特殊计划
+            _exclude_restrictions = _parsed + _DEFAULT_SPECIAL
+        else:
+            _exclude_restrictions = _parsed
+
     try:
         result = _run_recommend_core(province=province, rank=rank, subject=subject,
-                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=True,
-                                     constraints=constraints or None, trial_limit=trial_limit)
+                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid,
+                                     constraints=constraints or None, trial_limit=trial_limit,
+                                     batch_filter=_batch_filter or None,
+                                     exclude_restrictions=_exclude_restrictions or None,
+                                     user_score=score)
         result["is_trial"] = trial_limit is not None
         result["trial_limit"] = trial_limit
         return result

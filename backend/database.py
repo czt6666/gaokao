@@ -111,6 +111,7 @@ class AdmissionRecord(Base):
     subject_any_of   = Column(String, default="")           # OR 组（分号分隔多组，组内斜杠分隔）
     batch_type       = Column(String, default="")           # 批次分类
     major_restrictions = Column(String, default="")         # 专业限制标签
+    major_remark     = Column(String, default="")           # 专业备注（院校端维护的备注文本）
     min_score        = Column(Integer, default=0)           # 最低录取分
     min_rank         = Column(Integer, default=0)           # 最低录取位次
     admit_count      = Column(Integer, default=0)           # 录取人数
@@ -220,6 +221,10 @@ class User(Base):
     subscription_type   = Column(String(20), default="")   # single_report / monthly_sub / quarterly_sub
     subscription_end_at = Column(DateTime, nullable=True)   # None=单次(永久); 订阅型到期时间
     referral_reward_days = Column(Integer, default=0)        # 已发放的里程碑奖励天数（如4人+30天）
+    # ── 佣金字段 ──
+    balance_fen         = Column(Integer, default=0)        # 可提现余额（分）
+    pending_fen         = Column(Integer, default=0)        # 冻结中余额（分）
+    total_earned_fen    = Column(Integer, default=0)        # 累计赚取（分）
 
 
 class Order(Base):
@@ -245,6 +250,7 @@ class Order(Base):
     c_nature        = Column(String(20), default="")        # 用户筛选：性质
     c_tier          = Column(String(20), default="")        # 用户筛选：档次
     mock_score      = Column(Integer, nullable=True)        # 用户模考分数（分数模式下单时传入）
+    commission_fen  = Column(Integer, default=0)            # 该订单产生的佣金（分）
 
     __table_args__ = (Index("ix_order_status_created", "status", "created_at"),)
 
@@ -269,6 +275,41 @@ class UserEvent(Base):
     created_at      = Column(DateTime, default=datetime.datetime.utcnow, index=True)
     ip              = Column(String(45), default="")
     user_agent      = Column(Text, default="")
+
+
+class CommissionRecord(Base):
+    """佣金发放记录"""
+    __tablename__ = "commission_records"
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(Integer, index=True, nullable=False)      # 受益者（邀请人）
+    order_id        = Column(Integer, nullable=True)                   # 关联订单ID
+    order_no        = Column(String(32), default="")                   # 关联订单号
+    amount_fen      = Column(Integer, nullable=False)                  # 佣金金额（分）
+    status          = Column(String(20), default="frozen")             # frozen/available/deducted
+    freeze_until    = Column(DateTime, nullable=True)                  # 冻结到期时间
+    source          = Column(String(20), default="")                   # ref_code / referred_by
+    created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+
+    __table_args__ = (
+        Index("ix_commission_user_status", "user_id", "status", "created_at"),
+    )
+
+
+class WithdrawalRecord(Base):
+    """提现申请记录"""
+    __tablename__ = "withdrawal_records"
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(Integer, index=True, nullable=False)      # 申请者
+    amount_fen      = Column(Integer, nullable=False)                  # 提现金额（分）
+    status          = Column(String(20), default="pending")            # pending/paid/rejected
+    admin_note      = Column(String(200), default="")                  # 管理员备注
+    wechat_id       = Column(String(50), default="")                   # 客服微信号（给用户展示）
+    created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+    processed_at    = Column(DateTime, nullable=True)                  # 处理时间
+
+    __table_args__ = (
+        Index("ix_withdrawal_user_status", "user_id", "status", "created_at"),
+    )
 
 
 class Feedback(Base):
@@ -390,6 +431,9 @@ def _ensure_schema():
                 ("subscription_type",   "VARCHAR(20) DEFAULT ''"),
                 ("subscription_end_at", "DATETIME"),
                 ("referral_reward_days", "INTEGER DEFAULT 0"),
+                ("balance_fen",          "INTEGER DEFAULT 0"),
+                ("pending_fen",          "INTEGER DEFAULT 0"),
+                ("total_earned_fen",     "INTEGER DEFAULT 0"),
             ],
             "orders": [
                 ("rank_input", "INTEGER"),
@@ -401,6 +445,7 @@ def _ensure_schema():
                 ("c_nature",   "VARCHAR(20) DEFAULT ''"),
                 ("c_tier",     "VARCHAR(20) DEFAULT ''"),
                 ("mock_score", "INTEGER"),
+                ("commission_fen", "INTEGER DEFAULT 0"),
             ],
             "user_events": [
                 ("subject",    "VARCHAR(50) DEFAULT ''"),

@@ -120,15 +120,37 @@ export default function Home() {
   const provinceInitRef = useRef(false);
 
   // ── 偏好约束 ──
+  const CITY_LEVEL_OPTIONS = ["一线城市", "新一线", "二线", "三线"];
+  const NATURE_OPTIONS = ["公办", "民办"];
+  const TIER_OPTIONS = ["985", "211", "双一流", "普通"];
+  const BATCH_OPTIONS = [
+    { value: "undergraduate", label: "本科" },
+    { value: "junior_college", label: "专科/高职" },
+    { value: "advance_batch", label: "提前批" },
+  ];
+  const GENDER_OPTIONS = [
+    { value: "male", label: "男生", exclude: "gender:female_only" },
+    { value: "female", label: "女生", exclude: "gender:male_only" },
+  ];
+  const SPECIAL_PLAN_OPTIONS = [
+    { value: "special:national_special", label: "排除国家专项" },
+    { value: "special:local_special", label: "排除地方专项" },
+    { value: "special:sino_foreign", label: "排除中外合作" },
+  ];
   const [showConstraints, setShowConstraints] = useState(false);
   const [cMajorInput, setCMajorInput] = useState("");
   const [cMajors, setCMajors] = useState<string[]>([]);
   const [cCityLevels, setCCityLevels] = useState<string[]>([]);
   const [cNature, setCNature] = useState<string[]>([]);
   const [cTiers, setCTiers] = useState<string[]>([]);
-  const CITY_LEVEL_OPTIONS = ["一线城市", "新一线", "二线", "三线"];
-  const NATURE_OPTIONS = ["公办", "民办"];
-  const TIER_OPTIONS = ["985", "211", "双一流", "普通"];
+  const [cBatchTypes, setCBatchTypes] = useState<string[]>(BATCH_OPTIONS.map(b => b.value));
+  const [cGender, setCGender] = useState<string>("");
+  const [cSpecialPlans, setCSpecialPlans] = useState<string[]>([]);
+
+  // 偏好约束子面板展开状态（纯 UI，不持久化）
+  const [showSchoolPrefs, setShowSchoolPrefs] = useState(true);
+  const [showBatchFilter, setShowBatchFilter] = useState(false);
+  const [showRestrictionFilter, setShowRestrictionFilter] = useState(false);
 
   useEffect(() => {
     try { const p = localStorage.getItem("gaokao_province"); if (p) setProvince(p); } catch {}
@@ -157,6 +179,24 @@ export default function Home() {
         if (c.cCityLevels !== undefined) setCCityLevels(c.cCityLevels);
         if (c.cNature !== undefined) setCNature(c.cNature);
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
+        if (c.cBatchTypes !== undefined) {
+          const validBatch = (c.cBatchTypes as string[]).filter(v => BATCH_OPTIONS.some(b => b.value === v));
+          setCBatchTypes(validBatch.length ? validBatch : BATCH_OPTIONS.map(b => b.value));
+        }
+        // 兼容旧格式 cExcludeRestrictions → 提取性别和特殊计划
+        if (c.cGender !== undefined) setCGender(c.cGender);
+        if (c.cSpecialPlans !== undefined) {
+          const validSpecial = (c.cSpecialPlans as string[]).filter(v => SPECIAL_PLAN_OPTIONS.some(s => s.value === v));
+          setCSpecialPlans(validSpecial);
+        } else if (c.cExcludeRestrictions !== undefined && Array.isArray(c.cExcludeRestrictions)) {
+          const old = c.cExcludeRestrictions as string[];
+          const genderMale = old.includes("gender:male_only");
+          const genderFemale = old.includes("gender:female_only");
+          if (genderMale && !genderFemale) setCGender("female");
+          else if (genderFemale && !genderMale) setCGender("male");
+          const specials = old.filter((v: string) => v.startsWith("special:"));
+          if (specials.length) setCSpecialPlans(specials);
+        }
         if (c.showConstraints !== undefined) setShowConstraints(c.showConstraints);
       }
     } catch {}
@@ -186,10 +226,10 @@ export default function Home() {
     if (!constraintInitRef.current) { constraintInitRef.current = true; return; }
     try {
       localStorage.setItem("gaokao_constraints", JSON.stringify({
-        cMajors, cCityLevels, cNature, cTiers, showConstraints
+        cMajors, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints
       }));
     } catch {}
-  }, [cMajors, cCityLevels, cNature, cTiers, showConstraints]);
+  }, [cMajors, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints]);
 
   // 省份变化自动缓存（跳过首次挂载）
   useEffect(() => {
@@ -261,8 +301,32 @@ export default function Home() {
         if (cCityLevels.length) parts.push(`c_city=${encodeURIComponent(cCityLevels.join(","))}`);
         if (cNature.length) parts.push(`c_nature=${encodeURIComponent(cNature.join(","))}`);
         if (cTiers.length) parts.push(`c_tier=${encodeURIComponent(cTiers.join(","))}`);
+        if (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) {
+          parts.push(`batch_filter=${encodeURIComponent(cBatchTypes.join(","))}`);
+        }
+        const _restParts: string[] = [];
+        if (cGender === "male") _restParts.push("gender:female_only");
+        else if (cGender === "female") _restParts.push("gender:male_only");
+        if (cSpecialPlans.length > 0) {
+          _restParts.push(...cSpecialPlans);
+        } else {
+          _restParts.push("special:none");
+        }
+        if (_restParts.length) {
+          parts.push(`exclude_restrictions=${encodeURIComponent(_restParts.join(","))}`);
+        }
         return parts.length ? `&${parts.join("&")}` : "";
       })();
+
+      // 携带邀请码跳转（优先 URL 中的 ref，fallback 到 sessionStorage）
+      const refCode = (() => {
+        try {
+          const urlRef = new URLSearchParams(window.location.search).get("ref");
+          if (urlRef) return urlRef;
+          return sessionStorage.getItem("gaokao_ref") || "";
+        } catch { return ""; }
+      })();
+      const refQs = refCode ? `&ref=${encodeURIComponent(refCode)}` : "";
 
       if (mode === "score") {
         const res = await fetch(
@@ -277,9 +341,9 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}&from_mock=1&mock_score=${mockScore}${constraintQs}`);
+        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}&from_mock=1&mock_score=${mockScore}${constraintQs}${refQs}`);
       } else {
-        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}${constraintQs}`);
+        router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}${constraintQs}${refQs}`);
       }
     } catch (e: any) {
       const msg = e?.name === "AbortError"
@@ -641,7 +705,7 @@ export default function Home() {
                 fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
               }}>{showConstraints ? "−" : "+"}</span>
               添加偏好约束
-              {(cMajors.length || cCityLevels.length || cNature.length || cTiers.length) ? (
+              {(cMajors.length || cCityLevels.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
                 <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
               ) : null}
             </button>
@@ -651,8 +715,8 @@ export default function Home() {
                 marginTop: 12, padding: 16, borderRadius: 12,
                 background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
               }}>
-                {/* 专业关键词 */}
-                <div style={{ marginBottom: 14 }}>
+                {/* 专业关键词 — 始终可见 */}
+                <div style={{ marginBottom: 16 }}>
                   <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业</label>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <input
@@ -665,7 +729,7 @@ export default function Home() {
                       onKeyDown={(e) => { if (e.key === "Enter") addMajorTag(); }}
                       placeholder="输入关键词，如：计算机"
                       className="apple-input"
-                      style={{ flex: 1, fontSize: 14, padding: "10px 12px" }}
+                      style={{ flex: 1, fontSize: 14, padding: "10px 12px", border: "1.5px solid var(--color-separator)" }}
                     />
                     <button
                       onClick={addMajorTag}
@@ -720,58 +784,186 @@ export default function Home() {
                   )}
                 </div>
 
-                {/* 城市等级 */}
-                <div style={{ marginBottom: 14 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>城市等级</label>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                    {CITY_LEVEL_OPTIONS.map(lv => {
-                      const active = cCityLevels.includes(lv);
-                      return (
-                        <button key={lv} onClick={() => setCCityLevels(prev => active ? prev.filter(x => x !== lv) : [...prev, lv])} style={{
-                          padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
-                          border: active ? "none" : "1px solid var(--color-separator)",
-                          background: active ? "var(--color-navy)" : "var(--color-bg)",
-                          color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
-                        }}>{lv}</button>
-                      );
-                    })}
-                  </div>
+                {/* 院校偏好 — 可折叠 */}
+                <div style={{ marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowSchoolPrefs(v => !v)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: "none", border: "none", padding: "10px 0", cursor: "pointer",
+                      borderBottom: "1px solid var(--color-separator)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>院校偏好</span>
+                      {(cCityLevels.length || cNature.length || cTiers.length) ? (
+                        <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
+                          {cCityLevels.length + cNature.length + cTiers.length}项
+                        </span>
+                      ) : null}
+                    </div>
+                    <span style={{ fontSize: 14, color: "var(--color-text-tertiary)", width: 20, textAlign: "center" }}>{showSchoolPrefs ? "−" : "+"}</span>
+                  </button>
+                  {showSchoolPrefs && (
+                    <div style={{ marginTop: 12 }}>
+                      {/* 城市等级 */}
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>城市等级</label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {CITY_LEVEL_OPTIONS.map(lv => {
+                            const active = cCityLevels.includes(lv);
+                            return (
+                              <button key={lv} onClick={() => setCCityLevels(prev => active ? prev.filter(x => x !== lv) : [...prev, lv])} style={{
+                                padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                                border: active ? "none" : "1px solid var(--color-separator)",
+                                background: active ? "var(--color-navy)" : "var(--color-bg)",
+                                color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                              }}>{lv}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* 办学性质 + 院校档次 */}
+                      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>办学性质</label>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {NATURE_OPTIONS.map(n => {
+                              const active = cNature.includes(n);
+                              return (
+                                <button key={n} onClick={() => setCNature(prev => active ? prev.filter(x => x !== n) : [...prev, n])} style={{
+                                  padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                                  border: active ? "none" : "1px solid var(--color-separator)",
+                                  background: active ? "var(--color-navy)" : "var(--color-bg)",
+                                  color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                                }}>{n}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div>
+                          <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>院校档次</label>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                            {TIER_OPTIONS.map(t => {
+                              const active = cTiers.includes(t);
+                              return (
+                                <button key={t} onClick={() => setCTiers(prev => active ? prev.filter(x => x !== t) : [...prev, t])} style={{
+                                  padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                                  border: active ? "none" : "1px solid var(--color-separator)",
+                                  background: active ? "var(--color-navy)" : "var(--color-bg)",
+                                  color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                                }}>{t}</button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* 办学性质 + 院校档次 并排 */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>办学性质</label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {NATURE_OPTIONS.map(n => {
-                        const active = cNature.includes(n);
-                        return (
-                          <button key={n} onClick={() => setCNature(prev => active ? prev.filter(x => x !== n) : [...prev, n])} style={{
-                            padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
-                            border: active ? "none" : "1px solid var(--color-separator)",
-                            background: active ? "var(--color-navy)" : "var(--color-bg)",
-                            color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
-                          }}>{n}</button>
-                        );
-                      })}
+                {/* 批次类型 — 可折叠 */}
+                <div style={{ marginBottom: 12 }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowBatchFilter(v => !v)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: "none", border: "none", padding: "10px 0", cursor: "pointer",
+                      borderBottom: "1px solid var(--color-separator)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>批次类型</span>
+                      {cBatchTypes.length < BATCH_OPTIONS.length ? (
+                        <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
+                          已选{cBatchTypes.length}/{BATCH_OPTIONS.length}
+                        </span>
+                      ) : null}
                     </div>
-                  </div>
-                  <div>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>院校档次</label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                      {TIER_OPTIONS.map(t => {
-                        const active = cTiers.includes(t);
-                        return (
-                          <button key={t} onClick={() => setCTiers(prev => active ? prev.filter(x => x !== t) : [...prev, t])} style={{
-                            padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
-                            border: active ? "none" : "1px solid var(--color-separator)",
-                            background: active ? "var(--color-navy)" : "var(--color-bg)",
-                            color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
-                          }}>{t}</button>
-                        );
-                      })}
+                    <span style={{ fontSize: 14, color: "var(--color-text-tertiary)", width: 20, textAlign: "center" }}>{showBatchFilter ? "−" : "+"}</span>
+                  </button>
+                  {showBatchFilter && (
+                    <div style={{ marginTop: 12 }}>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                        {BATCH_OPTIONS.map(b => {
+                          const active = cBatchTypes.includes(b.value);
+                          return (
+                            <button key={b.value} onClick={() => setCBatchTypes(prev => active ? prev.filter(x => x !== b.value) : [...prev, b.value])} style={{
+                              padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                              border: active ? "none" : "1px solid var(--color-separator)",
+                              background: active ? "var(--color-navy)" : "var(--color-bg)",
+                              color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                            }}>{b.label}</button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
+                  )}
+                </div>
+
+                {/* 特殊限制 — 可折叠 */}
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setShowRestrictionFilter(v => !v)}
+                    style={{
+                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
+                      background: "none", border: "none", padding: "10px 0", cursor: "pointer",
+                      borderBottom: "1px solid var(--color-separator)",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>特殊限制</span>
+                      {cGender || cSpecialPlans.length > 0 ? (
+                        <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
+                          {cGender ? (cGender === "male" ? "男生" : "女生") : ""}
+                          {cGender && cSpecialPlans.length > 0 ? " · " : ""}
+                          {cSpecialPlans.length > 0 ? `${cSpecialPlans.length}项特殊计划` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span style={{ fontSize: 14, color: "var(--color-text-tertiary)", width: 20, textAlign: "center" }}>{showRestrictionFilter ? "−" : "+"}</span>
+                  </button>
+                  {showRestrictionFilter && (
+                    <div style={{ marginTop: 12 }}>
+                      {/* 性别 */}
+                      <div style={{ marginBottom: 12 }}>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>性别</label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {GENDER_OPTIONS.map(g => {
+                            const active = cGender === g.value;
+                            return (
+                              <button key={g.value} onClick={() => setCGender(prev => prev === g.value ? "" : g.value)} style={{
+                                padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
+                                border: active ? "none" : "1px solid var(--color-separator)",
+                                background: active ? "var(--color-navy)" : "var(--color-bg)",
+                                color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                              }}>{g.label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      {/* 特殊计划 */}
+                      <div>
+                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>特殊计划（我不想报，排除以下）</label>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {SPECIAL_PLAN_OPTIONS.map(r => {
+                            const active = cSpecialPlans.includes(r.value);
+                            return (
+                              <button key={r.value} onClick={() => setCSpecialPlans(prev => active ? prev.filter(x => x !== r.value) : [...prev, r.value])} style={{
+                                padding: "5px 12px", borderRadius: 980, fontSize: 12, cursor: "pointer",
+                                border: active ? "none" : "1px solid var(--color-separator)",
+                                background: active ? "var(--color-accent)" : "var(--color-bg)",
+                                color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
+                              }}>{r.label}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

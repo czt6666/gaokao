@@ -637,7 +637,9 @@ def _paywall_strip(r: dict) -> dict:
         "locked": True,
         "school_name":  r.get("school_name", ""),
         "major_name":   r.get("major_name", ""),
+        "major_remark": r.get("major_remark", ""),
         "city":         r.get("city", ""),
+        "province_school": r.get("province_school", ""),
         "is_985":       r.get("is_985", ""),
         "is_211":       r.get("is_211", ""),
         "tier":         r.get("tier", ""),
@@ -654,24 +656,38 @@ _rec_cache: dict = {}   # key → (result_dict, timestamp)
 _REC_CACHE_TTL = 1800   # 30分钟
 _REC_RANK_BUCKET = 1000 # 每1000位次共用一个缓存桶
 
-def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None):
+def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None):
     _c_key = ""
     if constraints:
         # 稳定的字符串表示，用于缓存 key
         _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
     _trial_key = f"|trial{trial_limit}" if trial_limit is not None else ""
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}"
+    _batch_key = ""
+    if batch_filter:
+        _batch_key = "|" + hashlib.md5(",".join(sorted(batch_filter)).encode()).hexdigest()[:8]
+    _rest_key = ""
+    if exclude_restrictions:
+        _rest_key = "|" + hashlib.md5(",".join(sorted(exclude_restrictions)).encode()).hexdigest()[:8]
+    _score_key = f"|s{user_score}" if user_score is not None else ""
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_score_key}"
     entry = _rec_cache.get(key)
     if entry and time.time() - entry[1] < _REC_CACHE_TTL:
         return entry[0]
     return None
 
-def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None):
+def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None):
     _c_key = ""
     if constraints:
         _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
     _trial_key = f"|trial{trial_limit}" if trial_limit is not None else ""
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}"
+    _batch_key = ""
+    if batch_filter:
+        _batch_key = "|" + hashlib.md5(",".join(sorted(batch_filter)).encode()).hexdigest()[:8]
+    _rest_key = ""
+    if exclude_restrictions:
+        _rest_key = "|" + hashlib.md5(",".join(sorted(exclude_restrictions)).encode()).hexdigest()[:8]
+    _score_key = f"|s{user_score}" if user_score is not None else ""
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_score_key}"
     _rec_cache[key] = (result, time.time())
     if len(_rec_cache) > 500:  # 超过500项时清理最旧的50项
         oldest = sorted(_rec_cache.items(), key=lambda x: x[1][1])[:50]
@@ -685,6 +701,8 @@ def _build_recommend_data(
     rank: int,
     subject: str,
     db: Session,
+    batch_filter: list[str] | None = None,
+    exclude_restrictions: list[str] | None = None,
 ) -> dict:
     """
     推荐主流程的**数据基座**：一次性完成
@@ -772,14 +790,7 @@ def _build_recommend_data(
     # ── 1. SQL 级过滤 + 拉取 admission_records ───────────────────
     _sql_extra = ""
     _sql_params: dict = {"prov": province}
-    # 【低位次学生保留专科/高职】：后半段考生需要保底，SQL层同步放行
-    _prov_total = _get_province_total(province, 2025)
-    _is_low_rank = rank > 0 and _prov_total > 0 and rank > _prov_total * 0.5
-    _exclude_batch_kw = ("提前批", "艺术", "专项", "预科", "蒙授", "民航飞行")
-    if not _is_low_rank:
-        _exclude_batch_kw += ("专科", "高职")
-    for _bkw in _exclude_batch_kw:
-        _sql_extra += f" AND COALESCE(batch,'') NOT LIKE '%{_bkw}%'"
+    # 批次筛选由前端传入 batch_filter 控制，后端不再硬编码排除任何批次。
     # ── 位次区间预过滤已移除 ─────────────────────────────────────
     # 原设计按 min_rank 范围预过滤，副作用：同一专业正常年份（高分/低位次）
     # 被排除，只保留异常爆冷年份（低分/高位次），导致误导性推荐。
@@ -825,27 +836,23 @@ def _build_recommend_data(
     _sql = (
         "SELECT school_name, major_name, year, min_rank, min_score, "
         "COALESCE(admit_count,0), COALESCE(subject_req,''), COALESCE(batch,''), "
-        "COALESCE(subject_must,''), COALESCE(subject_any_of,'') "
+        "COALESCE(subject_must,''), COALESCE(subject_any_of,''), COALESCE(major_remark,''), "
+        "COALESCE(batch_type,''), COALESCE(major_restrictions,'') "
         f"FROM admission_records WHERE province=:prov AND year>=2017{_sql_extra}"
     )
     raw_rows = db.execute(_sqla_text(_sql), _sql_params).fetchall()
 
-    # ── 3. 按 (校, 专业) 分组 + Python 层兜底过滤 ────────────────
-    # 【低位次学生保留专科/高职】：后半段考生（位次 > 总考生数/2）需要保底，
-    # 若继续无条件排除专科/高职，将导致稳保区学校严重不足。
-    _prov_total = _get_province_total(province, 2025)
-    _is_low_rank = rank > 0 and _prov_total > 0 and rank > _prov_total * 0.5
-    _EXCLUDE_BATCH_KW = ("提前批", "艺术", "专项", "预科", "蒙授", "民航飞行")
-    if not _is_low_rank:
-        _EXCLUDE_BATCH_KW += ("专科", "高职")
-    _EXCLUDE_SCHOOL_KW = ("高等专科学校", "职业技术学院", "高职学院", "职业学院", "专科学校")
+    # ── 3. 按 (校, 专业) 分组 + 批次过滤（由前端 batch_filter 控制）────────
     grouped: dict = defaultdict(list)
     for row in raw_rows:
-        s_name, m_name, year, mrank, mscore, admit, sreq, batch, smust, sany = row
-        if any(kw in batch for kw in _EXCLUDE_BATCH_KW):
-            continue
-        if any(kw in s_name for kw in _EXCLUDE_SCHOOL_KW) and "大学" not in s_name:
-            continue
+        s_name, m_name, year, mrank, mscore, admit, sreq, batch, smust, sany, mrest, btype, mrestrict = row
+        if batch_filter:
+            if (btype or "") not in batch_filter:
+                continue
+        if exclude_restrictions:
+            _rest_text = (mrestrict or "").strip()
+            if any(r in _rest_text for r in exclude_restrictions):
+                continue
         grouped[(s_name, m_name, batch)].append({
             "year": year, "min_rank": mrank, "min_score": mscore,
             "plan_count": admit,
@@ -853,6 +860,9 @@ def _build_recommend_data(
             "subject_must": (smust or "").strip(),
             "subject_any_of": (sany or "").strip(),
             "batch": (batch or "").strip(),
+            "major_remark": (mrest or "").strip(),
+            "batch_type": (btype or "").strip(),
+            "major_restrictions": (mrestrict or "").strip(),
         })
 
     # ── 3b. 同一年同batch去重：保留 min_rank 最小的一条（最难录取）──
@@ -1139,6 +1149,7 @@ def _build_recommend_data(
             "province_admission": province,
             "school_name": s_name,
             "major_name":  m_name,
+            "major_remark": recs_sorted[0].get("major_remark", "") if recs_sorted else "",
             "subject_req": recs_sorted[0].get("subject_req", "") if recs_sorted else "",
             "batch":       recs_sorted[0].get("batch", "") if recs_sorted else "",
             "subject_req_matched": major_subject_cache.get((s_name, m_name), ""),
@@ -1222,20 +1233,20 @@ def _build_recommend_data(
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
-def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None) -> dict:
+def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None) -> dict:
     """
     核心推荐逻辑（纯函数，不依赖 Request）。
     供 /api/recommend 端点和 PDF 报告生成共同调用。
     主推荐接口：输入位次，返回冲稳保分层推荐 + 冷门挖掘（接入真实学科评估）
     """
     # 缓存命中快速返回
-    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode, trial_limit)
+    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, user_score)
     if _cached is not None:
         return _cached
 
     # ── 数据层：一次性加载全部 cache + 组合候选画像 ───────────
     try:
-        data = _build_recommend_data(province, rank, subject, db)
+        data = _build_recommend_data(province, rank, subject, db, batch_filter=batch_filter, exclude_restrictions=exclude_restrictions)
     except Exception:
         raise
     grouped                = data["grouped"]
@@ -1511,30 +1522,35 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             _scan["skip_avg_rank_0"] += 1
             continue
 
-        # ── gap_rate 分桶预计算 ──────────────────────────────────
-        # gap_rate = (avg_school_rank - student_rank) / student_rank
-        #   < 0 → 学校更难（冲刺方向）；> 0 → 学校更容易（保底方向）
-        # 分桶边界：
-        #   冲：[-0.20, -0.10)   学校比学生难 10~20%
-        #   稳：[-0.10, +0.10]   学校与学生位次相近 ±10%
-        #   保：(+0.10, +0.40]   学校比学生容易 10~40%
-        # 超出范围（< -0.20 或 > +0.40）直接跳过
-        # 【高位次特殊处理】rank≤2000 时取消上界，避免清北被截断。
+        # ── 分桶预计算 ────────────────────────────────────────────
+        # 若提供了 user_score，优先按「去年录取分 - 考生分」的绝对差分桶，
+        # 避免位次非线性导致 450 分考生被推荐 550 分学校。
+        #   冲：高 10~25 分      稳：±10 分          保：低 10~25 分
+        # 未提供 user_score 时回退到传统的 gap_rate（位次百分比）分桶。
         _gap_rate = (avg_rank - rank) / rank if rank > 0 else 0
+        _score_diff = None
+        _use_score_bucket = False
 
-        if rank <= 2000:
-            if _gap_rate < -0.80:
+        if user_score and _last_year_min_score > 0:
+            _score_diff = _last_year_min_score - user_score
+            _use_score_bucket = True
+            # 硬过滤：只保留 ±25 分范围内的学校
+            if _score_diff < -25 or _score_diff > 25:
                 _scan["skip_rank_window"] += 1
                 continue
         else:
-            if _gap_rate < -0.20 or _gap_rate > 0.40:
-                _scan["skip_rank_window"] += 1
-                continue
+            # 传统位次分桶（无 user_score 时回退）
+            if rank <= 2000:
+                if _gap_rate < -0.80:
+                    _scan["skip_rank_window"] += 1
+                    continue
+            else:
+                if _gap_rate < -0.20 or _gap_rate > 0.40:
+                    _scan["skip_rank_window"] += 1
+                    continue
 
         # 安全网：基于去年实际位次再做一次硬过滤
         # 防止贝叶斯平滑把专科/二段项目从 gap_rate=0.9 拉到 0.3 进入推荐列表。
-        # 例：中国民航大学空中乘务 raw avg≈596k，学校先验≈147k，平滑后 avg≈416k，
-        # gap_rate 从 0.91 被压到 0.33，进入保区；但去年位次 599k 实际对应 gap_rate=0.92。
         if _last_year_min_rank > 0 and rank > 0:
             _last_year_gap_rate = (_last_year_min_rank - rank) / rank
             if _last_year_gap_rate > 0.55:
@@ -1549,6 +1565,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         result = {
             "school_name": school_name,
             "major_name": _display_major,
+            "major_remark": records[0].get("major_remark", "") if records else "",
             "city": school_info.city if school_info else "",
             "province_school": school_info.province if school_info else "",
             "tier": tier,
@@ -1592,6 +1609,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             "opportunity_score": _opp_score,
             "opportunity_signals": _opp_signals,
             "gap_rate": round(_gap_rate, 4),   # (avg_school_rank - student_rank) / student_rank
+            "score_diff": _score_diff,          # last_year_min_score - user_score（有 user_score 时注入）
             "surge_label": (
                 "大冲" if _gap_rate < -0.15      # 学校难15~20%
                 else "小冲" if _gap_rate < -0.10  # 学校难10~15%
@@ -1666,17 +1684,27 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 x.get("school_name", ""), x.get("major_name", ""))
 
 
-    # 7. 冲/稳/保硬排名分桶（gap_rate = (avg_school_rank - student_rank) / student_rank）
+    # 7. 冲/稳/保硬排名分桶
     # ─────────────────────────────────────────────────────────────────────────────────
-    # 冲：[-0.20, -0.10)  学校比学生难10~20%，有希望但需要努力
-    # 稳：[-0.10, +0.10]  学校与学生位次相近±10%，录取把握大
-    # 保：(+0.10, +0.40]  学校明显容易，学生位次高于录取线10%以上
-    # 【高位次特殊处理】rank≤2000 时过滤阶段允许 gap_rate 低至 -0.80，
-    # 分桶阶段同步把 [-0.80, -0.20) 也归入 surge，避免保留但不入桶。
-    _SURGE_LO = -0.80 if rank <= 2000 else -0.20
-    surge  = [r for r in results if _SURGE_LO <= r["gap_rate"] < -0.10]
-    stable = [r for r in results if -0.10 <= r["gap_rate"] <= 0.10]
-    safe   = [r for r in results if  0.10 <  r["gap_rate"] <= 0.40]
+    # 若提供了 user_score 且学校有去年录取分，优先按「分数差」分桶：
+    #   冲：高 10~25 分      稳：±10 分          保：低 10~25 分
+    # 否则回退到传统 gap_rate（位次百分比）分桶。
+    if user_score:
+        # 分数差分桶：每个 result 已在构建时注入 score_diff
+        surge  = [r for r in results if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25]
+        stable = [r for r in results if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10]
+        safe   = [r for r in results if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10]
+    else:
+        # 传统位次分桶（gap_rate = (avg_school_rank - student_rank) / student_rank）
+        # 冲：[-0.20, -0.10)  学校比学生难10~20%
+        # 稳：[-0.10, +0.10]  学校与学生位次相近±10%
+        # 保：(+0.10, +0.40]  学校明显容易
+        # 【高位次特殊处理】rank≤2000 时过滤阶段允许 gap_rate 低至 -0.80，
+        # 分桶阶段同步把 [-0.80, -0.20) 也归入 surge，避免保留但不入桶。
+        _SURGE_LO = -0.80 if rank <= 2000 else -0.20
+        surge  = [r for r in results if _SURGE_LO <= r["gap_rate"] < -0.10]
+        stable = [r for r in results if -0.10 <= r["gap_rate"] <= 0.10]
+        safe   = [r for r in results if  0.10 <  r["gap_rate"] <= 0.40]
 
     # 每所学校各桶独立计数（原来跨桶共享导致某桶学校不足）
     _SCHOOL_CAP = 5
@@ -1780,16 +1808,27 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if ph is not None and ph < p:
             r["prob_high"] = p
 
-    # 7d. 惩罚后重新分桶（gap_rate 不因惩罚变化，按各桶 sort_key 重排）
-    surge_list  = _capped_pick(
-        sorted([r for r in display_list if _SURGE_LO <= r["gap_rate"] < -0.10], key=_surge_sort),
-        25, defaultdict(int))
-    stable_list = _capped_pick(
-        sorted([r for r in display_list if -0.10 <= r["gap_rate"] <= 0.10],  key=_stable_sort),
-        46, defaultdict(int))
-    safe_list   = _capped_pick(
-        sorted([r for r in display_list if  0.10 <  r["gap_rate"] <= 0.40],  key=_safe_sort),
-        25, defaultdict(int))
+    # 7d. 惩罚后重新分桶（按 user_score 或 gap_rate 重排）
+    if user_score:
+        surge_list  = _capped_pick(
+            sorted([r for r in display_list if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25], key=_surge_sort),
+            25, defaultdict(int))
+        stable_list = _capped_pick(
+            sorted([r for r in display_list if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10], key=_stable_sort),
+            46, defaultdict(int))
+        safe_list   = _capped_pick(
+            sorted([r for r in display_list if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10], key=_safe_sort),
+            25, defaultdict(int))
+    else:
+        surge_list  = _capped_pick(
+            sorted([r for r in display_list if _SURGE_LO <= r["gap_rate"] < -0.10], key=_surge_sort),
+            25, defaultdict(int))
+        stable_list = _capped_pick(
+            sorted([r for r in display_list if -0.10 <= r["gap_rate"] <= 0.10],  key=_stable_sort),
+            46, defaultdict(int))
+        safe_list   = _capped_pick(
+            sorted([r for r in display_list if  0.10 <  r["gap_rate"] <= 0.40],  key=_safe_sort),
+            25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
 
     # P8修复（终稿）：惩罚后重新分桶后再次检查数量不足
@@ -1797,22 +1836,39 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 场景B：combined_96不足30条 → 用概率最高的未入桶结果补齐至30条
     _p8_note = "无需"
     if not combined_96 and results:
-        # 三桶皆空：取 gap_rate 最接近稳区中心（0）的30条，标"参考"
-        _fallback = sorted(results, key=lambda x: abs(x["gap_rate"]))[:30]
+        # 三桶皆空：取最接近稳区中心的30条，标"参考"
+        if user_score:
+            _fallback = sorted(results, key=lambda x: abs(x.get("score_diff") or 999))[:30]
+        else:
+            _fallback = sorted(results, key=lambda x: abs(x["gap_rate"]))[:30]
         for _fb in _fallback:
             _fb["suggested_action"] = "参考"
         safe_list   = _fallback
         combined_96 = _fallback
-        _p8_note = "三桶皆空→取gap_rate最近30条标「参考」"
+        _p8_note = "三桶皆空→取最近30条标「参考」"
     elif len(combined_96) < 30 and results:
         _in_96 = {(r["school_name"], r["major_name"]) for r in combined_96}
         _extras = [r for r in results if (r["school_name"], r["major_name"]) not in _in_96]
-        _extras_sorted = sorted(_extras, key=lambda x: abs(x["gap_rate"]))
+        if user_score:
+            _extras_sorted = sorted(_extras, key=lambda x: abs(x.get("score_diff") or 999))
+        else:
+            _extras_sorted = sorted(_extras, key=lambda x: abs(x["gap_rate"]))
         _need = 30 - len(combined_96)
         for _ex in _extras_sorted[:_need]:
             _ex["suggested_action"] = "参考"
-            safe_list.append(_ex)
-            combined_96.append(_ex)
+            # 分数分桶模式下：把补齐的学校放入其本应归属的桶，而非全部塞入 safe
+            if user_score and _ex.get("score_diff") is not None:
+                sd = _ex["score_diff"]
+                if 10 < sd <= 25:
+                    surge_list.append(_ex)
+                elif -10 <= sd <= 10:
+                    stable_list.append(_ex)
+                elif -25 <= sd < -10:
+                    safe_list.append(_ex)
+                combined_96.append(_ex)
+            else:
+                safe_list.append(_ex)
+                combined_96.append(_ex)
         _p8_note = f"不足30条→补齐{_need}条标「参考」"
 
     gems_list = sorted(
@@ -1898,5 +1954,5 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                     _result[_key][_i] = _paywall_strip(_item)
     
 
-    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode, trial_limit)
+    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, user_score)
     return _result

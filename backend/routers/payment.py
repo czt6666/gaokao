@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
 import uuid, time, datetime, json, os, base64, hashlib, hmac
-from database import get_db, Order, User, SessionLocal
+from database import get_db, Order, User, SessionLocal, CommissionRecord
 # User 已导入 — JSAPI 端点需要查找小程序用户
 from routers.auth import _verify_token
 from services.email_service import send_payment_notification
@@ -14,8 +14,8 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/payment", tags=["payment"])
 
-# 本地调试：设置 SIMULATE_PAY=1 可跳过真实微信支付
-SIMULATE_PAY = os.getenv("SIMULATE_PAY", "0") == "1"
+# 本地调试：设置 GAOKAO_DEBUG=1 可跳过真实微信支付
+GAOKAO_DEBUG = os.getenv("GAOKAO_DEBUG", "0") == "1"
 
 # 产品定价表（分）
 PRODUCT_AMOUNTS: dict[str, int] = {
@@ -519,22 +519,23 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
             base = referrer.subscription_end_at if (referrer.subscription_end_at and referrer.subscription_end_at > now) else now
             new_end = min(base + datetime.timedelta(days=3), SEASON_END)
             referrer.subscription_end_at = new_end
-            if not referrer.is_paid:
-                referrer.is_paid = 1
-                referrer.subscription_type = "season_2026"
+            referrer.is_paid = 1
+            referrer.subscription_type = "season_2026"
             logger.info(f"Referral reward: user {referrer.id} +3 days via {source}")
 
             # 里程碑奖励：累计4人付费时额外+30天（仅一次）
             if referrer.referral_reward_days < 30:
-                from sqlalchemy import func as _func
-                paid_count = db.query(_func.count(Order.id)).filter(
+                # 通过 ref_code 支付的用户（去重，避免同一用户多笔订单重复计）
+                paid_user_ids = {r[0] for r in db.query(Order.user_id).filter(
                     Order.ref_code == referrer.referral_code,
                     Order.status == "paid"
-                ).scalar() or 0
-                reg_count = db.query(_func.count(User.id)).filter(
+                ).distinct().all() if r[0]}
+                # 通过注册绑定 referred_by 的用户
+                reg_user_ids = {r[0] for r in db.query(User.id).filter(
                     User.referred_by == referrer.id
-                ).scalar() or 0
-                total = paid_count + reg_count
+                ).all()}
+                # 合并去重：同一个人只算一次
+                total = len(paid_user_ids | reg_user_ids)
                 if total >= 4:
                     referrer.subscription_end_at = min(
                         referrer.subscription_end_at + datetime.timedelta(days=30), SEASON_END
@@ -543,18 +544,49 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
                     logger.info(f"Referral milestone: user {referrer.id} +30 days for {total} referrals")
 
         rewarded = False
+        referrer_id = None
+        reward_source = ""
         # 1) 新逻辑：支付时传入的 ref_code
         if order.ref_code:
             referrer = db.query(User).filter(User.referral_code == order.ref_code).first()
             if referrer:
-                _reward_referrer(referrer.id, f"ref_code={order.ref_code}")
+                referrer_id = referrer.id
+                reward_source = f"ref_code={order.ref_code}"
                 rewarded = True
         # 2) 旧逻辑：注册时绑定的 referred_by（向后兼容）
         if not rewarded and order.user_id:
             paying_user = db.query(User).filter(User.id == order.user_id).first()
             if paying_user and paying_user.referred_by:
-                _reward_referrer(paying_user.referred_by, f"referred_by user={order.user_id}")
-        db.commit()  # 单次 commit：Order + User 要么同时成功，要么同时回滚
+                referrer_id = paying_user.referred_by
+                reward_source = f"referred_by user={order.user_id}"
+                rewarded = True
+
+        # ━━━ 佣金发放（30%，冻结15天）━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        if referrer_id and order.amount and order.amount > 0:
+            commission_fen = int(order.amount * 0.3)
+            if commission_fen > 0:
+                freeze_until = datetime.datetime.utcnow() + datetime.timedelta(days=15)
+                db.add(CommissionRecord(
+                    user_id=referrer_id,
+                    order_id=order.id,
+                    order_no=order.order_no,
+                    amount_fen=commission_fen,
+                    status="frozen",
+                    freeze_until=freeze_until,
+                    source=reward_source or "referral",
+                ))
+                ref_user = db.query(User).filter(User.id == referrer_id).first()
+                if ref_user:
+                    ref_user.pending_fen += commission_fen
+                    ref_user.total_earned_fen += commission_fen
+                order.commission_fen = commission_fen
+                logger.info(f"Commission: user {referrer_id} +{commission_fen} fen for order {order_no} (frozen until {freeze_until})")
+
+        # 原有订阅天数奖励保持不变
+        if referrer_id:
+            _reward_referrer(referrer_id, reward_source)
+
+        db.commit()  # 单次 commit：Order + User + CommissionRecord 要么同时成功，要么同时回滚
         logger.info(f"Order {order_no} marked PAID, user={order.user_id}")
         # 发送支付成功通知邮件（静默失败，不影响支付结果）
         pay_time_str = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -928,18 +960,18 @@ async def _alipay_precreate(order_no: str) -> str | None:
     return None
 
 
-# ── 本地调试：模拟支付（仅当 SIMULATE_PAY=1 时启用）─────────────────────────
+# ── 本地调试：模拟支付（仅当 GAOKAO_DEBUG=1 时启用）─────────────────────────
 
 @router.get("/config")
 async def payment_config():
     """返回支付配置，前端据此决定是否显示模拟支付按钮。"""
-    return {"simulate": SIMULATE_PAY}
+    return {"simulate": GAOKAO_DEBUG}
 
 
 @router.post("/simulate/{order_no}")
-async def simulate_pay(order_no: str, db: Session = Depends(get_db)):
+async def GAOKAO_DEBUG(order_no: str, db: Session = Depends(get_db)):
     """本地调试：跳过真实微信支付，直接将订单标记为已支付。"""
-    if not SIMULATE_PAY:
+    if not GAOKAO_DEBUG:
         raise HTTPException(status_code=403, detail="模拟支付未启用")
     order = db.query(Order).filter(Order.order_no == order_no).first()
     if not order:

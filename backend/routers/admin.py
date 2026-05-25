@@ -8,7 +8,7 @@ from typing import List, Optional
 import datetime, os, json, csv, io
 from pydantic import BaseModel
 
-from database import get_db, User, Order, UserEvent, ReportLog, ReportScan, Feedback
+from database import get_db, User, Order, UserEvent, ReportLog, ReportScan, Feedback, CommissionRecord, WithdrawalRecord
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -22,10 +22,27 @@ def _verify_admin(x_admin_token: str = Header(...)):
         raise HTTPException(status_code=403, detail="Invalid admin token")
 
 
+def _bj_now() -> datetime.datetime:
+    """获取当前北京时间（UTC+8）"""
+    return datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+
+
+def _bj_today_start() -> datetime.datetime:
+    """获取北京时间今天 0:00 对应的 UTC 时间，用于和数据库 UTC 时间比较"""
+    bj = _bj_now()
+    bj_start = bj.replace(hour=0, minute=0, second=0, microsecond=0)
+    return bj_start - datetime.timedelta(hours=8)
+
+
+def _day_bj(col):
+    """SQLite: 按北京时间日期分组（UTC 时间 +8 小时）"""
+    return func.strftime("%Y-%m-%d", col, '+8 hours')
+
+
 # ── 今日概览 ──────────────────────────────────────────────────
 @router.get("/stats/today", dependencies=[Depends(_verify_admin)])
 def stats_today(db: Session = Depends(get_db)):
-    today_start = datetime.datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = _bj_today_start()
 
     queries      = db.query(func.count(UserEvent.id)).filter(UserEvent.event_type == "query_submit", UserEvent.created_at >= today_start).scalar() or 0
     paid_orders  = db.query(func.count(Order.id)).filter(Order.status == "paid", Order.pay_time >= today_start).scalar() or 0
@@ -70,13 +87,13 @@ def stats_today(db: Session = Depends(get_db)):
 # ── 近30天趋势折线 ─────────────────────────────────────────────
 @router.get("/stats/chart", dependencies=[Depends(_verify_admin)])
 def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(get_db)):
-    """近N天每日：查询量、付费量、新用户、收入（优化为4次批量查询）"""
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=days_back)
-    since = since.replace(hour=0, minute=0, second=0, microsecond=0)
+    """近N天每日：查询量、付费量、新用户、收入（按北京时间聚合）"""
+    since = _bj_now() - datetime.timedelta(days=days_back)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
 
-    # 查询量按天聚合
+    # 查询量按天聚合（北京时间）
     q_rows = db.query(
-        func.strftime("%Y-%m-%d", UserEvent.created_at).label("day"),
+        _day_bj(UserEvent.created_at).label("day"),
         func.count(UserEvent.id).label("cnt")
     ).filter(
         UserEvent.event_type == "query_submit",
@@ -84,9 +101,9 @@ def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(g
     ).group_by("day").all()
     q_map = {r.day: r.cnt for r in q_rows}
 
-    # 付费量按天聚合
+    # 付费量按天聚合（北京时间）
     p_rows = db.query(
-        func.strftime("%Y-%m-%d", Order.pay_time).label("day"),
+        _day_bj(Order.pay_time).label("day"),
         func.count(Order.id).label("cnt")
     ).filter(
         Order.status == "paid",
@@ -94,18 +111,18 @@ def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(g
     ).group_by("day").all()
     p_map = {r.day: r.cnt for r in p_rows}
 
-    # 新用户按天聚合
+    # 新用户按天聚合（北京时间）
     u_rows = db.query(
-        func.strftime("%Y-%m-%d", User.created_at).label("day"),
+        _day_bj(User.created_at).label("day"),
         func.count(User.id).label("cnt")
     ).filter(
         User.created_at >= since,
     ).group_by("day").all()
     u_map = {r.day: r.cnt for r in u_rows}
 
-    # 收入按天聚合
+    # 收入按天聚合（北京时间）
     r_rows = db.query(
-        func.strftime("%Y-%m-%d", Order.pay_time).label("day"),
+        _day_bj(Order.pay_time).label("day"),
         func.sum(Order.amount).label("amt")
     ).filter(
         Order.status == "paid",
@@ -115,7 +132,7 @@ def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(g
 
     result = []
     for i in range(days_back - 1, -1, -1):
-        d = datetime.datetime.utcnow() - datetime.timedelta(days=i)
+        d = _bj_now() - datetime.timedelta(days=i)
         day_str = d.strftime("%Y-%m-%d")
         result.append({
             "date":      d.strftime("%m/%d"),
@@ -130,8 +147,9 @@ def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(g
 # ── 转化漏斗 ─────────────────────────────────────────────────
 @router.get("/stats/funnel", dependencies=[Depends(_verify_admin)])
 def stats_funnel(days: int = Query(30, ge=1, le=90), db: Session = Depends(get_db)):
-    """过去N天的转化漏斗：访问→查询→点击解锁→付费"""
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    """过去N天的转化漏斗：访问→查询→点击解锁→付费（北京时间）"""
+    since = _bj_now() - datetime.timedelta(days=days)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
 
     page_views   = db.query(func.count(UserEvent.id)).filter(UserEvent.event_type == "page_view", UserEvent.created_at >= since).scalar() or 0
     queries      = db.query(func.count(UserEvent.id)).filter(UserEvent.event_type == "query_submit", UserEvent.created_at >= since).scalar() or 0
@@ -293,8 +311,9 @@ def stats_demand(db: Session = Depends(get_db)):
 # ── 用户行为时间分布 ──────────────────────────────────────────
 @router.get("/stats/hourly", dependencies=[Depends(_verify_admin)])
 def stats_hourly(db: Session = Depends(get_db)):
-    """过去7天每小时查询量（了解用户活跃时段）"""
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=7)
+    """过去7天每小时查询量（了解用户活跃时段，北京时间）"""
+    since = _bj_now() - datetime.timedelta(days=7)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
     rows = db.query(UserEvent.created_at).filter(
         UserEvent.event_type == "query_submit",
         UserEvent.created_at >= since,
@@ -895,6 +914,25 @@ def mark_refunded(order_no: str, db: Session = Depends(get_db)):
 
     # ── 微信退款成功后更新数据库 ──────────────────────────────────
     order.status = "refunded"
+
+    # ━━━ 退款时扣除对应佣金 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+    if order.commission_fen and order.commission_fen > 0:
+        comm = db.query(CommissionRecord).filter(
+            CommissionRecord.order_no == order.order_no,
+            CommissionRecord.status.in_(["frozen", "available"])
+        ).first()
+        if comm:
+            referrer = db.query(User).filter(User.id == comm.user_id).first()
+            if referrer:
+                deduct = comm.amount_fen
+                # 先扣 pending，不够扣 balance（允许负数）
+                from_pending = min(referrer.pending_fen, deduct)
+                referrer.pending_fen -= from_pending
+                referrer.balance_fen -= (deduct - from_pending)
+                referrer.total_earned_fen -= deduct
+                logger.info(f"Commission deducted: user {referrer.id} -{deduct} fen for refunded order {order_no}")
+            comm.status = "deducted"
+
     if order.user_id:
         paid_left = db.query(Order).filter(
             Order.user_id == order.user_id,
@@ -913,11 +951,12 @@ def mark_refunded(order_no: str, db: Session = Depends(get_db)):
 @router.get("/stats/school_conversion", dependencies=[Depends(_verify_admin)])
 def school_conversion(days: int = Query(30), db: Session = Depends(get_db)):
     """
-    哪些学校点击最多 vs 实际带来付费转化最多。
+    哪些学校点击最多 vs 实际带来付费转化最多（北京时间）。
     逻辑：school_click事件 → 同session内export_click → 同session付费
     简化版：统计 school_click TOP20，再关联同用户付费情况。
     """
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    since = _bj_now() - datetime.timedelta(days=days)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
 
     # 学校点击 TOP20
     click_rows = db.query(
@@ -974,8 +1013,9 @@ def school_conversion(days: int = Query(30), db: Session = Depends(get_db)):
 # ── 收入产品拆分 ─────────────────────────────────────────────
 @router.get("/stats/revenue_breakdown", dependencies=[Depends(_verify_admin)])
 def revenue_breakdown(days: int = Query(30), db: Session = Depends(get_db)):
-    """按产品类型拆分收入：单次/月度/季度各贡献多少，含转化数量"""
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=days)
+    """按产品类型拆分收入：单次/月度/季度各贡献多少，含转化数量（北京时间）"""
+    since = _bj_now() - datetime.timedelta(days=days)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
     from sqlalchemy import case
     rows = (
         db.query(
@@ -1089,7 +1129,8 @@ def viral_stats(db: Session = Depends(get_db)):
     )
 
     # 来源平台分析（从referer推断）
-    since = datetime.datetime.utcnow() - datetime.timedelta(days=30)
+    since = _bj_now() - datetime.timedelta(days=30)
+    since = since.replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(hours=8)
     scans = db.query(ReportScan).filter(ReportScan.scanned_at >= since).all()
 
     platform_map: dict = {}
@@ -1113,11 +1154,12 @@ def viral_stats(db: Session = Depends(get_db)):
 
     platform_list = sorted(platform_map.items(), key=lambda x: -x[1])
 
-    # 最近7天每日扫描量
+    # 最近7天每日扫描量（北京时间）
     daily = []
     for i in range(6, -1, -1):
-        d = datetime.datetime.utcnow() - datetime.timedelta(days=i)
-        d_start = d.replace(hour=0, minute=0, second=0, microsecond=0)
+        d = _bj_now() - datetime.timedelta(days=i)
+        d_bj_start = d.replace(hour=0, minute=0, second=0, microsecond=0)
+        d_start = d_bj_start - datetime.timedelta(hours=8)
         d_end   = d_start + datetime.timedelta(days=1)
         cnt = db.query(func.count(ReportScan.id)).filter(
             ReportScan.scanned_at >= d_start, ReportScan.scanned_at < d_end
@@ -1344,4 +1386,151 @@ def list_feedbacks(
             }
             for i in items
         ],
+    }
+
+
+# ── 佣金管理 ────────────────────────────────────────────────────
+@router.get("/commissions", dependencies=[Depends(_verify_admin)])
+def list_commissions(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: str = Query("", description="frozen/available/deducted 或空=全部"),
+    q: str = Query("", description="订单号或用户ID"),
+    db: Session = Depends(get_db),
+):
+    query = db.query(CommissionRecord)
+    if status:
+        query = query.filter(CommissionRecord.status == status)
+    if q:
+        query = query.filter(
+            (CommissionRecord.order_no.ilike(f"%{q}%")) |
+            (CommissionRecord.user_id == int(q) if q.isdigit() else False)
+        )
+    total = query.count()
+    items = query.order_by(CommissionRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "order_no": r.order_no,
+                "amount_fen": r.amount_fen,
+                "amount_yuan": round(r.amount_fen / 100, 2),
+                "status": r.status,
+                "freeze_until": r.freeze_until.strftime("%Y-%m-%d %H:%M:%S") if r.freeze_until else "",
+                "source": r.source,
+                "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else "",
+            }
+            for r in items
+        ],
+    }
+
+
+@router.get("/withdrawals", dependencies=[Depends(_verify_admin)])
+def list_withdrawals(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: str = Query("", description="pending/paid/rejected 或空=全部"),
+    q: str = Query("", description="用户ID"),
+    db: Session = Depends(get_db),
+):
+    query = db.query(WithdrawalRecord)
+    if status:
+        query = query.filter(WithdrawalRecord.status == status)
+    if q:
+        query = query.filter(WithdrawalRecord.user_id == int(q)) if q.isdigit() else query
+    total = query.count()
+    items = query.order_by(WithdrawalRecord.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "items": [
+            {
+                "id": r.id,
+                "user_id": r.user_id,
+                "amount_fen": r.amount_fen,
+                "amount_yuan": round(r.amount_fen / 100, 2),
+                "status": r.status,
+                "admin_note": r.admin_note,
+                "wechat_id": r.wechat_id,
+                "created_at": r.created_at.strftime("%Y-%m-%d %H:%M:%S") if r.created_at else "",
+                "processed_at": r.processed_at.strftime("%Y-%m-%d %H:%M:%S") if r.processed_at else "",
+            }
+            for r in items
+        ],
+    }
+
+
+@router.post("/withdrawals/{withdrawal_id}/approve", dependencies=[Depends(_verify_admin)])
+def approve_withdrawal(
+    withdrawal_id: int,
+    wechat_id: str = Query("", description="客服微信号（给用户展示）"),
+    db: Session = Depends(get_db),
+):
+    rec = db.query(WithdrawalRecord).filter(WithdrawalRecord.id == withdrawal_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="提现记录不存在")
+    if rec.status != "pending":
+        raise HTTPException(status_code=400, detail=f"当前状态为 {rec.status}，无法审核通过")
+    rec.status = "paid"
+    rec.processed_at = datetime.datetime.utcnow()
+    if wechat_id:
+        rec.wechat_id = wechat_id
+    db.commit()
+    return {"ok": True}
+
+
+@router.post("/withdrawals/{withdrawal_id}/reject", dependencies=[Depends(_verify_admin)])
+def reject_withdrawal(
+    withdrawal_id: int,
+    note: str = Query("", description="拒绝原因"),
+    db: Session = Depends(get_db),
+):
+    rec = db.query(WithdrawalRecord).filter(WithdrawalRecord.id == withdrawal_id).first()
+    if not rec:
+        raise HTTPException(status_code=404, detail="提现记录不存在")
+    if rec.status != "pending":
+        raise HTTPException(status_code=400, detail=f"当前状态为 {rec.status}，无法拒绝")
+    # 退回余额
+    user = db.query(User).filter(User.id == rec.user_id).first()
+    if user:
+        user.balance_fen += rec.amount_fen
+    rec.status = "rejected"
+    rec.admin_note = note
+    rec.processed_at = datetime.datetime.utcnow()
+    db.commit()
+    return {"ok": True}
+
+
+@router.get("/stats/commission", dependencies=[Depends(_verify_admin)])
+def commission_stats(db: Session = Depends(get_db)):
+    total_granted = db.query(func.sum(CommissionRecord.amount_fen)).filter(
+        CommissionRecord.status.in_(["frozen", "available"])
+    ).scalar() or 0
+    total_deducted = db.query(func.sum(CommissionRecord.amount_fen)).filter(
+        CommissionRecord.status == "deducted"
+    ).scalar() or 0
+    total_withdrawn = db.query(func.sum(WithdrawalRecord.amount_fen)).filter(
+        WithdrawalRecord.status == "paid"
+    ).scalar() or 0
+    pending_withdrawals = db.query(func.count(WithdrawalRecord.id)).filter(
+        WithdrawalRecord.status == "pending"
+    ).scalar() or 0
+    frozen_total = db.query(func.sum(CommissionRecord.amount_fen)).filter(
+        CommissionRecord.status == "frozen"
+    ).scalar() or 0
+    available_total = db.query(func.sum(CommissionRecord.amount_fen)).filter(
+        CommissionRecord.status == "available"
+    ).scalar() or 0
+    return {
+        "total_granted_yuan": round(total_granted / 100, 2),
+        "total_deducted_yuan": round(total_deducted / 100, 2),
+        "total_withdrawn_yuan": round(total_withdrawn / 100, 2),
+        "frozen_yuan": round(frozen_total / 100, 2),
+        "available_yuan": round(available_total / 100, 2),
+        "pending_withdrawals": pending_withdrawals,
     }

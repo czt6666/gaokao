@@ -40,6 +40,8 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
   const [manualCheckResult, setManualCheckResult] = useState<"idle" | "not_paid" | "error">("idle");
   const [qrExpiry, setQrExpiry] = useState(0);
   const [simulateMode, setSimulateMode] = useState(false);
+  const [refCode, setRefCode] = useState("");
+  const [boundRefCode, setBoundRefCode] = useState(""); // 从 URL/storage 自动绑定的原始邀请码
   // 根据已购产品过滤选项：已购 trial 隐藏 ¥9.9；已购 single 隐藏 ¥9.9 和 ¥39
   const visibleProducts = PRODUCTS.filter((p) => {
     if (existingProductType === "trial_report") {
@@ -118,6 +120,14 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       .then(async (r) => { if (r.ok) return r.json(); return null; })
       .then((d) => { if (d?.simulate) setSimulateMode(true); })
       .catch(() => {});
+  }, []);
+
+  // 初始化邀请码：从 storage 读取，用户可修改
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem("gaokao_ref") || localStorage.getItem("gaokao_ref") || "";
+      if (saved) { setRefCode(saved); setBoundRefCode(saved); }
+    } catch {}
   }, []);
 
   // 从 localStorage 恢复待付款订单（应对 iOS Safari 后台杀页面）
@@ -204,7 +214,7 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       province: queryParams?.province || "",
       rank_input: queryParams?.rank || 0,
       subject: queryParams?.subject || "",
-      ref_code: typeof window !== "undefined" ? (sessionStorage.getItem("gaokao_ref") || localStorage.getItem("gaokao_ref") || "") : "",
+      ref_code: refCode.trim(),
       c_major: queryParams?.c_major || "",
       c_city: queryParams?.c_city || "",
       c_nature: queryParams?.c_nature || "",
@@ -333,7 +343,6 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
         if (d.status === "paid") {
           setStatus("paid");
           try {
-            localStorage.setItem("gaokao_order", orderNo);
             localStorage.removeItem(pendingKey);
           } catch {}
           setTimeout(() => { onSuccessRef.current?.(orderNo); }, 1500);
@@ -536,6 +545,46 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
               </div>
             </button>
           ))}
+        </div>
+
+        {/* 邀请码 */}
+        <div style={{ marginBottom: 12 }}>
+          <label style={{ fontSize: 12, fontWeight: 600, color: "var(--color-text-secondary)", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+            邀请码（选填）
+            {boundRefCode && <span style={{ fontSize: 10, background: "#34c759", color: "#fff", padding: "1px 5px", borderRadius: 4 }}>已绑定</span>}
+          </label>
+          <input
+            type="text"
+            value={refCode}
+            onChange={(e) => setRefCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+            placeholder={boundRefCode ? "已绑定邀请码，可修改或清空" : "如有邀请码请填写"}
+            maxLength={10}
+            style={{
+              width: "100%",
+              padding: "9px 12px",
+              borderRadius: 8,
+              border: boundRefCode ? "1px solid #34c759" : "1px solid rgba(0,0,0,0.1)",
+              fontSize: 13,
+              outline: "none",
+              fontFamily: "monospace",
+              letterSpacing: 1,
+              color: "var(--color-text-primary)",
+              background: boundRefCode ? "#f6fdf8" : "#fff",
+              boxSizing: "border-box",
+            }}
+            onFocus={(e) => { e.currentTarget.style.borderColor = "var(--color-accent)"; }}
+            onBlur={(e) => { e.currentTarget.style.borderColor = boundRefCode ? "#34c759" : "rgba(0,0,0,0.1)"; }}
+          />
+          {boundRefCode && refCode === boundRefCode && (
+            <div style={{ fontSize: 11, color: "#34c759", marginTop: 4 }}>
+              ✅ 已绑定邀请码 <strong>{boundRefCode}</strong>
+            </div>
+          )}
+          {refCode && (!boundRefCode || refCode !== boundRefCode) && (
+            <div style={{ fontSize: 11, color: "#0071E3", marginTop: 4 }}>
+              ℹ️ 使用邀请码 <strong>{refCode}</strong>
+            </div>
+          )}
         </div>
 
         {/* 确认 + 支付区域 */}

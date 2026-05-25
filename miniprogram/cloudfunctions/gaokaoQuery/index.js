@@ -57,6 +57,45 @@ function fetchJSON(path, authToken) {
   });
 }
 
+// ── HTTP POST → JSON ─────────────────────────────────────────────
+function fetchPostJSON(path, authToken) {
+  return new Promise((resolve, reject) => {
+    const headers = {
+      'Accept': 'application/json',
+      'Accept-Encoding': 'gzip, deflate',
+      'User-Agent': 'WeChatMiniProgram/gaokaoQuery',
+    };
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+    const options = {
+      hostname: BASE_URL, port: 443, path,
+      method: 'POST', agent: _agent,
+      headers,
+    };
+    const req = https.request(options, (res) => {
+      const enc = (res.headers['content-encoding'] || '').toLowerCase();
+      let stream = res;
+      if (enc === 'gzip') stream = res.pipe(zlib.createGunzip());
+      else if (enc === 'deflate') stream = res.pipe(zlib.createInflate());
+      const chunks = [];
+      stream.on('data', c => chunks.push(c));
+      stream.on('end', () => {
+        try {
+          const txt = Buffer.concat(chunks).toString('utf8');
+          const parsed = JSON.parse(txt);
+          if (res.statusCode !== 200) {
+            return reject(new Error(`API ${res.statusCode}: ${(parsed && (parsed.message || parsed.error)) || 'error'}`));
+          }
+          resolve(parsed);
+        } catch (e) { reject(new Error('JSON parse: ' + Buffer.concat(chunks).toString('utf8').slice(0, 200))); }
+      });
+      stream.on('error', reject);
+    });
+    req.on('error', err => { console.error('[fetchPostJSON] err:', err.message); reject(err); });
+    req.setTimeout(25000, () => req.destroy(new Error('fetchPostJSON timeout 25s')));
+    req.end();
+  });
+}
+
 // ── HTTP GET → Binary Buffer（单次请求，55s 超时）──────────────────
 // Part1(69所) 首次 PDF 渲染约 47s，加算法约 50s。
 // 缓存命中后 <4s。留 5s 给云存储上传。
@@ -439,6 +478,28 @@ exports.main = async (event, context) => {
         if (e.message && e.message.includes('401')) {
           return { success: false, error: '登录已过期', code: 401 };
         }
+        return { success: false, error: e.message };
+      }
+
+    // ── getCommission：查询佣金余额与明细 ───────────────────────────
+    } else if (type === 'getCommission') {
+      const { auth_token } = event;
+      if (!auth_token) return { success: false, error: '缺少 auth_token' };
+      try {
+        const data = await fetchJSON('/api/commission/me', auth_token);
+        return { success: true, ...data };
+      } catch (e) {
+        return { success: false, error: e.message };
+      }
+
+    // ── withdrawCommission：申请提现 ────────────────────────────────
+    } else if (type === 'withdrawCommission') {
+      const { auth_token, amount_fen } = event;
+      if (!auth_token) return { success: false, error: '缺少 auth_token' };
+      try {
+        const data = await fetchPostJSON(`/api/commission/withdraw?amount_fen=${amount_fen || 0}`, auth_token);
+        return { success: true, ...data };
+      } catch (e) {
         return { success: false, error: e.message };
       }
 

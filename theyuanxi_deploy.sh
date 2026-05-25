@@ -36,6 +36,7 @@ rsync -av --no-owner --no-group \
   --exclude='__pycache__' --exclude='*.pyc' \
   --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
   --exclude='.venv' --exclude='venv/' \
+  --exclude='db-backup/' \
   --exclude='data/' \
   --exclude='.env' \
   "$LOCAL_BACKEND/" "$SERVER:$REMOTE_BACKEND/"

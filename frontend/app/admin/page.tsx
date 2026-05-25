@@ -17,6 +17,7 @@ interface TodayStats {
   today_queries: number; today_paid: number; today_revenue: number;
   today_new_users: number; today_export_clicks: number; today_conv_rate: number;
   total_users: number; total_paid: number; total_revenue: number; total_queries: number;
+  users_mini: number; users_web: number;
 }
 interface ChartDay { date: string; queries: number; paid: number; revenue: number; new_users: number; }
 interface Order {
@@ -83,28 +84,56 @@ interface ViralData {
 }
 
 // ── Mini SVG Line Chart ───────────────────────────────────────
-function LineChart({ data, field, color }: { data: ChartDay[]; field: keyof ChartDay; color: string }) {
-  if (!data.length) return <div style={{ height: 80, display: "flex", alignItems: "center", justifyContent: "center", color: "#aeaeb2", fontSize: 12 }}>暂无数据</div>;
+function LineChart({ data, field, color, height = 80 }: { data: ChartDay[]; field: keyof ChartDay; color: string; height?: number }) {
+  if (!data.length) return <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", color: "#aeaeb2", fontSize: 12 }}>暂无数据</div>;
   const vals = data.map(d => d[field] as number);
   const max = Math.max(...vals, 1);
-  const W = 320, H = 80, PAD = 8;
+  const W = 640;
+  const isLarge = height > 100;
+  const PAD = isLarge ? 28 : 16;
+  const BOTTOM = isLarge ? 46 : 30;
+  const H = isLarge ? height + BOTTOM : height * 2;
+  const plotH = H - PAD - BOTTOM;
   const pts = data.map((d, i) => {
     const x = PAD + (i / Math.max(data.length - 1, 1)) * (W - PAD * 2);
-    const y = H - PAD - 20 - ((d[field] as number) / max) * (H - PAD * 2 - 20);
+    const y = H - BOTTOM - ((d[field] as number) / max) * plotH;
     return `${x},${y}`;
   }).join(" ");
+  const step = Math.ceil(data.length / (isLarge ? 10 : 7));
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: 80 }}>
-      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height }}>
+      {isLarge && [0.25, 0.5, 0.75].map(pct => {
+        const gy = H - BOTTOM - plotH * pct;
+        return (
+          <g key={pct}>
+            <line x1={PAD} y1={gy} x2={W - PAD} y2={gy} stroke="#E5E5EA" strokeWidth={1} strokeDasharray="4 4" />
+            <text x={PAD - 6} y={gy + 4} textAnchor="end" fontSize={11} fill="#8E8E93">{Math.round(max * pct)}</text>
+          </g>
+        );
+      })}
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={isLarge ? 3 : 2} strokeLinejoin="round" />
       {data.map((d, i) => {
         const x = PAD + (i / Math.max(data.length - 1, 1)) * (W - PAD * 2);
-        const y = H - PAD - 20 - ((d[field] as number) / max) * (H - PAD * 2 - 20);
-        return <circle key={i} cx={x} cy={y} r={2.5} fill={color} />;
+        const y = H - BOTTOM - ((d[field] as number) / max) * plotH;
+        return <circle key={i} cx={x} cy={y} r={isLarge ? 5 : 2.5} fill={color} />;
       })}
-      {data.filter((_, i) => i % Math.ceil(data.length / 7) === 0 || i === data.length - 1).map((d, _, arr) => {
+      {data.filter((_, i) => i % step === 0 || i === data.length - 1).map((d) => {
         const origIdx = data.indexOf(d);
         const x = PAD + (origIdx / Math.max(data.length - 1, 1)) * (W - PAD * 2);
-        return <text key={origIdx} x={x} y={H - 2} textAnchor="middle" fontSize={8} fill="#6E6E73">{d.date}</text>;
+        return (
+          <text key={origIdx} x={x} y={H - (isLarge ? 8 : 4)} textAnchor="middle" fontSize={isLarge ? 13 : 8} fill="#6E6E73">
+            {d.date}
+          </text>
+        );
+      })}
+      {isLarge && data.map((d, i) => {
+        const x = PAD + (i / Math.max(data.length - 1, 1)) * (W - PAD * 2);
+        const y = H - BOTTOM - ((d[field] as number) / max) * plotH;
+        return (
+          <text key={`v-${i}`} x={x} y={y - 14} textAnchor="middle" fontSize={13} fill={color} fontWeight={700}>
+            {d[field] as number}
+          </text>
+        );
       })}
     </svg>
   );
@@ -171,16 +200,63 @@ function HourlyBars({ data }: { data: HourlyData[] }) {
   );
 }
 
+// ── Donut Chart ───────────────────────────────────────────────
+function DonutChart({ items, size = 140 }: { items: { label: string; value: number; color: string }[]; size?: number }) {
+  if (!items.length) return <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>暂无数据</div>;
+  const total = items.reduce((s, i) => s + i.value, 0);
+  if (total === 0) return <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>暂无数据</div>;
+  const r = size / 2 - 4;
+  const cx = size / 2, cy = size / 2;
+  let acc = 0;
+  const arcs = items.map((item) => {
+    const frac = item.value / total;
+    const start = acc;
+    acc += frac;
+    const end = acc;
+    const x1 = cx + r * Math.cos((start - 0.25) * 2 * Math.PI);
+    const y1 = cy + r * Math.sin((start - 0.25) * 2 * Math.PI);
+    const x2 = cx + r * Math.cos((end - 0.25) * 2 * Math.PI);
+    const y2 = cy + r * Math.sin((end - 0.25) * 2 * Math.PI);
+    const large = frac > 0.5 ? 1 : 0;
+    const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
+    return { ...item, frac, d };
+  });
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {arcs.map((a, i) => (
+          <g key={i}>
+            <path d={a.d} fill={a.color} stroke="#fff" strokeWidth={2} />
+          </g>
+        ))}
+        <circle cx={cx} cy={cy} r={r * 0.55} fill="#fff" />
+        <text x={cx} y={cy - 2} textAnchor="middle" fontSize={12} fontWeight={700} fill="#1d1d1f">{total.toLocaleString()}</text>
+        <text x={cx} y={cy + 12} textAnchor="middle" fontSize={8} fill="#6e6e73">合计</text>
+      </svg>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {arcs.map((a, i) => (
+          <div key={i} style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <div style={{ width: 8, height: 8, borderRadius: 2, background: a.color, flexShrink: 0 }} />
+            <span style={{ fontSize: 12, color: "#1d1d1f" }}>{a.label}</span>
+            <span style={{ fontSize: 11, color: "#6e6e73", marginLeft: "auto" }}>{a.value.toLocaleString()} ({(a.frac * 100).toFixed(0)}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Main Component ────────────────────────────────────────────
 export default function AdminPage() {
   const [tokenInput, setTokenInput] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "events" | "viral" | "insights" | "referral" | "feedback">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "events" | "viral" | "insights" | "referral" | "feedback" | "commission">("dashboard");
   const [insights, setInsights] = useState<any>(null);
 
   const [stats, setStats] = useState<TodayStats | null>(null);
   const [chart, setChart] = useState<ChartDay[]>([]);
   const [chartDays, setChartDays] = useState(30);
+  const [chartZoom, setChartZoom] = useState<{ open: boolean; field: keyof ChartDay; title: string; color: string } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [orderTotal, setOrderTotal] = useState(0);
   const [orderPage, setOrderPage] = useState(1);
@@ -205,6 +281,18 @@ export default function AdminPage() {
   const [revenueBreakdown, setRevenueBreakdown] = useState<RevenueBreakdown[]>([]);
   const [referralStats, setReferralStats] = useState<ReferralRow[]>([]);
   const [expiringSoon, setExpiringSoon] = useState<ExpiringSoon[]>([]);
+
+  // Commission state
+  const [commissionTab, setCommissionTab] = useState<"records" | "withdrawals" | "stats">("records");
+  const [commissionRecords, setCommissionRecords] = useState<any[]>([]);
+  const [commissionTotal, setCommissionTotal] = useState(0);
+  const [commissionPage, setCommissionPage] = useState(1);
+  const [commissionStatus, setCommissionStatus] = useState("");
+  const [withdrawalRecords, setWithdrawalRecords] = useState<any[]>([]);
+  const [withdrawalTotal, setWithdrawalTotal] = useState(0);
+  const [withdrawalPage, setWithdrawalPage] = useState(1);
+  const [withdrawalStatus, setWithdrawalStatus] = useState("pending");
+  const [commissionStatsData, setCommissionStatsData] = useState<any>(null);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -272,8 +360,9 @@ export default function AdminPage() {
     Promise.all([
       apiFetch("/api/admin/stats/today"),
       apiFetch(`/api/admin/stats/chart?days_back=${chartDays}`),
+      apiFetch("/api/admin/stats/revenue_breakdown"),
     ])
-      .then(([s, c]) => { setStats(s); setChart(c); })
+      .then(([s, c, rb]) => { setStats(s); setChart(c); setRevenueBreakdown(rb); })
       .catch(e => setError("加载失败：" + e.message))
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -385,6 +474,33 @@ export default function AdminPage() {
     }).catch(e => setError(e.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, activeTab]);
+
+  // Commission tab
+  useEffect(() => {
+    if (!authed || activeTab !== "commission") return;
+    if (commissionTab === "stats") {
+      apiFetch("/api/admin/stats/commission")
+        .then(d => setCommissionStatsData(d))
+        .catch(e => setError(e.message));
+      return;
+    }
+    if (commissionTab === "records") {
+      const q = new URLSearchParams({ page: String(commissionPage), page_size: "20" });
+      if (commissionStatus) q.set("status", commissionStatus);
+      apiFetch(`/api/admin/commissions?${q.toString()}`)
+        .then(d => { setCommissionRecords(d.items || []); setCommissionTotal(d.total || 0); })
+        .catch(e => setError(e.message));
+      return;
+    }
+    if (commissionTab === "withdrawals") {
+      const q = new URLSearchParams({ page: String(withdrawalPage), page_size: "20" });
+      if (withdrawalStatus) q.set("status", withdrawalStatus);
+      apiFetch(`/api/admin/withdrawals?${q.toString()}`)
+        .then(d => { setWithdrawalRecords(d.items || []); setWithdrawalTotal(d.total || 0); })
+        .catch(e => setError(e.message));
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, activeTab, commissionTab, commissionPage, commissionStatus, withdrawalPage, withdrawalStatus]);
 
   // Feedback tab
   const [feedbacks, setFeedbacks] = useState<any[]>([]);
@@ -551,6 +667,30 @@ export default function AdminPage() {
                 style={{ flex: 1, padding: "10px", borderRadius: 10, border: "none", background: "#FF3B30", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
                 确认执行
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 趋势图放大弹窗 ── */}
+      {chartZoom?.open && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }} onClick={() => setChartZoom(null)}>
+          <div style={{ background: "#fff", borderRadius: 20, padding: "24px 28px", maxWidth: 900, width: "100%", maxHeight: "80vh", boxShadow: "0 8px 40px rgba(0,0,0,0.18)", display: "flex", flexDirection: "column" }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+              <div style={{ fontSize: 17, fontWeight: 700 }}>{chartZoom.title} — 近{chartDays}天趋势</div>
+              <button onClick={() => setChartZoom(null)} style={{ background: "none", border: "none", fontSize: 24, color: "#8E8E93", cursor: "pointer" }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflow: "auto" }}>
+              <LineChart data={chart} field={chartZoom.field} color={chartZoom.color} height={280} />
+            </div>
+            <div style={{ display: "flex", gap: 8, marginTop: 16, justifyContent: "center" }}>
+              {[7, 14, 30, 60, 90].map(d => (
+                <button key={d} onClick={() => setChartDays(d)} style={{
+                  padding: "6px 14px", borderRadius: 980, fontSize: 12, border: "1px solid #E5E5EA",
+                  background: chartDays === d ? "#0071E3" : "#fff",
+                  color: chartDays === d ? "#fff" : "#6E6E73", cursor: "pointer",
+                }}>近{d}天</button>
+              ))}
             </div>
           </div>
         </div>
@@ -770,6 +910,7 @@ export default function AdminPage() {
               <Tab id="events" label="查询记录" />
               <Tab id="viral" label="传播追踪" />
               <Tab id="referral" label="分销订阅" />
+              <Tab id="commission" label="佣金管理" />
               <Tab id="feedback" label={`反馈 ${feedbackTotal > 0 ? `(${feedbackTotal})` : ""}`} />
             </div>
           </div>
@@ -817,9 +958,9 @@ export default function AdminPage() {
 
             {/* Chart timeframe selector */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: 1 }}>趋势图</div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: 1 }}>趋势图（点击放大）</div>
               <div style={{ display: "flex", gap: 4 }}>
-                {[7, 14, 30].map(d => (
+                {[7, 14, 30, 60, 90].map(d => (
                   <button key={d} onClick={() => setChartDays(d)} style={{
                     padding: "4px 10px", borderRadius: 980, fontSize: 11, border: "1px solid #E5E5EA",
                     background: chartDays === d ? "#0071E3" : "#fff",
@@ -835,10 +976,33 @@ export default function AdminPage() {
                 { field: "paid" as const, title: "付费笔数", color: "#34C759" },
                 { field: "revenue" as const, title: "收入（元）", color: "#FF9F0A" },
               ]).map(({ field, title, color }) => (
-                <Card key={field} title={title}>
-                  <LineChart data={chart} field={field} color={color} />
-                </Card>
+                <div key={field} onClick={() => setChartZoom({ open: true, field, title, color })} style={{ cursor: "pointer" }}>
+                  <Card title={title}>
+                    <LineChart data={chart} field={field} color={color} />
+                  </Card>
+                </div>
               ))}
+            </div>
+
+            {/* Extra visualizations */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16, marginTop: 16 }}>
+              <Card title="收入结构（近30天）">
+                <DonutChart
+                  items={revenueBreakdown.length > 0 ? [
+                    { label: "单次报告", value: revenueBreakdown.find(r => r.product_type === "single_report")?.count || 0, color: "#0071E3" },
+                    { label: "月度会员", value: revenueBreakdown.find(r => r.product_type === "monthly_sub")?.count || 0, color: "#34C759" },
+                    { label: "季度会员", value: revenueBreakdown.find(r => r.product_type === "quarterly_sub")?.count || 0, color: "#FF9F0A" },
+                  ].filter(i => i.value > 0) : []}
+                />
+              </Card>
+              <Card title="用户来源占比">
+                <DonutChart
+                  items={stats && (stats.users_mini > 0 || stats.users_web > 0) ? [
+                    { label: "小程序", value: stats.users_mini || 0, color: "#34C759" },
+                    { label: "网页端", value: stats.users_web || 0, color: "#0071E3" },
+                  ].filter(i => i.value > 0) : []}
+                />
+              </Card>
             </div>
           </>
         )}
@@ -1697,6 +1861,179 @@ export default function AdminPage() {
                 <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>近7天内暂无即将到期的订阅用户</div>
               )}
             </div>
+          </>
+        )}
+
+        {/* ── Commission ── */}
+        {activeTab === "commission" && (
+          <>
+            <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+              {(["records", "withdrawals", "stats"] as const).map(t => (
+                <button key={t} onClick={() => setCommissionTab(t)} style={{
+                  padding: "6px 16px", borderRadius: 980, fontSize: 13, fontWeight: 500,
+                  background: commissionTab === t ? "#0071E3" : "#fff",
+                  color: commissionTab === t ? "#fff" : "#6E6E73",
+                  border: "1px solid #E5E5EA", cursor: "pointer",
+                }}>
+                  {t === "records" ? "佣金记录" : t === "withdrawals" ? "提现审核" : "佣金统计"}
+                </button>
+              ))}
+            </div>
+
+            {commissionTab === "stats" && commissionStatsData && (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 16 }}>
+                {[
+                  { label: "总发放佣金", value: `¥${commissionStatsData.total_granted_yuan}`, color: "#34C759" },
+                  { label: "总扣除佣金", value: `¥${commissionStatsData.total_deducted_yuan}`, color: "#FF3B30" },
+                  { label: "总已提现", value: `¥${commissionStatsData.total_withdrawn_yuan}`, color: "#0071E3" },
+                  { label: "冻结中", value: `¥${commissionStatsData.frozen_yuan}`, color: "#FF9500" },
+                  { label: "可提现余额", value: `¥${commissionStatsData.available_yuan}`, color: "#34C759" },
+                  { label: "待审核提现", value: `${commissionStatsData.pending_withdrawals} 笔`, color: "#FF3B30" },
+                ].map(card => (
+                  <div key={card.label} style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, padding: "20px 24px" }}>
+                    <div style={{ fontSize: 12, color: "#6E6E73", marginBottom: 8 }}>{card.label}</div>
+                    <div style={{ fontSize: 24, fontWeight: 800, color: card.color }}>{card.value}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {commissionTab === "records" && (
+              <div style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, padding: "20px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: 0.5 }}>佣金记录（共 {commissionTotal} 条）</div>
+                  <select value={commissionStatus} onChange={e => { setCommissionStatus(e.target.value); setCommissionPage(1); }} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13 }}>
+                    <option value="">全部状态</option>
+                    <option value="frozen">冻结中</option>
+                    <option value="available">已到账</option>
+                    <option value="deducted">已扣除</option>
+                  </select>
+                </div>
+                {commissionRecords.length > 0 ? (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ background: "#F5F5F7" }}>
+                          {["ID", "用户ID", "订单号", "金额", "状态", "来源", "冻结到期", "创建时间"].map(h => (
+                            <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {commissionRecords.map((r, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                            <td style={{ padding: "8px 12px", color: "#aeaeb2", fontSize: 11 }}>{r.id}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11 }}>{r.user_id}</td>
+                            <td style={{ padding: "8px 12px", fontFamily: "monospace", fontSize: 11 }}>{r.order_no || "—"}</td>
+                            <td style={{ padding: "8px 12px", color: "#34C759", fontWeight: 600 }}>¥{r.amount_yuan}</td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11,
+                                background: r.status === "frozen" ? "#FFF8E7" : r.status === "available" ? "#EDFBF2" : "#FFF0EF",
+                                color: r.status === "frozen" ? "#FF9500" : r.status === "available" ? "#34C759" : "#FF3B30"
+                              }}>{r.status === "frozen" ? "冻结中" : r.status === "available" ? "已到账" : "已扣除"}</span>
+                            </td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.source || "—"}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.freeze_until || "—"}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.created_at}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {commissionTotal > 20 && (
+                      <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 16 }}>
+                        <button disabled={commissionPage <= 1} onClick={() => setCommissionPage(p => p - 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>上一页</button>
+                        <span style={{ fontSize: 13, color: "#6E6E73", lineHeight: "28px" }}>第 {commissionPage} 页 / 共 {Math.ceil(commissionTotal / 20)} 页</span>
+                        <button disabled={commissionPage >= Math.ceil(commissionTotal / 20)} onClick={() => setCommissionPage(p => p + 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>下一页</button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>暂无佣金记录</div>
+                )}
+              </div>
+            )}
+
+            {commissionTab === "withdrawals" && (
+              <div style={{ background: "#fff", border: "1px solid #E5E5EA", borderRadius: 12, padding: "20px 24px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", textTransform: "uppercase", letterSpacing: 0.5 }}>提现申请（共 {withdrawalTotal} 条）</div>
+                  <select value={withdrawalStatus} onChange={e => { setWithdrawalStatus(e.target.value); setWithdrawalPage(1); }} style={{ padding: "6px 10px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13 }}>
+                    <option value="pending">待审核</option>
+                    <option value="paid">已通过</option>
+                    <option value="rejected">已拒绝</option>
+                    <option value="">全部</option>
+                  </select>
+                </div>
+                {withdrawalRecords.length > 0 ? (
+                  <>
+                    <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                      <thead>
+                        <tr style={{ background: "#F5F5F7" }}>
+                          {["ID", "用户ID", "金额", "状态", "客服微信", "备注", "申请时间", "操作"].map(h => (
+                            <th key={h} style={{ padding: "8px 12px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {withdrawalRecords.map((r, i) => (
+                          <tr key={i} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                            <td style={{ padding: "8px 12px", color: "#aeaeb2", fontSize: 11 }}>{r.id}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11 }}>{r.user_id}</td>
+                            <td style={{ padding: "8px 12px", color: "#34C759", fontWeight: 600 }}>¥{r.amount_yuan}</td>
+                            <td style={{ padding: "8px 12px" }}>
+                              <span style={{ padding: "2px 8px", borderRadius: 980, fontSize: 11,
+                                background: r.status === "pending" ? "#FFF8E7" : r.status === "paid" ? "#EDFBF2" : "#FFF0EF",
+                                color: r.status === "pending" ? "#FF9500" : r.status === "paid" ? "#34C759" : "#FF3B30"
+                              }}>{r.status === "pending" ? "待审核" : r.status === "paid" ? "已通过" : "已拒绝"}</span>
+                            </td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.wechat_id || "—"}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.admin_note || "—"}</td>
+                            <td style={{ padding: "8px 12px", fontSize: 11, color: "#6E6E73" }}>{r.created_at}</td>
+                            <td style={{ padding: "8px 12px" }}>
+                              {r.status === "pending" && (
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button onClick={() => {
+                                    const wid = r.id;
+                                    setConfirmDialog({
+                                      msg: `确认通过提现申请 #${wid}？\n将通过微信转账给用户。`,
+                                      onConfirm: () => {
+                                        apiFetch(`/api/admin/withdrawals/${wid}/approve`, { method: "POST" })
+                                          .then(() => { setGrantMsg(`提现 #${wid} 已通过`); setWithdrawalPage(p => p); })
+                                          .catch(e => setError(e.message));
+                                      },
+                                    });
+                                  }} style={{ padding: "4px 10px", borderRadius: 6, border: "none", background: "#34C759", color: "#fff", fontSize: 12, cursor: "pointer" }}>通过</button>
+                                  <button onClick={() => {
+                                    const wid = r.id;
+                                    setConfirmDialog({
+                                      msg: `确认拒绝提现申请 #${wid}？\n金额将退回用户余额。`,
+                                      onConfirm: () => {
+                                        apiFetch(`/api/admin/withdrawals/${wid}/reject`, { method: "POST" })
+                                          .then(() => { setGrantMsg(`提现 #${wid} 已拒绝`); setWithdrawalPage(p => p); })
+                                          .catch(e => setError(e.message));
+                                      },
+                                    });
+                                  }} style={{ padding: "4px 10px", borderRadius: 6, border: "1px solid #E5E5EA", background: "#fff", color: "#FF3B30", fontSize: 12, cursor: "pointer" }}>拒绝</button>
+                                </div>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                    {withdrawalTotal > 20 && (
+                      <div style={{ display: "flex", justifyContent: "center", gap: 12, marginTop: 16 }}>
+                        <button disabled={withdrawalPage <= 1} onClick={() => setWithdrawalPage(p => p - 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>上一页</button>
+                        <span style={{ fontSize: 13, color: "#6E6E73", lineHeight: "28px" }}>第 {withdrawalPage} 页 / 共 {Math.ceil(withdrawalTotal / 20)} 页</span>
+                        <button disabled={withdrawalPage >= Math.ceil(withdrawalTotal / 20)} onClick={() => setWithdrawalPage(p => p + 1)} style={{ padding: "6px 14px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", cursor: "pointer" }}>下一页</button>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: 13, color: "#aeaeb2", padding: "16px 0" }}>暂无提现申请</div>
+                )}
+              </div>
+            )}
           </>
         )}
 

@@ -36,6 +36,34 @@ interface UserInfo {
   referral_reward_days?: number;
 }
 
+interface CommissionRecord {
+  id: number;
+  order_no: string;
+  amount_yuan: number;
+  status: string;
+  freeze_until: string | null;
+  created_at: string | null;
+}
+
+interface CommissionInfo {
+  balance_fen: number;
+  pending_fen: number;
+  total_earned_fen: number;
+  balance_yuan: number;
+  pending_yuan: number;
+  total_earned_yuan: number;
+  records: CommissionRecord[];
+}
+
+interface WithdrawalItem {
+  id: number;
+  amount_yuan: number;
+  status: string;
+  admin_note: string;
+  created_at: string | null;
+  processed_at: string | null;
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<UserInfo | null>(null);
@@ -43,6 +71,13 @@ export default function DashboardPage() {
   const [refCopied, setRefCopied] = useState(false);
   const [paidOrders, setPaidOrders] = useState<PaidOrder[]>([]);
   const [showPayModal, setShowPayModal] = useState(false);
+  const [commission, setCommission] = useState<CommissionInfo | null>(null);
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [withdrawMsg, setWithdrawMsg] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [showWithdrawSuccess, setShowWithdrawSuccess] = useState(false);
+  const [withdrawSuccessAmountYuan, setWithdrawSuccessAmountYuan] = useState(0);
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
@@ -73,11 +108,20 @@ export default function DashboardPage() {
       })
       .then((d) => { if (d?.orders) setPaidOrders(d.orders); })
       .catch(() => {});
+    // Fetch commission info
+    fetch(`${API}/api/commission/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        if (!r.ok) return null;
+        try { return await r.json(); } catch { return null; }
+      })
+      .then((d) => { if (d) setCommission(d); })
+      .catch(() => {});
   }, [router]);
 
   function logout() {
     try { localStorage.removeItem("auth_token"); } catch {}
-    try { localStorage.removeItem("gaokao_order"); } catch {}
     router.push("/");
   }
 
@@ -115,13 +159,6 @@ export default function DashboardPage() {
   const rewardDays = (referralCount * 3) + (user.referral_reward_days ?? 0);
 
   // Build re-query URL from stored params
-  const savedProvince = typeof window !== "undefined" ? (localStorage.getItem("gaokao_province") || "") : "";
-  const savedRank = typeof window !== "undefined" ? (localStorage.getItem("gaokao_rank") || "") : "";
-  const savedSubject = typeof window !== "undefined" ? (localStorage.getItem("gaokao_subject") || "") : "";
-  const reQueryUrl = savedProvince && savedRank
-    ? `/results?province=${encodeURIComponent(savedProvince)}&rank=${savedRank}&subject=${encodeURIComponent(savedSubject)}`
-    : "/";
-
   return (
     <main style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
       {/* Nav */}
@@ -168,72 +205,6 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* ── 核心CTA：重新查询 ── */}
-        <div style={{
-          background: user.is_paid && !isExpired
-            ? "linear-gradient(135deg, rgba(201,146,42,0.08) 0%, rgba(201,146,42,0.04) 100%)"
-            : "rgba(255,149,0,0.04)",
-          border: `1px solid ${user.is_paid && !isExpired ? "rgba(201,146,42,0.25)" : "rgba(255,149,0,0.2)"}`,
-          borderRadius: 16, padding: "20px",
-          marginBottom: 16,
-        }}>
-          {user.is_paid && !isExpired ? (
-            <>
-              <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>
-                获取最新冷门推荐
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
-                录取数据每年更新。越接近志愿截止日，竞争格局越清晰——<strong style={{ color: "var(--color-text-primary)" }}>建议在截止前3天重查一次</strong>，往往能发现位次相同但更好进的学校。
-              </div>
-              <button
-                onClick={() => router.push(reQueryUrl)}
-                style={{
-                  width: "100%", padding: "13px", borderRadius: 10, fontSize: 15,
-                  background: "var(--color-accent)", color: "#fff",
-                  border: "none", cursor: "pointer", fontWeight: 700,
-                }}
-              >
-                立即重新查询 →
-              </button>
-              {savedProvince && savedRank && (
-                <div style={{ textAlign: "center", fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 8 }}>
-                  上次查询：{savedProvince} · 位次 {parseInt(savedRank).toLocaleString()}
-                </div>
-              )}
-            </>
-          ) : isExpired ? (
-            <>
-              <div style={{ fontSize: 14, fontWeight: 600, color: "#ff3b30", marginBottom: 6 }}>会员已到期</div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>续费后可继续获取冷门推荐数据</div>
-              <button
-                onClick={() => router.push("/?unlock=1")}
-                style={{
-                  width: "100%", padding: "12px", borderRadius: 10, fontSize: 14,
-                  background: "#ff3b30", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600,
-                }}
-              >
-                续费解锁 →
-              </button>
-            </>
-          ) : (
-            <>
-              <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>先解锁，再重查</div>
-              <div style={{ fontSize: 12, color: "var(--color-text-secondary)", marginBottom: 12 }}>
-                解锁后可查看完整冷门分析 · 就业薪资 · 填报策略，并在2026年9月1日前无限次重查
-              </div>
-              <button
-                onClick={() => router.push("/?unlock=1")}
-                style={{
-                  width: "100%", padding: "12px", borderRadius: 10, fontSize: 14,
-                  background: "var(--color-accent)", color: "#fff", border: "none", cursor: "pointer", fontWeight: 600,
-                }}
-              >
-                解锁完整报告 ¥39 起 →
-              </button>
-            </>
-          )}
-        </div>
-
         {/* ── 填报季会员入口（未开通时展示） ── */}
         {user.subscription_type !== "season_2026" && !isExpired && (
           <div style={{
@@ -261,13 +232,76 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* ── 我的收益 ── */}
+        {commission && (
+          <div style={{
+            background: "linear-gradient(135deg, rgba(52,199,89,0.08) 0%, rgba(52,199,89,0.02) 100%)",
+            border: "1.5px solid rgba(52,199,89,0.2)",
+            borderRadius: 16, padding: "18px 20px", marginBottom: 16,
+          }}>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
+              <span>💰</span> 我的收益
+            </div>
+            <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.5)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "#34c759" }}>¥{commission.balance_yuan}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 2 }}>可提现</div>
+              </div>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.5)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--color-text-primary)" }}>¥{commission.pending_yuan}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 2 }}>冻结中</div>
+              </div>
+              <div style={{ flex: 1, background: "rgba(255,255,255,0.5)", borderRadius: 12, padding: "12px", textAlign: "center" }}>
+                <div style={{ fontSize: 20, fontWeight: 800, color: "var(--color-text-primary)" }}>¥{commission.total_earned_yuan}</div>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 2 }}>累计收益</div>
+              </div>
+            </div>
+            {commission.balance_fen >= 10000 ? (
+              <button
+                onClick={() => {
+                  setShowWithdrawModal(true);
+                  setWithdrawAmount("");
+                  setWithdrawMsg("");
+                  setShowWithdrawSuccess(false);
+                }}
+                style={{
+                  width: "100%", padding: "11px", borderRadius: 10, fontSize: 14,
+                  background: "#34c759", color: "#fff",
+                  border: "none", cursor: "pointer", fontWeight: 700,
+                }}
+              >
+                申请提现（满 ¥100）
+              </button>
+            ) : (
+              <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", textAlign: "center" }}>
+                满 ¥100 可申请提现，当前还差 ¥{(100 - commission.balance_yuan).toFixed(2)}
+              </div>
+            )}
+            {commission.records.length > 0 && (
+              <div style={{ marginTop: 12, borderTop: "1px solid rgba(52,199,89,0.1)", paddingTop: 10 }}>
+                <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 6 }}>最近收益</div>
+                {commission.records.slice(0, 5).map((r) => (
+                  <div key={r.id} style={{ display: "flex", justifyContent: "space-between", fontSize: 12, padding: "4px 0" }}>
+                    <span style={{ color: "var(--color-text-secondary)" }}>
+                      订单 {r.order_no.slice(-6)} · {r.status === "frozen" ? "冻结中" : r.status === "available" ? "已到账" : r.status === "deducted" ? "已扣除" : r.status}
+                    </span>
+                    <span style={{ fontWeight: 600, color: r.status === "deducted" ? "#ff3b30" : "#34c759" }}>
+                      {r.status === "deducted" ? "-" : "+"}¥{r.amount_yuan}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* ── 推荐返佣 ── */}
         {user.referral_code && (
           <div style={{
             background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
             borderRadius: 16, padding: "18px 20px", marginBottom: 16,
           }}>
-            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>邀请好友 · 你们都省钱</div>
+            <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>邀请好友</div>
             <div style={{ fontSize: 12, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 14 }}>
               朋友通过你的链接付费后，<strong style={{ color: "var(--color-accent)" }}>你自动获得3天免费</strong>——在最关键的高考季，白送一次重查机会。
             </div>
@@ -420,6 +454,152 @@ export default function DashboardPage() {
           onClose={() => setShowPayModal(false)}
           defaultProductType="season_2026"
         />
+      )}
+
+      {showWithdrawModal && commission && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }} onClick={() => { if (!withdrawLoading) setShowWithdrawModal(false); }}>
+          <div style={{
+            background: "#fff", borderRadius: 20, width: "100%", maxWidth: 400,
+            padding: "24px", color: "#111",
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 16 }}>申请提现</div>
+            <div style={{
+              background: "#f6f6f6", borderRadius: 12, padding: "14px", marginBottom: 16,
+              display: "flex", justifyContent: "space-between", alignItems: "center",
+            }}>
+              <span style={{ fontSize: 13, color: "#666" }}>可提现余额</span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: "#34c759" }}>¥{commission.balance_yuan}</span>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ fontSize: 13, color: "#666", display: "block", marginBottom: 6 }}>提现金额（最低 ¥100）</label>
+              <input
+                type="number"
+                min={100}
+                max={Math.floor(commission.balance_fen / 100)}
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                placeholder={`最多可提 ¥${Math.floor(commission.balance_fen / 100)}`}
+                style={{
+                  width: "100%", padding: "12px 14px", borderRadius: 12, fontSize: 15,
+                  border: "1px solid #ddd", outline: "none", boxSizing: "border-box",
+                }}
+              />
+            </div>
+            {withdrawMsg && (
+              <div style={{ fontSize: 12, marginBottom: 12, color: withdrawMsg.includes("成功") ? "#34c759" : "#ff3b30" }}>
+                {withdrawMsg}
+              </div>
+            )}
+            <button
+              onClick={async () => {
+                const yuan = parseFloat(withdrawAmount);
+                if (!yuan || yuan < 100) {
+                  setWithdrawMsg("提现金额至少为 ¥100");
+                  return;
+                }
+                const fen = Math.round(yuan * 100);
+                if (fen > commission.balance_fen) {
+                  setWithdrawMsg("提现金额不能超过可提现余额");
+                  return;
+                }
+                setWithdrawLoading(true);
+                setWithdrawMsg("");
+                try {
+                  const token = localStorage.getItem("auth_token");
+                  const res = await fetch(`${API}/api/commission/withdraw?amount_fen=${fen}`, {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${token}` },
+                  });
+                  const data = await res.json();
+                  if (res.ok) {
+                    setCommission((prev) => prev ? { ...prev, balance_fen: data.balance_fen, balance_yuan: parseFloat((data.balance_fen / 100).toFixed(2)) } : prev);
+                    setShowWithdrawModal(false);
+                    setWithdrawSuccessAmountYuan(yuan);
+                    setShowWithdrawSuccess(true);
+                  } else {
+                    setWithdrawMsg(data.detail || "申请失败");
+                  }
+                } catch {
+                  setWithdrawMsg("网络错误，请重试");
+                } finally {
+                  setWithdrawLoading(false);
+                }
+              }}
+              disabled={withdrawLoading || commission.balance_fen < 10000}
+              style={{
+                width: "100%", padding: "13px", borderRadius: 12, fontSize: 15,
+                background: withdrawLoading || commission.balance_fen < 10000 ? "#ccc" : "#34c759",
+                color: "#fff", border: "none", cursor: withdrawLoading ? "not-allowed" : "pointer",
+                fontWeight: 700,
+              }}
+            >
+              {withdrawLoading ? "提交中..." : "确认申请提现"}
+            </button>
+            <button
+              onClick={() => setShowWithdrawModal(false)}
+              disabled={withdrawLoading}
+              style={{
+                width: "100%", padding: "11px", borderRadius: 12, fontSize: 14,
+                background: "transparent", color: "#888", border: "none",
+                cursor: withdrawLoading ? "not-allowed" : "pointer", marginTop: 8,
+              }}
+            >
+              取消
+            </button>
+          </div>
+        </div>
+      )}
+
+      {showWithdrawSuccess && user && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 100,
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+        }} onClick={() => setShowWithdrawSuccess(false)}>
+          <div style={{
+            background: "#fff", borderRadius: 20, width: "100%", maxWidth: 400,
+            padding: "28px 24px", color: "#111", textAlign: "center",
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              width: 48, height: 48, borderRadius: "50%", background: "#34c759",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 16px",
+            }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 6 }}>提现申请已提交</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: "#34c759", marginBottom: 16 }}>
+              ¥{withdrawSuccessAmountYuan.toFixed(2)}
+            </div>
+            <div style={{ fontSize: 14, color: "#555", marginBottom: 20, lineHeight: 1.6 }}>
+              请截图此页面，添加客服微信
+            </div>
+            <div style={{
+              background: "#f0f9f4", borderRadius: 12, padding: "14px 16px",
+              marginBottom: 20, border: "1px solid #d1f0dc",
+            }}>
+              <div style={{ fontSize: 13, color: "#666", marginBottom: 4 }}>客服微信</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: "#111", letterSpacing: 1 }}>czt_1227</div>
+            </div>
+            <div style={{ fontSize: 12, color: "#999", lineHeight: 1.5 }}>
+              用户ID: {user.user_id} · 邀请码: {user.referral_code || "-"}
+            </div>
+            <button
+              onClick={() => setShowWithdrawSuccess(false)}
+              style={{
+                width: "100%", padding: "13px", borderRadius: 12, fontSize: 15,
+                background: "#34c759", color: "#fff", border: "none",
+                cursor: "pointer", fontWeight: 700, marginTop: 20,
+              }}
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
       )}
     </main>
   );

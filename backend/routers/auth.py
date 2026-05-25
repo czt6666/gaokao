@@ -117,6 +117,12 @@ async def _send_sms(phone: str, code: str):
     发送短信验证码。使用腾讯云短信，否则打印日志（开发模式）。
     真实渠道发送失败时抛出 HTTPException(503)，由调用方回滚DB记录。
     """
+    # ── 调试模式：直接打印，不走真实渠道 ────────────────────────
+    _is_debug = os.getenv("GAOKAO_DEBUG", "0") not in {"", "0", "false", "off", "no"}
+    if _is_debug:
+        print(f"[DEV SMS] {phone}: {code}  (调试模式，未发送真实短信)")
+        return
+
     # ── 腾讯云短信（优先）──────────────────────────────────────
     tencent_secret_id  = os.getenv("TENCENT_SECRET_ID", "")
     tencent_secret_key = os.getenv("TENCENT_SECRET_KEY", "")

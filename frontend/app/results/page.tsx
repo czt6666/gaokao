@@ -18,6 +18,7 @@ type SchoolResult = {
   locked?: boolean;
   school_name: string;
   major_name: string;
+  major_remark?: string;
   city: string;
   province_school: string;
   tier: string;
@@ -97,7 +98,6 @@ type RecommendResult = {
 
 const FORM_KEY = "gaokao_form_v3";
 const COMPARE_KEY = "gaokao_compare";
-const ORDER_KEY = "gaokao_order";
 const HISTORY_KEY = "gaokao_query_history";
 
 function addToForm(item: SchoolResult, showToast?: (msg: string) => void) {
@@ -207,9 +207,10 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             {item.school_name}
           </Link>
 
-          {/* Major + city */}
+          {/* Major + city + remark */}
           <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginBottom: 6 }}>
             {item.major_name === "[院校最低分]" ? "院校整体录取" : item.major_name}
+            {item.major_remark && <span style={{ marginLeft: 6 }}>· {item.major_remark}</span>}
             {item.city && <span style={{ marginLeft: 6 }}>· {item.city}</span>}
           </div>
 
@@ -716,6 +717,35 @@ function ResultsContent() {
   const cCity = searchParams.get("c_city") || "";
   const cNature = searchParams.get("c_nature") || "";
   const cTier = searchParams.get("c_tier") || "";
+  // 特殊限制（默认排除所有特殊计划 = URL 中无该参数；空字符串 = 不排除任何限制）
+  const DEFAULT_SPECIAL_PLANS = [
+    "special:experiment", "special:national_special", "special:local_special",
+    "special:oriented", "special:free_teacher", "special:sino_foreign",
+  ];
+  const hasExcludeRestrictionsParam = searchParams.has("exclude_restrictions");
+  const excludeRestrictionsParam = searchParams.get("exclude_restrictions") || "";
+  const parsedRestrictions = hasExcludeRestrictionsParam
+    ? excludeRestrictionsParam.split(",").filter((v) => v)
+    : [];
+  // 性别限制解析
+  const genderExclude = parsedRestrictions.find((r) => r.startsWith("gender:")) || "";
+  const selectedGender = genderExclude === "gender:female_only" ? "male" : genderExclude === "gender:male_only" ? "female" : "";
+  // 特殊计划解析
+  const hasSpecialNone = parsedRestrictions.includes("special:none");
+  const selectedSpecialPlans = parsedRestrictions.filter((r) => r.startsWith("special:"));
+  const effectiveSpecialPlans = hasExcludeRestrictionsParam
+    ? (hasSpecialNone ? [] : selectedSpecialPlans)
+    : DEFAULT_SPECIAL_PLANS;
+  // 用于 banner 显示的合并列表
+  const selectedExcludeRestrictions = [
+    ...(genderExclude ? [genderExclude] : []),
+    ...effectiveSpecialPlans,
+  ];
+  // 从 URL 读取邀请码并存入 sessionStorage（兼容直接分享 results 链接）
+  const urlRef = searchParams.get("ref") || "";
+  if (urlRef) {
+    try { sessionStorage.setItem("gaokao_ref", urlRef); } catch {}
+  }
 
   const [data, setData] = useState<RecommendResult | null>(null);
   const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("stable");
@@ -732,6 +762,20 @@ function ResultsContent() {
   const [emailInput, setEmailInput] = useState("");
   const [lockedExpanded, setLockedExpanded] = useState(false);
 
+  // 批次类型筛选（从 URL 读取，默认全选 = URL 中无该参数）
+  const BATCH_OPTIONS = [
+    { value: "undergraduate", label: "本科" },
+    { value: "junior_college", label: "专科/高职" },
+    { value: "advance_batch", label: "提前批" },
+  ];
+  const batchFilterParam = searchParams.get("batch_filter") || "";
+  const selectedBatchTypes = batchFilterParam
+    ? batchFilterParam.split(",").filter((v) => v && BATCH_OPTIONS.some((b) => b.value === v))
+    : BATCH_OPTIONS.map((b) => b.value);
+  const hasBatchConstraint =
+    batchFilterParam.length > 0 &&
+    selectedBatchTypes.length < BATCH_OPTIONS.length;
+
   // 登录前把查询条件持久化，供登录后恢复（避免依赖 URL redirect）
   useEffect(() => {
     try {
@@ -740,28 +784,8 @@ function ResultsContent() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [province, rank, subject, examMode, fromMock, mockScore]);
 
-  // Per-query order_no: keyed by province+rank+subject so one payment can't unlock other queries
-  const queryOrderKey = `gaokao_order_${province}_${rank}_${subject}`;
-  const [orderNo, setOrderNo] = useState<string>(() => {
-    try {
-      // 1. URL param (from dashboard "我的订单" click / H5 pay redirect / cross-device share)
-      const fromUrl = typeof window !== "undefined"
-        ? new URL(window.location.href).searchParams.get("order_no") || ""
-        : "";
-      if (fromUrl) {
-        try {
-          localStorage.setItem(`gaokao_order_${province}_${rank}_${subject}`, fromUrl);
-          localStorage.setItem(ORDER_KEY, fromUrl);
-        } catch {}
-        return fromUrl;
-      }
-      // 2. Try per-query key (new model)
-      const perQuery = localStorage.getItem(`gaokao_order_${province}_${rank}_${subject}`);
-      if (perQuery) return perQuery;
-      // 3. Fall back to legacy global key (backward compat for users who already paid)
-      return localStorage.getItem(ORDER_KEY) || "";
-    } catch { return ""; }
-  });
+  // H5 支付跳回时 URL 可能带 ?paid=<order_no>，用于自动查单后刷新数据
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   function openPayModal(productType?: string) {
     setDefaultProductType(productType);
@@ -784,9 +808,8 @@ function ResultsContent() {
     track("export_click", { province, rankInput: Number(rank), eventData: { subject } });
     setExporting(true);
     try {
-      const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
       const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${orderParam}${examParam}`;
+      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${examParam}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
@@ -864,11 +887,8 @@ function ResultsContent() {
           if (res.ok) {
             const d = await res.json();
             if (d.status === "paid") {
-              try {
-                localStorage.setItem(queryOrderKey, paidOrderNo);
-                localStorage.setItem(ORDER_KEY, paidOrderNo);
-              } catch {}
-              setOrderNo(paidOrderNo);
+              // 支付成功，触发数据重新加载（后端会通过 JWT 识别付费状态）
+              setRefreshTrigger((n) => n + 1);
             }
           }
         } catch {}
@@ -926,18 +946,24 @@ function ResultsContent() {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000);
 
-    const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
     const constraintParam = (() => {
       const parts: string[] = [];
       if (cMajor) parts.push(`c_major=${encodeURIComponent(cMajor)}`);
       if (cCity) parts.push(`c_city=${encodeURIComponent(cCity)}`);
       if (cNature) parts.push(`c_nature=${encodeURIComponent(cNature)}`);
       if (cTier) parts.push(`c_tier=${encodeURIComponent(cTier)}`);
+      if (batchFilterParam) {
+        parts.push(`batch_filter=${encodeURIComponent(batchFilterParam)}`);
+      }
+      if (hasExcludeRestrictionsParam) {
+        parts.push(`exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}`);
+      }
       return parts.length ? `&${parts.join("&")}` : "";
     })();
     const authToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
+    const scoreParam = score ? `&score=${encodeURIComponent(score)}` : "";
     fetch(
-      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : ""}${orderParam}${constraintParam}`,
+      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : ""}${scoreParam}${constraintParam}`,
       {
         signal: controller.signal,
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
@@ -977,7 +1003,7 @@ function ResultsContent() {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [rank, province, subject, orderNo, cMajor, cCity, cNature, cTier]);
+  }, [rank, province, subject, refreshTrigger, cMajor, cCity, cNature, cTier, batchFilterParam, excludeRestrictionsParam]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -1204,7 +1230,7 @@ function ResultsContent() {
       </nav>
 
       {/* 已应用约束提示 */}
-      {(cMajor || cCity || cNature || cTier) && (
+      {(cMajor || cCity || cNature || cTier || hasBatchConstraint || selectedExcludeRestrictions.length > 0) && (
         <div style={{ background: "#EEF2FF", borderBottom: "1px solid #C7D2FE", padding: "10px 20px" }}>
           <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: "#1E3A8A" }}>
             <span style={{ fontWeight: 600 }}>已应用偏好约束：</span>
@@ -1212,8 +1238,18 @@ function ResultsContent() {
             {cCity && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>城市：{cCity}</span>}
             {cNature && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>性质：{cNature}</span>}
             {cTier && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>档次：{cTier}</span>}
+            {hasBatchConstraint && (
+              <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>
+                批次：{selectedBatchTypes.map((v) => BATCH_OPTIONS.find((b) => b.value === v)?.label).filter(Boolean).join("、")}
+              </span>
+            )}
+            {selectedExcludeRestrictions.length > 0 && (
+              <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>
+                已排除 {selectedExcludeRestrictions.length} 项专业限制
+              </span>
+            )}
             <button
-              onClick={() => router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}`)}
+              onClick={() => router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject)}&exclude_restrictions=`)}
               style={{ marginLeft: "auto", background: "none", border: "none", color: "#1E40AF", fontSize: 12, cursor: "pointer", textDecoration: "underline" }}
             >
               清除约束
@@ -1710,14 +1746,13 @@ function ResultsContent() {
       {showPayModal && (
         <PayModal
           onClose={() => setShowPayModal(false)}
-          onSuccess={(no) => {
-            // Store with per-query key so this order_no only unlocks this specific query
-            try { localStorage.setItem(queryOrderKey, no); } catch {}
-            setOrderNo(no);
+          onSuccess={() => {
             setShowPayModal(false);
             setToast("✅ 解锁成功！正在加载完整报告…");
             setTimeout(() => setToast(null), 4000);
             setLoading(true);
+            // 触发数据重新加载（后端通过 JWT 识别付费状态）
+            setRefreshTrigger((n) => n + 1);
           }}
           queryParams={{ province, rank: rank ? Number(rank) : undefined, subject, c_major: cMajor, c_city: cCity, c_nature: cNature, c_tier: cTier, mock_score: mockScore ? Number(mockScore) : undefined }}
           totalSchools={totalSchools}

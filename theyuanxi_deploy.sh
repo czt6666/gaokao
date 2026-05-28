@@ -1,11 +1,10 @@
 #!/bin/bash
-# 部署 www.theyuanxi.cn（后端 8000 / 前端 3000）
+# 部署 www.theyuanxi.cn（后端 5198 / 前端 5198）
 # 用法: bash theyuanxi_deploy.sh
 # 环境变量：本地维护 backend/.env.production 和 frontend/.env.production
 set -e
 
 SERVER="root@43.143.206.19"
-# SERVER="ubuntu@43.143.206.19"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOCAL_BACKEND="$SCRIPT_DIR/backend"
 LOCAL_FRONTEND="$SCRIPT_DIR/frontend"
@@ -18,16 +17,16 @@ echo "  袁希高报 · theyuanxi.cn 部署"
 echo "========================================"
 
 # ── 0. 同步环境变量（先传 .env，确保重启后新配置已生效）──
-echo ""
-echo "→ [0/4] 同步环境变量..."
-if [ -f "$LOCAL_BACKEND/.env" ]; then
-  echo "  同步 backend/.env → server:/app/backend/.env"
-  rsync -av --no-owner --no-group "$LOCAL_BACKEND/.env" "$SERVER:$REMOTE_BACKEND/.env"
-fi
-if [ -f "$LOCAL_FRONTEND/.env.production" ]; then
-  echo "  同步 frontend/.env.production → server:/app/frontend/.env.production"
-  rsync -av --no-owner --no-group "$LOCAL_FRONTEND/.env.production" "$SERVER:$REMOTE_FRONTEND/.env.production"
-fi
+# echo ""
+# echo "→ [0/4] 同步环境变量..."
+# if [ -f "$LOCAL_BACKEND/.env" ]; then
+#   echo "  同步 backend/.env → server:/app/backend/.env"
+#   rsync -av --no-owner --no-group "$LOCAL_BACKEND/.env" "$SERVER:$REMOTE_BACKEND/.env"
+# fi
+# if [ -f "$LOCAL_FRONTEND/.env.production" ]; then
+#   echo "  同步 frontend/.env.production → server:/app/frontend/.env.production"
+#   rsync -av --no-owner --no-group "$LOCAL_FRONTEND/.env.production" "$SERVER:$REMOTE_FRONTEND/.env.production"
+# fi
 
 # ── 1. 同步后端代码（不删除目标端文件；保留 .venv / 数据库）──
 echo ""

@@ -7,7 +7,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ||
   (typeof window !== "undefined" && window.location.hostname !== "localhost"
     ? "https://api.theyuanxi.cn"
-    : "http://localhost:8000");
+    : "http://localhost:5198");
 
 interface Source {
   title: string;

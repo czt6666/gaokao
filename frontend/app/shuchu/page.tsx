@@ -73,7 +73,7 @@ export default function ShuchuPage() {
         }}
       >
         这个页面嵌入的是 `SHUCHU` 原始前端。
-        它会请求 `http://localhost:8000`。
+        它会请求 `http://localhost:5198`。
         如果你看到“无法连接后端”，说明还需要把 `SHUCHU/backend` 启起来。
       </div>
 

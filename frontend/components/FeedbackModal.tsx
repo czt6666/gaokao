@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 interface FeedbackModalProps {
   onClose: () => void;

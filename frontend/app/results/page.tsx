@@ -7,7 +7,7 @@ import PayModal from "@/components/PayModal";
 import AuthNav from "@/components/AuthNav";
 import { track } from "@/lib/track";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 type ReasonSection = {
   title: string;

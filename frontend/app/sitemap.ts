@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 const BASE_URL = "https://www.theyuanxi.cn";
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 // 公开页面（允许搜索引擎收录）
 const staticRoutes: MetadataRoute.Sitemap = [

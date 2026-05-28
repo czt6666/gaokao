@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 const TIERS = ["", "985", "211", "双一流", "普通"];
 const PROVINCES = [

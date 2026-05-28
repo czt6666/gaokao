@@ -6,7 +6,7 @@ import { track } from "@/lib/track";
 import AuthNav from "@/components/AuthNav";
 import FeedbackModal from "@/components/FeedbackModal";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 const PROVINCES = [
   "安徽","北京","重庆","福建","甘肃","广东","广西","贵州","海南","河北",

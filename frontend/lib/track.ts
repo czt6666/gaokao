@@ -2,7 +2,7 @@
  * 行为埋点工具 — 封装 POST /api/track
  * 所有参数可选，失败静默（不影响主流程）
  */
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 type EventType =
   | "page_view"

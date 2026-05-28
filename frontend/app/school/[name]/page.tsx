@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import SchoolDetailClient from "./SchoolDetailClient";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 interface SchoolPageProps {
   params: Promise<{ name: string }>;

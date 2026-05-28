@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 const PRODUCTS = [
   { productType: "trial_report",  price: 9.9,  label: "试看报告",       desc: "解锁前3所学校的完整分析", highlight: false },
@@ -114,8 +114,11 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
     return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, []);
 
-  // 检测是否开启本地模拟支付
+  // 检测是否开启本地模拟支付（仅限 localhost / 127.x.x.x，防止线上泄漏）
   useEffect(() => {
+    const isLocalhost = typeof window !== "undefined" &&
+      (window.location.hostname === "localhost" || window.location.hostname.startsWith("127."));
+    if (!isLocalhost) return;
     fetch(`${API}/api/payment/config`)
       .then(async (r) => { if (r.ok) return r.json(); return null; })
       .then((d) => { if (d?.simulate) setSimulateMode(true); })

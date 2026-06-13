@@ -249,7 +249,7 @@ class Order(Base):
     c_city          = Column(String(20), default="")        # 用户筛选：城市
     c_nature        = Column(String(20), default="")        # 用户筛选：性质
     c_tier          = Column(String(20), default="")        # 用户筛选：档次
-    mock_score      = Column(Integer, nullable=True)        # 用户模考分数（分数模式下单时传入）
+    mock_score      = Column(Integer, nullable=True)        # 用户高考分数（分数模式下单时传入）
     commission_fen  = Column(Integer, default=0)            # 该订单产生的佣金（分）
 
     __table_args__ = (Index("ix_order_status_created", "status", "created_at"),)

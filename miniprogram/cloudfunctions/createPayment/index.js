@@ -52,9 +52,9 @@ function postJSON(path, body) {
 
 exports.main = async (event, context) => {
   const { OPENID } = cloud.getWXContext();
-  const { product_type, province, rank_input, subject } = event;
+  const { product_type, province, rank_input, subject, ref_code } = event;
 
-  console.log('[createPayment] openid:', OPENID, 'product:', product_type, 'subject:', subject);
+  console.log('[createPayment] openid:', OPENID, 'product:', product_type, 'subject:', subject, 'ref:', ref_code);
 
   if (!OPENID) {
     return { success: false, error: '无法获取用户身份' };
@@ -67,6 +67,7 @@ exports.main = async (event, context) => {
       province: province || '',
       rank_input: rank_input || 0,
       subject: subject || '',
+      ref_code: ref_code || '',
     });
 
     if (result.error) {

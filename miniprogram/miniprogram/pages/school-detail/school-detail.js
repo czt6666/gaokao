@@ -610,4 +610,14 @@ Page({
       path: `/pages/school-detail/school-detail?id=${school && school.id || ''}`,
     };
   },
+
+  onShareTimeline() {
+    const school = this.data.school;
+    const name = school && school.name ? school.name : '这所学校';
+    const id = school && school.id || '';
+    return {
+      title: `${name} · 袁希精选学校详情`,
+      query: id ? `id=${id}` : '',
+    };
+  },
 });

@@ -19,7 +19,7 @@
       <text class="info-label">共匹配</text>
       <text class="info-val">{{totalCount}} 所</text>
     </view>
-    <view wx:if="{{query.fromMock}}" class="mock-tag">模考估算</view>
+    <view wx:if="{{query.fromMock}}" class="mock-tag">高考估算</view>
   </view>
 
   <!-- 当前约束条件 -->
@@ -307,6 +307,13 @@
     <text class="confirm-title">{{confirmTitle}}</text>
     <text class="confirm-price">{{confirmPrice}}</text>
     <text class="confirm-desc">{{confirmDesc}}</text>
+    <!-- 邀请码输入 -->
+    <view class="refcode-wrap">
+      <text class="refcode-label">邀请码（选填）</text>
+      <input class="refcode-input" value="{{payRefCode}}" bindinput="onRefCodeInput" placeholder="{{boundRefCode ? '已绑定邀请码，可修改或清空' : '如有邀请码请填写'}}" placeholder-class="refcode-input-ph" />
+      <text wx:if="{{boundRefCode && payRefCode === boundRefCode}}" class="refcode-hint refcode-hint-bound">✅ 已绑定邀请码 {{boundRefCode}}</text>
+      <text wx:elif="{{payRefCode && (!boundRefCode || payRefCode !== boundRefCode)}}" class="refcode-hint">ℹ️ 使用邀请码 {{payRefCode}}</text>
+    </view>
     <view class="confirm-btns">
       <view class="confirm-btn confirm-cancel" bindtap="closePayConfirm">取消</view>
       <view class="confirm-btn confirm-ok" bindtap="onConfirmPay">确认支付</view>

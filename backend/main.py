@@ -652,7 +652,7 @@ def simulate(
     subject: str = Query(""),
     db: Session = Depends(get_db)
 ):
-    """考前模拟：将模考分数转换为预估位次区间"""
+    """考前模拟：将高考分数转换为预估位次区间"""
     try:
         return _simulate_inner(mock_score=mock_score, province=province, subject=subject, db=db)
     except Exception as e:

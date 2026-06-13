@@ -1,5 +1,6 @@
 <!-- pages/commission/commission.wxml -->
 <view class="page">
+
   <!-- 顶部卡片 -->
   <view class="header-card">
     <view class="title-row">
@@ -54,28 +55,53 @@
     <view class="modal-content" catchtap="stopBubble">
       <view class="modal-title">申请提现</view>
       <view class="modal-body">
-        <view class="modal-tip">
-          1. 添加客服微信：<text class="strong" bindtap="onCopyWechat">shuilukefu</text>（点击复制）
-        </view>
-        <view class="modal-tip">2. 备注您的用户 ID，审核通过后微信转账</view>
-        <view class="modal-balance">
+        <view class="modal-balance-row">
           <text class="modal-balance-label">可提现余额</text>
-          <text class="modal-balance-value">¥{{balanceYuan}}</text>
+          <text class="modal-balance-value green">¥{{balanceYuan}}</text>
+        </view>
+        <view class="modal-input-wrap">
+          <text class="modal-input-label">提现金额（最低 ¥100）</text>
+          <input
+            class="modal-input"
+            type="digit"
+            value="{{withdrawAmount}}"
+            bindinput="onWithdrawAmountInput"
+            placeholder="最多可提 ¥{{Math.floor(balanceFen/100)}}"
+            placeholder-class="modal-input-ph"
+          />
         </view>
         <text wx:if="{{withdrawMsg}}" class="modal-msg {{withdrawMsg.includes('成功') ? 'green' : 'red'}}">{{withdrawMsg}}</text>
+        <view class="modal-tip">
+          <text>1. 添加客服微信：<text class="strong" bindtap="onCopyWechat">shuilukefu</text>（点击复制）</text>
+          <text>2. 备注您的用户 ID，审核通过后微信转账</text>
+        </view>
       </view>
       <view class="modal-actions">
         <button
           class="modal-btn primary"
           bindtap="onConfirmWithdraw"
           loading="{{withdrawLoading}}"
-          disabled="{{withdrawLoading}}"
-        >确认申请</button>
+          disabled="{{withdrawLoading || balanceFen < 10000}}"
+        >{{withdrawLoading ? '提交中...' : '确认申请提现'}}</button>
         <button
           class="modal-btn ghost"
           bindtap="onCloseModal"
           disabled="{{withdrawLoading}}"
         >取消</button>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提现成功提示 -->
+  <view wx:if="{{showWithdrawSuccess}}" class="modal-mask" bindtap="onCloseSuccess">
+    <view class="modal-content" catchtap="stopBubble">
+      <view class="modal-title">申请成功</view>
+      <view class="modal-body">
+        <text class="success-amount">¥{{withdrawSuccessYuan}}</text>
+        <text class="modal-tip">提现申请已提交，请添加客服微信 shuilukefu 等待转账</text>
+      </view>
+      <view class="modal-actions">
+        <button class="modal-btn primary" bindtap="onCloseSuccess">知道了</button>
       </view>
     </view>
   </view>

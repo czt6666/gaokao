@@ -232,7 +232,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* ── 我的收益 ── */}
+        {/* ── 邀请收益 ── */}
         {commission && (
           <div style={{
             background: "linear-gradient(135deg, rgba(52,199,89,0.08) 0%, rgba(52,199,89,0.02) 100%)",
@@ -240,7 +240,7 @@ export default function DashboardPage() {
             borderRadius: 16, padding: "18px 20px", marginBottom: 16,
           }}>
             <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 12, display: "flex", alignItems: "center", gap: 6 }}>
-              <span>💰</span> 我的收益
+              <span>💰</span> 邀请收益
             </div>
             <div style={{ display: "flex", gap: 12, marginBottom: 14 }}>
               <div style={{ flex: 1, background: "rgba(255,255,255,0.5)", borderRadius: 12, padding: "12px", textAlign: "center" }}>

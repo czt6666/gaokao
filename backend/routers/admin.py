@@ -385,7 +385,7 @@ def export_orders_csv(status: str = Query(""), db: Session = Depends(get_db)):
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选性质", "筛选档次", "模考分数"])
+    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选性质", "筛选档次", "高考分数"])
     for o in orders:
         w.writerow([
             o.order_no, round(o.amount/100, 2), o.status, o.pay_method,

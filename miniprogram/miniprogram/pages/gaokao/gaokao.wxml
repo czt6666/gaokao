@@ -33,17 +33,17 @@ module.exports = {
       <view
         class="mode-btn {{mode==='score'?'mode-btn-active':''}}"
         bindtap="setMode" data-mode="score"
-      >模考 · 分数</view>
+      >高考 · 分数</view>
       <view
         class="mode-btn {{mode==='rank'?'mode-btn-active':''}}"
         bindtap="setMode" data-mode="rank"
       >已出分 · 位次</view>
     </view>
-    <text class="mode-hint">{{mode==='rank'?'高考出分后用位次查询，结果最精确':'输入模考分数，系统自动估算位次'}}</text>
+    <text class="mode-hint">{{mode==='rank'?'高考出分后用位次查询，结果最精确':'输入高考分数，系统自动估算位次'}}</text>
 
     <!-- 大数字输入 -->
     <view class="input-section">
-      <text class="input-label">{{mode==='rank'?'全省排名位次':'模考成绩（分）'}}</text>
+      <text class="input-label">{{mode==='rank'?'全省排名位次':'高考成绩（分）'}}</text>
       <view class="input-wrap">
         <input
           class="big-input"

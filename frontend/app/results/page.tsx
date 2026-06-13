@@ -1055,7 +1055,7 @@ function ResultsContent() {
           <div style={{ textAlign: "center", flex: 1, padding: "0 12px" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
               {mockScore
-                ? `模考 ${mockScore}分 · 估算 ${Number(rank).toLocaleString()}`
+                ? `高考 ${mockScore}分 · 估算 ${Number(rank).toLocaleString()}`
                 : `位次 ${Number(rank).toLocaleString()} · ${province}`}
             </div>
             {mockScore && (

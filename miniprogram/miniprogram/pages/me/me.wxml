@@ -1,0 +1,125 @@
+<!-- pages/me/me.wxml -->
+<!-- 艺圆智探 · 个人中心 — 与网页 dashboard 对齐 -->
+
+<view class="page">
+
+  <!-- ── 用户信息头部 ── -->
+  <view class="user-header">
+    <view class="user-avatar-wrap">
+      <image wx:if="{{avatar}}" class="user-avatar" src="{{avatar}}" mode="aspectFill" />
+      <view wx:else class="user-avatar user-avatar-default">👤</view>
+    </view>
+    <view class="user-info">
+      <text class="user-name">{{displayName}}</text>
+      <view class="user-status-row">
+        <text wx:if="{{isPaid && !isExpired}}" class="status-badge status-paid">✅ 报告已解锁</text>
+        <text wx:elif="{{isExpired}}" class="status-badge status-expired">❌ 会员已到期</text>
+        <text wx:else class="status-badge status-unpaid">⚠️ 尚未解锁报告</text>
+        <text wx:if="{{!isExpired && endDateStr}}" class="status-end">· 到期 {{endDateStr}}</text>
+      </view>
+      <view wx:if="{{isExpiringSoon && daysRemaining !== null}}" class="status-soon">
+        剩余 {{daysRemaining}} 天
+      </view>
+    </view>
+  </view>
+
+  <!-- ── 填报季会员入口（未开通时展示）── -->
+  <view wx:if="{{subscriptionType !== 'season_2026' && !isExpired}}" class="card season-card" bindtap="goSeasonPay">
+    <view class="season-left">
+      <text class="season-title">2026 填报季会员</text>
+      <text class="season-desc">即日起至2026年9月1日 · 无限次查询 · 位次微调随时重查</text>
+    </view>
+    <view class="season-right">
+      <text class="season-price">¥99</text>
+      <text class="season-btn">开通</text>
+    </view>
+  </view>
+
+  <!-- ── 我的收益 ── -->
+  <view wx:if="{{commission}}" class="card commission-card" bindtap="goCommission">
+    <view class="card-title-row">
+      <text class="card-title">💰 我的收益</text>
+      <text class="card-arrow">›</text>
+    </view>
+    <view class="commission-stats">
+      <view class="c-stat">
+        <text class="c-stat-value green">¥{{commission.balanceYuan}}</text>
+        <text class="c-stat-label">可提现</text>
+      </view>
+      <view class="c-stat-divider"></view>
+      <view class="c-stat">
+        <text class="c-stat-value">¥{{commission.pendingYuan}}</text>
+        <text class="c-stat-label">冻结中</text>
+      </view>
+      <view class="c-stat-divider"></view>
+      <view class="c-stat">
+        <text class="c-stat-value">¥{{commission.totalEarnedYuan}}</text>
+        <text class="c-stat-label">累计收益</text>
+      </view>
+    </view>
+    <view wx:if="{{commission.recordCount > 0}}" class="commission-tip">
+      最近有 {{commission.recordCount}} 笔收益记录 ›
+    </view>
+  </view>
+
+  <!-- ── 邀请好友 ── -->
+  <view wx:if="{{referralCode}}" class="card referral-card">
+    <view class="card-title-row">
+      <text class="card-title">🎁 邀请好友</text>
+    </view>
+    <text class="referral-desc">
+      朋友通过你的链接付费后，<text class="referral-highlight">你自动获得3天免费</text>——在最关键的高考季，白送一次重查机会。
+    </text>
+
+    <!-- 进度条 -->
+    <view class="referral-progress-wrap">
+      <view class="referral-progress-top">
+        <text class="rpt-left">已邀请 <text class="rpt-num">{{referralCount}}</text> 人付费</text>
+        <text class="rpt-right">
+          {{referralRewardDays >= 30 ? '✓ 已获得额外30天奖励' : '再邀 ' + (4 - referralCount) + ' 人 → 额外+30天'}}
+        </text>
+      </view>
+      <view class="referral-progress-track">
+        <view class="referral-progress-fill" style="width:{{milestonePct}}%"></view>
+      </view>
+      <view wx:if="{{rewardDays > 0}}" class="referral-progress-bonus">
+        ✓ 已累计获得 {{rewardDays}} 天奖励
+      </view>
+    </view>
+
+    <button class="ref-copy-btn {{refCopied ? 'ref-copied' : ''}}" bindtap="onCopyRef">
+      {{refCopied ? '✓ 已复制，发给朋友即可' : '复制专属邀请链接'}}
+    </button>
+  </view>
+
+  <!-- ── 快捷入口 ── -->
+  <view class="quick-section">
+    <view class="quick-item" bindtap="goReports">
+      <view class="quick-left">
+        <text class="quick-icon">📋</text>
+        <view class="quick-info">
+          <text class="quick-title">我的报告</text>
+          <text class="quick-sub">查看历史查询与下载PDF</text>
+        </view>
+      </view>
+      <text class="quick-arrow">›</text>
+    </view>
+
+    <view class="quick-item" bindtap="goForm">
+      <view class="quick-left">
+        <text class="quick-icon">📋</text>
+        <view class="quick-info">
+          <text class="quick-title">我的志愿表</text>
+          <text class="quick-sub">{{formCount > 0 ? '已保存 ' + formCount + ' 个志愿' : '查询后可添加志愿'}}</text>
+        </view>
+      </view>
+      <text class="quick-arrow">›</text>
+    </view>
+  </view>
+
+  <!-- ── 退出登录 ── -->
+  <view class="logout-wrap">
+    <button class="logout-btn" bindtap="logout">退出登录</button>
+  </view>
+
+</view>

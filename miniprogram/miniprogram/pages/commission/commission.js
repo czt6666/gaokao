@@ -1,5 +1,6 @@
 // pages/commission/commission.js
 // 艺圆智探 · 我的收益 — 佣金余额、明细与提现
+// v2 — 与网页 dashboard 对齐：支持自定义提现金额
 
 Page({
   data: {
@@ -15,16 +16,17 @@ Page({
     showWithdrawModal: false,
     withdrawLoading: false,
     withdrawMsg: '',
+    withdrawAmount: '',
+    showWithdrawSuccess: false,
+    withdrawSuccessYuan: 0,
   },
 
   onLoad() {
     this.loadCommission();
-    this.loadWithdrawals();
   },
 
   onShow() {
     this.loadCommission();
-    this.loadWithdrawals();
   },
 
   loadCommission() {
@@ -57,21 +59,18 @@ Page({
     });
   },
 
-  loadWithdrawals() {
-    const token = wx.getStorageSync('auth_token');
-    if (!token) return;
-    // 复用已有的 getUserStatus 或其他方式？目前 commission API 暂无 withdrawals 独立列表，
-    // 这里直接调用 getCommission 没有 withdrawals，暂时留空，后续可扩展
-    this.setData({ withdrawals: [] });
-  },
-
   onWithdraw() {
     const { balanceFen } = this.data;
     if (balanceFen < 10000) {
       wx.showToast({ title: '满100元才可提现', icon: 'none' });
       return;
     }
-    this.setData({ showWithdrawModal: true, withdrawMsg: '' });
+    this.setData({
+      showWithdrawModal: true,
+      withdrawMsg: '',
+      withdrawAmount: '',
+      showWithdrawSuccess: false,
+    });
   },
 
   onCloseModal() {
@@ -79,28 +78,44 @@ Page({
     this.setData({ showWithdrawModal: false });
   },
 
+  onWithdrawAmountInput(e) {
+    this.setData({ withdrawAmount: e.detail.value || '' });
+  },
+
   onConfirmWithdraw() {
-    const { balanceFen, withdrawLoading } = this.data;
+    const { balanceFen, withdrawLoading, withdrawAmount } = this.data;
     if (withdrawLoading) return;
+
+    const yuan = parseFloat(withdrawAmount);
+    if (!yuan || yuan < 100) {
+      this.setData({ withdrawMsg: '提现金额至少为 ¥100' });
+      return;
+    }
+    const fen = Math.round(yuan * 100);
+    if (fen > balanceFen) {
+      this.setData({ withdrawMsg: '提现金额不能超过可提现余额' });
+      return;
+    }
+
     const token = wx.getStorageSync('auth_token');
     if (!token) return;
 
     this.setData({ withdrawLoading: true, withdrawMsg: '' });
     wx.cloud.callFunction({
       name: 'gaokaoQuery',
-      data: { type: 'withdrawCommission', auth_token: token, amount_fen: balanceFen },
+      data: { type: 'withdrawCommission', auth_token: token, amount_fen: fen },
     }).then(res => {
       const d = res.result;
       if (d && d.ok) {
+        const newBalanceFen = d.balance_fen || 0;
         this.setData({
-          withdrawMsg: '申请成功，请添加客服微信等待转账',
-          balanceFen: d.balance_fen || 0,
-          balanceYuan: ((d.balance_fen || 0) / 100).toFixed(2),
+          showWithdrawModal: false,
+          showWithdrawSuccess: true,
+          withdrawSuccessYuan: yuan,
+          balanceFen: newBalanceFen,
+          balanceYuan: (newBalanceFen / 100).toFixed(2),
         });
-        setTimeout(() => {
-          this.setData({ showWithdrawModal: false });
-          this.loadCommission();
-        }, 1500);
+        this.loadCommission();
       } else {
         this.setData({ withdrawMsg: d.error || d.detail || '申请失败' });
       }
@@ -109,6 +124,10 @@ Page({
     }).finally(() => {
       this.setData({ withdrawLoading: false });
     });
+  },
+
+  onCloseSuccess() {
+    this.setData({ showWithdrawSuccess: false });
   },
 
   onCopyWechat() {

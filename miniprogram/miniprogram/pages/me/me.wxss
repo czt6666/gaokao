@@ -1,0 +1,308 @@
+/* pages/me/me.wxss */
+
+page { background: #F5F5F7; min-height: 100vh; }
+.page { padding: 0 24rpx 60rpx; }
+
+/* ── 用户信息头部 ── */
+.user-header {
+  display: flex;
+  align-items: center;
+  gap: 24rpx;
+  padding: 40rpx 0 32rpx;
+}
+.user-avatar-wrap {
+  flex-shrink: 0;
+}
+.user-avatar {
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: #E5E5EA;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 44rpx;
+}
+.user-avatar-default {
+  background: #F2F2F7;
+  border: 1.5rpx solid #E5E5EA;
+}
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+.user-name {
+  font-size: 32rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+.user-status-row {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  flex-wrap: wrap;
+}
+.status-badge {
+  font-size: 24rpx;
+}
+.status-paid { color: #34C759; }
+.status-expired { color: #FF3B30; }
+.status-unpaid { color: #FF9500; }
+.status-end {
+  font-size: 22rpx;
+  color: #86868B;
+}
+.status-soon {
+  display: inline-block;
+  background: rgba(255,149,0,0.12);
+  color: #B45309;
+  padding: 2rpx 14rpx;
+  border-radius: 980rpx;
+  font-size: 20rpx;
+  font-weight: 600;
+  margin-top: 4rpx;
+}
+
+/* ── 卡片通用 ── */
+.card {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 20rpx;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.05);
+}
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+.card-title {
+  font-size: 30rpx;
+  font-weight: 700;
+  color: #1D1D1F;
+}
+.card-arrow {
+  font-size: 32rpx;
+  color: #C7C7CC;
+}
+
+/* ── 季会员卡片 ── */
+.season-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, rgba(0,56,179,0.06) 0%, rgba(0,56,179,0.02) 100%);
+  border: 1.5rpx solid rgba(0,56,179,0.18);
+}
+.season-left {
+  flex: 1;
+  min-width: 0;
+}
+.season-title {
+  display: block;
+  font-size: 28rpx;
+  font-weight: 700;
+  color: #0038B3;
+  margin-bottom: 8rpx;
+}
+.season-desc {
+  display: block;
+  font-size: 22rpx;
+  color: #6E6E73;
+  line-height: 1.5;
+}
+.season-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-left: 20rpx;
+  flex-shrink: 0;
+}
+.season-price {
+  font-size: 40rpx;
+  font-weight: 800;
+  color: #0038B3;
+}
+.season-btn {
+  font-size: 24rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #0038B3;
+  padding: 8rpx 28rpx;
+  border-radius: 980rpx;
+  margin-top: 8rpx;
+}
+
+/* ── 收益卡片 ── */
+.commission-card:active { opacity: 0.92; }
+.commission-stats {
+  display: flex;
+  gap: 0;
+  margin-bottom: 16rpx;
+}
+.c-stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 16rpx 0;
+  background: #F5F5F7;
+  border-radius: 16rpx;
+  margin: 0 6rpx;
+}
+.c-stat:first-child { margin-left: 0; }
+.c-stat:last-child { margin-right: 0; }
+.c-stat-value {
+  font-size: 34rpx;
+  font-weight: 800;
+  color: #1D1D1F;
+}
+.c-stat-value.green { color: #34C759; }
+.c-stat-label {
+  font-size: 20rpx;
+  color: #86868B;
+}
+.commission-tip {
+  font-size: 22rpx;
+  color: #86868B;
+  text-align: center;
+  padding-top: 8rpx;
+  border-top: 1rpx solid #F2F2F7;
+}
+
+/* ── 邀请好友 ── */
+.referral-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #6E6E73;
+  line-height: 1.6;
+  margin-bottom: 20rpx;
+}
+.referral-highlight {
+  color: #0071E3;
+  font-weight: 600;
+}
+.referral-progress-wrap {
+  margin-bottom: 20rpx;
+}
+.referral-progress-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10rpx;
+}
+.rpt-left {
+  font-size: 22rpx;
+  color: #86868B;
+}
+.rpt-num {
+  color: #1D1D1F;
+  font-weight: 700;
+}
+.rpt-right {
+  font-size: 22rpx;
+  color: #0071E3;
+  font-weight: 600;
+}
+.referral-progress-track {
+  height: 10rpx;
+  background: #E5E5EA;
+  border-radius: 980rpx;
+  overflow: hidden;
+}
+.referral-progress-fill {
+  height: 100%;
+  background: #0071E3;
+  border-radius: 980rpx;
+  transition: width 0.5s;
+}
+.referral-progress-bonus {
+  font-size: 20rpx;
+  color: #34C759;
+  margin-top: 8rpx;
+  font-weight: 500;
+}
+.ref-copy-btn {
+  width: 100%;
+  padding: 22rpx 0;
+  border-radius: 20rpx;
+  font-size: 26rpx;
+  font-weight: 600;
+  color: #FFFFFF;
+  background: #07C160;
+  border: none;
+  text-align: center;
+  line-height: 1;
+}
+.ref-copy-btn::after { border: none; }
+.ref-copy-btn:active { opacity: 0.9; }
+.ref-copied {
+  background: #34C759;
+}
+
+/* ── 快捷入口 ── */
+.quick-section {
+  background: #FFFFFF;
+  border-radius: 24rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.05);
+  margin-bottom: 20rpx;
+}
+.quick-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 28rpx;
+  border-bottom: 1rpx solid #F2F2F7;
+}
+.quick-item:last-child { border-bottom: none; }
+.quick-item:active { background: #F9F9FB; }
+.quick-left {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+.quick-icon {
+  font-size: 40rpx;
+  line-height: 1;
+}
+.quick-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4rpx;
+}
+.quick-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: #1D1D1F;
+}
+.quick-sub {
+  font-size: 22rpx;
+  color: #86868B;
+}
+.quick-arrow {
+  font-size: 32rpx;
+  color: #C7C7CC;
+}
+
+/* ── 退出登录 ── */
+.logout-wrap {
+  margin-top: 12rpx;
+}
+.logout-btn {
+  width: 100%;
+  padding: 24rpx 0;
+  background: #FFFFFF;
+  color: #AEAEB2;
+  font-size: 26rpx;
+  border-radius: 24rpx;
+  border: none;
+  text-align: center;
+  box-shadow: 0 2rpx 16rpx rgba(0,0,0,0.05);
+  line-height: 1;
+}
+.logout-btn::after { border: none; }
+.logout-btn:active { background: #F9F9FB; }

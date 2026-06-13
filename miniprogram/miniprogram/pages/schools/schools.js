@@ -119,6 +119,20 @@ Page({
     this._loadUSApiSchools();
   },
 
+  onShareAppMessage() {
+    return {
+      title: '美国大学数据库 · 录取率、学费、SAT一键查',
+      path: '/pages/schools/schools',
+    };
+  },
+
+  onShareTimeline() {
+    return {
+      title: '美国大学数据库 · 录取率、学费、SAT一键查',
+      query: '',
+    };
+  },
+
   onShow() {
     // 接收首页通过 globalData 传递的筛选条件
     const app = getApp();

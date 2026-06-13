@@ -12,6 +12,8 @@
     "pages/admin-detail/admin-detail",
     "pages/booking/booking",
     "pages/profile/profile",
+    "pages/me/me",
+    "pages/commission/commission",
     "pages/gaokao-feedback/gaokao-feedback",
     "pages/feedback/feedback",
     "pages/my-reports/my-reports",
@@ -40,10 +42,10 @@
         "selectedIconPath": "images/tab-growth-active.png"
       },
       {
-        "pagePath": "pages/my-reports/my-reports",
-        "text": "我的报告",
-        "iconPath": "images/tab-school.png",
-        "selectedIconPath": "images/tab-school-active.png"
+        "pagePath": "pages/me/me",
+        "text": "我的",
+        "iconPath": "images/tab-yuanxi.png",
+        "selectedIconPath": "images/tab-yuanxi-active.png"
       }
     ]
   },

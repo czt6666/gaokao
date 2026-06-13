@@ -105,7 +105,7 @@ def _detect_actions(messages: List[Dict]) -> List[Dict]:
 
     # 意图：填写分数 / 使用指引
     if re.search(r'如何|怎么用|开始|填写|输入分数|填分|我的分数|填报志愿|怎么填', user_msg):
-        actions.append({"label": "填写分数", "url": "/#query-form", "icon": "📝", "desc": "输入位次或模考分获取推荐"})
+        actions.append({"label": "填写分数", "url": "/#query-form", "icon": "📝", "desc": "输入位次或高考分获取推荐"})
 
     # 意图：推荐结果 / 查询可报学校（宽泛匹配）
     if re.search(r'推荐|能上|可以报|可以去|能去|去哪|冲稳保|志愿|什么学校|哪些学校|哪个学校|查推荐|看推荐|适合报|适合我|被低估|冷门窗口|冷门高校|隐藏宝藏', user_msg):

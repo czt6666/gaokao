@@ -67,7 +67,7 @@ class CreateOrderRequest(BaseModel):
     c_city: str = ""             # 用户筛选：城市
     c_nature: str = ""           # 用户筛选：性质
     c_tier: str = ""             # 用户筛选：档次
-    mock_score: int = 0          # 用户模考分数
+    mock_score: int = 0          # 用户高考分数
 
 
 @router.post("/create")
@@ -141,11 +141,12 @@ class CreateJSAPIRequest(BaseModel):
     province: str = ""
     rank_input: int = 0
     subject: str = ""    # 选科，绑定单次查询
+    ref_code: str = ""   # 邀请码（支付时传入，用于奖励邀请人）
     c_major: str = ""    # 用户筛选：专业
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
-    mock_score: int = 0  # 用户模考分数
+    mock_score: int = 0  # 用户高考分数
 
 
 @router.post("/wechat/jsapi")
@@ -176,6 +177,7 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
         rank_input=req.rank_input or None,
         subject=req.subject,
         ip=request.client.host if request.client else "",
+        ref_code=req.ref_code or "",
         c_major=req.c_major or "",
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
@@ -210,7 +212,7 @@ class CreateH5Request(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
-    mock_score: int = 0  # 用户模考分数
+    mock_score: int = 0  # 用户高考分数
 
 
 @router.post("/wechat/h5")
@@ -309,7 +311,7 @@ class CreateJSAPIWebRequest(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
-    mock_score: int = 0  # 用户模考分数
+    mock_score: int = 0  # 用户高考分数
 
 
 @router.post("/wechat/jsapi_web")

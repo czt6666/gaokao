@@ -1526,8 +1526,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         # 若提供了 user_score，优先按「去年录取分 - 考生分」的绝对差分桶，
         # 避免位次非线性导致 450 分考生被推荐 550 分学校。
         #   冲：高 10~25 分      稳：±10 分          保：低 10~25 分
-        # 未提供 user_score 时回退到传统的 gap_rate（位次百分比）分桶。
-        _gap_rate = (avg_rank - rank) / rank if rank > 0 else 0
+        # 未提供 user_score 时，用「去年实际位次 vs 考生位次」直接分桶，
+        # 不再使用 avg_rank 计算的 gap_rate（高位次考生会被误杀）。
         _score_diff = None
         _use_score_bucket = False
 
@@ -1539,23 +1539,16 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 _scan["skip_rank_window"] += 1
                 continue
         else:
-            # 传统位次分桶（无 user_score 时回退）
-            if rank <= 2000:
-                if _gap_rate < -0.80:
-                    _scan["skip_rank_window"] += 1
-                    continue
-            else:
-                if _gap_rate < -0.20 or _gap_rate > 0.40:
+            # 位次模式：用去年实际位次做硬过滤，去掉极端不匹配的学校
+            if _last_year_min_rank > 0 and rank > 0:
+                _rank_ratio = _last_year_min_rank / rank
+                # 学校位次比考生好 3 倍以上（太难）或差 2.5 倍以上（太水）→ 跳过
+                if _rank_ratio < 0.30 or _rank_ratio > 2.5:
                     _scan["skip_rank_window"] += 1
                     continue
 
-        # 安全网：基于去年实际位次再做一次硬过滤
-        # 防止贝叶斯平滑把专科/二段项目从 gap_rate=0.9 拉到 0.3 进入推荐列表。
-        if _last_year_min_rank > 0 and rank > 0:
-            _last_year_gap_rate = (_last_year_min_rank - rank) / rank
-            if _last_year_gap_rate > 0.55:
-                _scan["skip_last_year_too_easy"] += 1
-                continue
+        # 删除旧的安全网（已被上面的 last_year_min_rank 过滤覆盖）
+        # 原逻辑：基于 avg_rank 的 gap_rate 做二次过滤，已废弃
 
         # 展示名称清理：CDN 校级占位行转为对用户友好的名称
         _display_major = major_name
@@ -1608,11 +1601,11 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             ),
             "opportunity_score": _opp_score,
             "opportunity_signals": _opp_signals,
-            "gap_rate": round(_gap_rate, 4),   # (avg_school_rank - student_rank) / student_rank
+            "gap_rate": round((_last_year_min_rank - rank) / rank, 4) if _last_year_min_rank > 0 and rank > 0 else 0,  # 兼容字段，现已用 last_year_min_rank 分桶
             "score_diff": _score_diff,          # last_year_min_score - user_score（有 user_score 时注入）
             "surge_label": (
-                "大冲" if _gap_rate < -0.15      # 学校难15~20%
-                else "小冲" if _gap_rate < -0.10  # 学校难10~15%
+                "大冲" if _last_year_min_rank > 0 and _last_year_min_rank < rank * 0.75      # 学校难25%+
+                else "小冲" if _last_year_min_rank > 0 and _last_year_min_rank < rank * 0.85  # 学校难15%+
                 else ""
             ),
             "reason": "",  # filled after result dict is built
@@ -1688,23 +1681,20 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # ─────────────────────────────────────────────────────────────────────────────────
     # 若提供了 user_score 且学校有去年录取分，优先按「分数差」分桶：
     #   冲：高 10~25 分      稳：±10 分          保：低 10~25 分
-    # 否则回退到传统 gap_rate（位次百分比）分桶。
+    # 否则按「最近一年实际位次 vs 考生位次」分桶。
     if user_score:
         # 分数差分桶：每个 result 已在构建时注入 score_diff
         surge  = [r for r in results if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25]
         stable = [r for r in results if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10]
         safe   = [r for r in results if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10]
     else:
-        # 传统位次分桶（gap_rate = (avg_school_rank - student_rank) / student_rank）
-        # 冲：[-0.20, -0.10)  学校比学生难10~20%
-        # 稳：[-0.10, +0.10]  学校与学生位次相近±10%
-        # 保：(+0.10, +0.40]  学校明显容易
-        # 【高位次特殊处理】rank≤2000 时过滤阶段允许 gap_rate 低至 -0.80，
-        # 分桶阶段同步把 [-0.80, -0.20) 也归入 surge，避免保留但不入桶。
-        _SURGE_LO = -0.80 if rank <= 2000 else -0.20
-        surge  = [r for r in results if _SURGE_LO <= r["gap_rate"] < -0.10]
-        stable = [r for r in results if -0.10 <= r["gap_rate"] <= 0.10]
-        safe   = [r for r in results if  0.10 <  r["gap_rate"] <= 0.40]
+        # 位次分桶：完全看最近一年实际位次 vs 考生位次
+        # 学校位次 < 考生位次*0.85 → 学校更难 → 冲
+        # 考生位次*0.85 ≤ 学校位次 ≤ 考生位次*1.15 → 稳
+        # 学校位次 > 考生位次*1.15 → 保
+        surge  = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < rank * 0.85]
+        stable = [r for r in results if r["last_year_min_rank"] > 0 and rank * 0.85 <= r["last_year_min_rank"] <= rank * 1.15]
+        safe   = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > rank * 1.15]
 
     # 每所学校各桶独立计数（原来跨桶共享导致某桶学校不足）
     _SCHOOL_CAP = 5
@@ -1725,9 +1715,9 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     safe_list   = _capped_pick(sorted(safe,   key=_safe_sort),   25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
 
-    # 冷门宝藏：从冲+稳区（gap_rate ≤ 0.10）提取，保区宝藏价值低不展示
+    # 冷门宝藏：从稳区提取（last_year_min_rank 在考生位次 ±15% 以内），保区宝藏价值低不展示
     gems_list = sorted(
-        [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
+        [r for r in combined_96 if r["is_hidden_gem"] and r["last_year_min_rank"] > 0 and r["last_year_min_rank"] <= rank * 1.15],
         key=lambda x: -(x["gem_score"] * 0.55 + x["quality_score"] * 0.30 + _opp_n(x) * 100 * 0.15)
     )
 
@@ -1808,7 +1798,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if ph is not None and ph < p:
             r["prob_high"] = p
 
-    # 7d. 惩罚后重新分桶（按 user_score 或 gap_rate 重排）
+    # 7d. 惩罚后重新分桶（按 user_score 或 last_year_min_rank 重排）
     if user_score:
         surge_list  = _capped_pick(
             sorted([r for r in display_list if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25], key=_surge_sort),
@@ -1821,13 +1811,13 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             25, defaultdict(int))
     else:
         surge_list  = _capped_pick(
-            sorted([r for r in display_list if _SURGE_LO <= r["gap_rate"] < -0.10], key=_surge_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < rank * 0.85], key=_surge_sort),
             25, defaultdict(int))
         stable_list = _capped_pick(
-            sorted([r for r in display_list if -0.10 <= r["gap_rate"] <= 0.10],  key=_stable_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and rank * 0.85 <= r["last_year_min_rank"] <= rank * 1.15],  key=_stable_sort),
             46, defaultdict(int))
         safe_list   = _capped_pick(
-            sorted([r for r in display_list if  0.10 <  r["gap_rate"] <= 0.40],  key=_safe_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > rank * 1.15],  key=_safe_sort),
             25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
 
@@ -1840,7 +1830,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if user_score:
             _fallback = sorted(results, key=lambda x: abs(x.get("score_diff") or 999))[:30]
         else:
-            _fallback = sorted(results, key=lambda x: abs(x["gap_rate"]))[:30]
+            _fallback = sorted(results, key=lambda x: abs((x["last_year_min_rank"] / rank) - 1) if x["last_year_min_rank"] > 0 and rank > 0 else 999)[:30]
         for _fb in _fallback:
             _fb["suggested_action"] = "参考"
         safe_list   = _fallback
@@ -1852,7 +1842,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if user_score:
             _extras_sorted = sorted(_extras, key=lambda x: abs(x.get("score_diff") or 999))
         else:
-            _extras_sorted = sorted(_extras, key=lambda x: abs(x["gap_rate"]))
+            _extras_sorted = sorted(_extras, key=lambda x: abs((x["last_year_min_rank"] / rank) - 1) if x["last_year_min_rank"] > 0 and rank > 0 else 999)
         _need = 30 - len(combined_96)
         for _ex in _extras_sorted[:_need]:
             _ex["suggested_action"] = "参考"
@@ -1872,7 +1862,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         _p8_note = f"不足30条→补齐{_need}条标「参考」"
 
     gems_list = sorted(
-        [r for r in combined_96 if r["is_hidden_gem"] and r["gap_rate"] <= 0.10],
+        [r for r in combined_96 if r["is_hidden_gem"] and r["last_year_min_rank"] > 0 and r["last_year_min_rank"] <= rank * 1.15],
         key=lambda x: (-(x["gem_score"]*0.55 + x["quality_score"]*0.30 + _opp_n(x)*100*0.15),
                        x.get("school_name",""), x.get("major_name",""))
     )

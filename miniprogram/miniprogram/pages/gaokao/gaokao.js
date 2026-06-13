@@ -616,7 +616,7 @@ Page({
 
         wx.cloud.callFunction({
             name: "gaokaoQuery",
-            data: { type: "recommend", rank, province, subject, exam_mode: examMode, ...constraints },
+            data: { type: "recommend", rank, province, subject, exam_mode: examMode, score: (extra && extra.mockScore) ? extra.mockScore : undefined, ...constraints },
             success: (res) => {
                 if (this._recommendTimer) {
                     clearTimeout(this._recommendTimer);

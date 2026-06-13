@@ -247,6 +247,7 @@ exports.main = async (event, context) => {
       if (!rank || !province) return { success: false, error: '缺少 rank/province' };
       const orderParam = order_no ? `&order_no=${encodeURIComponent(order_no)}` : '';
       let path = `/api/recommend?rank=${encodeURIComponent(String(rank))}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subject || '')}${orderParam}`;
+      if (event.score) path += `&score=${encodeURIComponent(String(event.score))}`;
       path = appendConstraints(path, event);
       const raw  = await fetchJSON(path);
       const trimList = (arr) => (arr || []).map(trimSchool);

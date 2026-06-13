@@ -51,8 +51,8 @@ _ALLOWED_ORIGINS = [
     "https://theyuanxi.cn",
     "https://www.theyuanxi.cn",
     "https://mega.theyuanxi.cn",
-    "http://localhost:5198",
-    "http://127.0.0.1:5198",
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 # 从环境变量动态追加（支持域名切换无需改代码）
 if _SITE_URL and _SITE_URL not in _ALLOWED_ORIGINS:
@@ -676,7 +676,7 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
         FROM admission_records
         WHERE province = :prov
           AND min_score > 0 AND min_rank > 0
-          AND year >= 2022
+          AND year >= 2021
         GROUP BY min_score
         HAVING COUNT(*) >= 1
         ORDER BY min_score DESC

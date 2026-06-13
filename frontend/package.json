@@ -6,9 +6,9 @@
     "onlyBuiltDependencies": ["sharp", "unrs-resolver"]
   },
   "scripts": {
-    "dev": "next dev -p 5198",
+    "dev": "next dev",
     "build": "next build",
-    "start": "next start -p 5198",
+    "start": "next start",
     "lint": "eslint"
   },
   "dependencies": {

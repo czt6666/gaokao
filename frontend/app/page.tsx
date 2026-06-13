@@ -143,7 +143,7 @@ export default function Home() {
   const [cCityLevels, setCCityLevels] = useState<string[]>([]);
   const [cNature, setCNature] = useState<string[]>([]);
   const [cTiers, setCTiers] = useState<string[]>([]);
-  const [cBatchTypes, setCBatchTypes] = useState<string[]>(BATCH_OPTIONS.map(b => b.value));
+  const [cBatchTypes, setCBatchTypes] = useState<string[]>([]);
   const [cGender, setCGender] = useState<string>("");
   const [cSpecialPlans, setCSpecialPlans] = useState<string[]>([]);
 
@@ -181,7 +181,7 @@ export default function Home() {
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
         if (c.cBatchTypes !== undefined) {
           const validBatch = (c.cBatchTypes as string[]).filter(v => BATCH_OPTIONS.some(b => b.value === v));
-          setCBatchTypes(validBatch.length ? validBatch : BATCH_OPTIONS.map(b => b.value));
+          setCBatchTypes(validBatch);
         }
         // 兼容旧格式 cExcludeRestrictions → 提取性别和特殊计划
         if (c.cGender !== undefined) setCGender(c.cGender);
@@ -729,7 +729,7 @@ export default function Home() {
                       onKeyDown={(e) => { if (e.key === "Enter") addMajorTag(); }}
                       placeholder="输入关键词，如：计算机"
                       className="apple-input"
-                      style={{ flex: 1, fontSize: 14, padding: "10px 12px", border: "1.5px solid var(--color-separator)" }}
+                      style={{ flex: 1, fontSize: 14, padding: "10px 12px", border: "1.5px solid var(--color-accent)" }}
                     />
                     <button
                       onClick={addMajorTag}
@@ -876,9 +876,9 @@ export default function Home() {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>批次类型</span>
-                      {cBatchTypes.length < BATCH_OPTIONS.length ? (
+                      {cBatchTypes.length > 0 ? (
                         <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
-                          已选{cBatchTypes.length}/{BATCH_OPTIONS.length}
+                          {BATCH_OPTIONS.find(b => b.value === cBatchTypes[0])?.label}
                         </span>
                       ) : null}
                     </div>
@@ -890,7 +890,7 @@ export default function Home() {
                         {BATCH_OPTIONS.map(b => {
                           const active = cBatchTypes.includes(b.value);
                           return (
-                            <button key={b.value} onClick={() => setCBatchTypes(prev => active ? prev.filter(x => x !== b.value) : [...prev, b.value])} style={{
+                            <button key={b.value} onClick={() => setCBatchTypes(prev => active ? [] : [b.value])} style={{
                               padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
                               border: active ? "none" : "1px solid var(--color-separator)",
                               background: active ? "var(--color-navy)" : "var(--color-bg)",

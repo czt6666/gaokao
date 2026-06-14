@@ -51,8 +51,8 @@ _ALLOWED_ORIGINS = [
     "https://theyuanxi.cn",
     "https://www.theyuanxi.cn",
     "https://mega.theyuanxi.cn",
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
+    "http://localhost:5198",
+    "http://127.0.0.1:5198",
 ]
 # 从环境变量动态追加（支持域名切换无需改代码）
 if _SITE_URL and _SITE_URL not in _ALLOWED_ORIGINS:

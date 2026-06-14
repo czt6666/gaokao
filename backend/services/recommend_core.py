@@ -1029,7 +1029,8 @@ def _build_recommend_data(
             sany  = (row[9]  or "").strip()
             if smust or sany:
                 key = (s_name, m_name)
-                if key not in _latest_subj or year > _latest_subj[key][0]:
+                # 只使用2024+新高考选科标记，避免老高考文理数据混入
+                if year >= 2024 and (key not in _latest_subj or year > _latest_subj[key][0]):
                     _latest_subj[key] = (year, {"must": smust, "any_of": sany})
         for key, (_, info) in _latest_subj.items():
             major_subject_cache[key] = info
@@ -1374,7 +1375,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
 
     # 5. 遍历所有专业组合，计算推荐结果
     results = []
-    _scan = {"skip_subject": 0, "skip_avg_rank_0": 0, "skip_rank_window": 0, "skip_last_year_too_easy": 0, "kept": 0}
+    _scan = {"skip_subject": 0, "skip_avg_rank_0": 0, "skip_rank_window": 0, "skip_last_year_too_easy": 0, "skip_no_2025_data": 0, "kept": 0}
     for (school_name, major_name, batch), records in grouped.items():
 
         # 选科过滤（使用预加载缓存，O(1) 查询）
@@ -1389,14 +1390,13 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                                        school_prior_rank=_school_prior_rank.get(school_name, 0))
 
         # 去年（基础集中年份最新、且有录取位次的一条）最低分；与 predict_admission 相同的基础记录集
-        _base_recs = sorted(
-            [r for r in records if (r.get("min_rank") or 0) > 0],
-            key=lambda r: r["year"], reverse=True
-        )[:5]
-        _latest_ms = (_base_recs[0].get("min_score") or 0) if _base_recs else 0
-        _last_year_min_score = round(float(_latest_ms)) if _latest_ms > 0 else 0
-        _latest_mr = (_base_recs[0].get("min_rank") or 0) if _base_recs else 0
-        _last_year_min_rank = round(float(_latest_mr)) if _latest_mr > 0 else 0
+        # 强制只取 2025 年数据，避免老高考文理数据混入展示
+        _2025_recs = [r for r in records if (r.get("min_rank") or 0) > 0 and r.get("year") == 2025]
+        if not _2025_recs:
+            _scan["skip_no_2025_data"] += 1
+            continue
+        _last_year_min_score = round(float(_2025_recs[0].get("min_score") or 0))
+        _last_year_min_rank = round(float(_2025_recs[0].get("min_rank") or 0))
 
         # 从真实学科评估表获取该校A类学科（用于Type A冷门检测）
         strong_subjects = subject_eval_cache.get(school_name, [])

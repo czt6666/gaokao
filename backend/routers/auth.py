@@ -112,6 +112,20 @@ def _check_rate_limit(phone: str, client_ip: str, db: Session):
             raise HTTPException(status_code=429, detail="今日发送次数已达上限，请明天再试")
 
 
+# ── 腾讯云短信错误码映射 ──────────────────────────────────────────────────────────
+TENCENT_SMS_ERROR_MAP = {
+    "LimitExceeded.PhoneNumberDailyLimit":    "该手机号今日发送次数已达上限，请明天再试",
+    "LimitExceeded.AppDailyLimit":            "系统今日发送量已达上限，请明天再试",
+    "LimitExceeded.PhoneNumberOneHourLimit":    "发送过于频繁，请1小时后再试",
+    "LimitExceeded.PhoneNumberThirtySecondLimit": "发送过于频繁，请30秒后再试",
+    "FailedOperation.PhoneNumberInBlacklist":  "该手机号无法接收短信，请更换手机号",
+    "FailedOperation.FrequencyLimit":          "发送过于频繁，请稍后再试",
+    "FailedOperation.ContainSensitiveWord":    "短信内容包含敏感词，请联系客服",
+    "UnauthorizedOperation.RequestIpNotInWhitelist": "短信服务配置异常，请联系客服",
+    "UnauthorizedOperation.SmsSdkAppIdVerifyFail":   "短信服务配置异常，请联系客服",
+    "FailedOperation.TemplateIncorrectOrUnapproved": "短信模板未审批，请联系客服",
+}
+
 async def _send_sms(phone: str, code: str):
     """
     发送短信验证码。使用腾讯云短信，否则打印日志（开发模式）。
@@ -150,14 +164,16 @@ async def _send_sms(phone: str, code: str):
             if status and status.Code == "Ok":
                 print(f"[TENCENT SMS OK] {phone}: {code}")
                 return
-            err = status.Message if status else "unknown"
-            print(f"[TENCENT SMS FAIL] {phone}: {err}")
-            raise HTTPException(status_code=503, detail="短信发送失败，请稍后重试")
+            err_code = status.Code if status else "unknown"
+            err_msg = status.Message if status else "unknown"
+            print(f"[TENCENT SMS FAIL] {phone}: {err_code} - {err_msg}")
+            user_msg = TENCENT_SMS_ERROR_MAP.get(err_code, f"短信发送失败：{err_msg}")
+            raise HTTPException(status_code=503, detail=user_msg)
         except HTTPException:
             raise
         except Exception as e:
             print(f"[TENCENT SMS ERROR] {phone}: {e}")
-            raise HTTPException(status_code=503, detail="短信服务暂时不可用，请稍后重试")
+            raise HTTPException(status_code=503, detail=f"短信服务异常：{str(e)[:100]}")
 
 
     # ── 开发模式（无凭证）——始终成功 ──────────────────────────

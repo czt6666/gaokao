@@ -809,7 +809,16 @@ function ResultsContent() {
     setExporting(true);
     try {
       const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${examParam}`;
+      const constraintParams = [
+        cMajor ? `c_major=${encodeURIComponent(cMajor)}` : "",
+        cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
+        cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
+        cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
+        batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
+        hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
+        score ? `score=${encodeURIComponent(score)}` : "",
+      ].filter(Boolean).join("&");
+      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${examParam}${constraintParams ? "&" + constraintParams : ""}`;
       const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
@@ -839,7 +848,16 @@ function ResultsContent() {
     try {
       const token = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
       const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
-      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}${examParam}`;
+      const constraintParams = [
+        cMajor ? `c_major=${encodeURIComponent(cMajor)}` : "",
+        cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
+        cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
+        cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
+        batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
+        hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
+        score ? `score=${encodeURIComponent(score)}` : "",
+      ].filter(Boolean).join("&");
+      const url = `${API}/api/report/email?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}&to_email=${encodeURIComponent(emailInput)}${examParam}${constraintParams ? "&" + constraintParams : ""}`;
       const res = await fetch(url, {
         method: "POST",
         headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -1092,6 +1110,7 @@ function ResultsContent() {
                 解锁完整报告
               </button>
             )}
+            {/* 发邮件按钮隐藏：服务器缺少 libgobject-2.0-0，WeasyPrint 暂不可用
             <button
               onClick={() => setShowEmailInput(!showEmailInput)}
               disabled={!data || data.total_matched === 0}
@@ -1104,6 +1123,7 @@ function ResultsContent() {
             >
               发邮件
             </button>
+            */}
             <Link href="/form" style={{ fontSize: 13, padding: "6px 14px", borderRadius: 980, background: "var(--color-accent)", color: "#fff", textDecoration: "none", fontWeight: 500 }}>
               我的志愿表
             </Link>
@@ -1196,7 +1216,7 @@ function ResultsContent() {
                 >
                   ✦ AI 助手
                 </Link>
-                <button
+                {/* <button
                   onClick={() => { setShowMobileMenu(false); setShowEmailInput(!showEmailInput); }}
                   disabled={!data || data.total_matched === 0}
                   style={{
@@ -1207,7 +1227,7 @@ function ResultsContent() {
                   }}
                 >
                   发送邮件报告
-                </button>
+                </button> */}
                 <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
                   <button
                     onClick={() => router.push("/dashboard")}
@@ -1258,7 +1278,7 @@ function ResultsContent() {
         </div>
       )}
 
-      {/* Email input panel */}
+      {/* Email input panel — 隐藏：服务器缺少 libgobject-2.0-0，WeasyPrint 暂不可用
       {showEmailInput && (
         <div style={{ background: "var(--color-bg-secondary)", borderBottom: "1px solid var(--color-separator)", padding: "12px 20px" }}>
           <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", gap: 8, alignItems: "center" }}>
@@ -1297,6 +1317,7 @@ function ResultsContent() {
           </div>
         </div>
       )}
+      */}
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 12px 80px" }}>
 

@@ -100,6 +100,13 @@ async def export_report(
     order_no: str = Query(..., description="已支付的订单号"),
     subject: str = Query("物理", description="选科（与查询时一致）"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
+    c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
+    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_nature: str = Query("", description="办学性质，逗号分隔"),
+    c_tier: str = Query("", description="院校档次，逗号分隔"),
+    batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
+    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     db: Session = Depends(get_db),
 ):
     """
@@ -116,13 +123,47 @@ async def export_report(
     province  = order.province or "北京"
     rank      = order.rank_input or 5000
 
+    # 解析约束条件（与 /api/recommend 保持一致）
+    constraints = {}
+    if c_major.strip():
+        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+    if c_city.strip():
+        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+    if c_nature.strip():
+        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+    if c_tier.strip():
+        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+
+    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+
+    _DEFAULT_SPECIAL = [
+        "special:experiment", "special:national_special", "special:local_special",
+        "special:oriented", "special:free_teacher", "special:sino_foreign",
+    ]
+    if exclude_restrictions is None:
+        _exclude_restrictions = _DEFAULT_SPECIAL
+    elif exclude_restrictions == "":
+        _exclude_restrictions = []
+    else:
+        _parsed = [x.strip() for x in exclude_restrictions.split(",") if x.strip()]
+        if "special:none" in _parsed:
+            _exclude_restrictions = [r for r in _parsed if r != "special:none"]
+        elif not any(r.startswith("special:") for r in _parsed):
+            _exclude_restrictions = _parsed + _DEFAULT_SPECIAL
+        else:
+            _exclude_restrictions = _parsed
+
     # 2. 调用核心推荐逻辑（is_paid=True，返回完整数据）
     try:
         from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",
-            db=db, is_paid=True, exam_mode=exam_mode
+            db=db, is_paid=True, exam_mode=exam_mode,
+            constraints=constraints or None,
+            batch_filter=_batch_filter or None,
+            exclude_restrictions=_exclude_restrictions or None,
+            user_score=score,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")
@@ -163,6 +204,13 @@ async def preview_report_html(
     order_no: str = Query(...),
     subject: str = Query("物理"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
+    c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
+    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_nature: str = Query("", description="办学性质，逗号分隔"),
+    c_tier: str = Query("", description="院校档次，逗号分隔"),
+    batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
+    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     db: Session = Depends(get_db),
 ):
     """返回 HTML 预览（需已支付订单）"""
@@ -175,11 +223,45 @@ async def preview_report_html(
     province = order.province or "北京"
     rank     = order.rank_input or 5000
 
+    # 解析约束条件（与 /api/recommend 保持一致）
+    constraints = {}
+    if c_major.strip():
+        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+    if c_city.strip():
+        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+    if c_nature.strip():
+        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+    if c_tier.strip():
+        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+
+    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+
+    _DEFAULT_SPECIAL = [
+        "special:experiment", "special:national_special", "special:local_special",
+        "special:oriented", "special:free_teacher", "special:sino_foreign",
+    ]
+    if exclude_restrictions is None:
+        _exclude_restrictions = _DEFAULT_SPECIAL
+    elif exclude_restrictions == "":
+        _exclude_restrictions = []
+    else:
+        _parsed = [x.strip() for x in exclude_restrictions.split(",") if x.strip()]
+        if "special:none" in _parsed:
+            _exclude_restrictions = [r for r in _parsed if r != "special:none"]
+        elif not any(r.startswith("special:") for r in _parsed):
+            _exclude_restrictions = _parsed + _DEFAULT_SPECIAL
+        else:
+            _exclude_restrictions = _parsed
+
     try:
         from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank, subject=subject,
-            mode="all", db=db, is_paid=True, exam_mode=exam_mode
+            mode="all", db=db, is_paid=True, exam_mode=exam_mode,
+            constraints=constraints or None,
+            batch_filter=_batch_filter or None,
+            exclude_restrictions=_exclude_restrictions or None,
+            user_score=score,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -201,6 +283,13 @@ async def generate_report_free(
     order_no: str = Query("", description="付费订单号，有效则允许下载"),
     part: int = Query(0, description="分册：0=全部（旧兼容），1=上册(冲+稳)，2=下册(保+冷门)"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
+    c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
+    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_nature: str = Query("", description="办学性质，逗号分隔"),
+    c_tier: str = Query("", description="院校档次，逗号分隔"),
+    batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
+    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
 ):
@@ -239,6 +328,36 @@ async def generate_report_free(
     if not PUBLIC_TESTING and not is_paid:
         raise HTTPException(status_code=403, detail="请先完成支付后再下载报告")
 
+    # ── 解析约束条件（与 /api/recommend 保持一致）──────────────
+    constraints = {}
+    if c_major.strip():
+        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+    if c_city.strip():
+        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+    if c_nature.strip():
+        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+    if c_tier.strip():
+        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+
+    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+
+    _DEFAULT_SPECIAL = [
+        "special:experiment", "special:national_special", "special:local_special",
+        "special:oriented", "special:free_teacher", "special:sino_foreign",
+    ]
+    if exclude_restrictions is None:
+        _exclude_restrictions = _DEFAULT_SPECIAL
+    elif exclude_restrictions == "":
+        _exclude_restrictions = []
+    else:
+        _parsed = [x.strip() for x in exclude_restrictions.split(",") if x.strip()]
+        if "special:none" in _parsed:
+            _exclude_restrictions = [r for r in _parsed if r != "special:none"]
+        elif not any(r.startswith("special:") for r in _parsed):
+            _exclude_restrictions = _parsed + _DEFAULT_SPECIAL
+        else:
+            _exclude_restrictions = _parsed
+
     # ── 缓存层：同参数+分册 30 分钟内直接返回 ──────────
     cache_suffix = f"_p{part}" if part in (1, 2) else ""
     cache_key = _pdf_cache_key(province, rank, subject + cache_suffix)
@@ -253,7 +372,11 @@ async def generate_report_free(
             recommend_data = _run_recommend_core(
                 province=province, rank=rank,
                 subject=subject, mode="all",
-                db=db, is_paid=True, exam_mode=exam_mode
+                db=db, is_paid=True, exam_mode=exam_mode,
+                constraints=constraints or None,
+                batch_filter=_batch_filter or None,
+                exclude_restrictions=_exclude_restrictions or None,
+                user_score=score,
             )
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")
@@ -333,6 +456,13 @@ async def email_report(
     rank: int = Query(..., description="位次"),
     subject: str = Query("", description="选科"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
+    c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
+    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_nature: str = Query("", description="办学性质，逗号分隔"),
+    c_tier: str = Query("", description="院校档次，逗号分隔"),
+    batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
+    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     to_email: str = Query(..., description="收件人邮箱"),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -353,13 +483,47 @@ async def email_report(
     if not user or not user.is_paid:
         raise HTTPException(status_code=403, detail="请先解锁报告后再发送邮件")
 
+    # 解析约束条件（与 /api/recommend 保持一致）
+    constraints = {}
+    if c_major.strip():
+        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+    if c_city.strip():
+        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+    if c_nature.strip():
+        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+    if c_tier.strip():
+        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+
+    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+
+    _DEFAULT_SPECIAL = [
+        "special:experiment", "special:national_special", "special:local_special",
+        "special:oriented", "special:free_teacher", "special:sino_foreign",
+    ]
+    if exclude_restrictions is None:
+        _exclude_restrictions = _DEFAULT_SPECIAL
+    elif exclude_restrictions == "":
+        _exclude_restrictions = []
+    else:
+        _parsed = [x.strip() for x in exclude_restrictions.split(",") if x.strip()]
+        if "special:none" in _parsed:
+            _exclude_restrictions = [r for r in _parsed if r != "special:none"]
+        elif not any(r.startswith("special:") for r in _parsed):
+            _exclude_restrictions = _parsed + _DEFAULT_SPECIAL
+        else:
+            _exclude_restrictions = _parsed
+
     # 1. 生成推荐数据
     try:
         from services.recommend_core import _run_recommend_core
         recommend_data = _run_recommend_core(
             province=province, rank=rank,
             subject=subject, mode="all",
-            db=db, is_paid=True, exam_mode=exam_mode
+            db=db, is_paid=True, exam_mode=exam_mode,
+            constraints=constraints or None,
+            batch_filter=_batch_filter or None,
+            exclude_restrictions=_exclude_restrictions or None,
+            user_score=score,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"生成报告数据失败：{str(e)}")

@@ -139,7 +139,7 @@ function buildYearPrediction(bsy) {
 
 // ── 把约束参数拼接到 URL ─────────────────────────────────────────
 function appendConstraints(path, event) {
-  const keys = ['c_major', 'c_city', 'c_nature', 'c_tier'];
+  const keys = ['c_major', 'c_city', 'c_nature', 'c_tier', 'batch_filter', 'exclude_restrictions', 'score'];
   for (const k of keys) {
     if (event[k]) path += `&${k}=${encodeURIComponent(event[k])}`;
   }

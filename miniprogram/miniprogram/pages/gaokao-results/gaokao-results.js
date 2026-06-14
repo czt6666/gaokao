@@ -1113,6 +1113,12 @@ Page({
         ["c_major", "c_city", "c_nature", "c_tier"].forEach(function (k) {
             if (qc[k]) payload2[k] = qc[k];
         });
+        if (q.batch_filter) payload2.batch_filter = q.batch_filter;
+        if (q.exclude_restrictions) payload2.exclude_restrictions = q.exclude_restrictions;
+        if (q.score) payload2.score = q.score;
+        if (q.batch_filter) payload2.batch_filter = q.batch_filter;
+        if (q.exclude_restrictions) payload2.exclude_restrictions = q.exclude_restrictions;
+        if (q.score) payload2.score = q.score;
         wx.cloud.callFunction({
             name: "gaokaoQuery",
             data: payload2,

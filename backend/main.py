@@ -402,12 +402,18 @@ def school_detail(
         .order_by(Major.year.desc())
         .all()
     )
-    # 去重专业名（取最新年份的条目）
+    # 去重：专业名称 + 专业组（同一专业名不同专业组视为不同专业）
     seen_majors = {}
     for m in majors:
-        if m.major_name not in seen_majors:
-            seen_majors[m.major_name] = m
+        key = f"{m.major_name}|{m.major_group or ''}"
+        if key not in seen_majors:
+            seen_majors[key] = m
     majors_dedup = list(seen_majors.values())
+    # 建立 major_name -> major_info 的映射（用于补充 subject_req 等）
+    majors_by_name = {}
+    for m in majors_dedup:
+        if m.major_name not in majors_by_name:
+            majors_by_name[m.major_name] = m
 
     # 历年录取记录
     records = (
@@ -417,16 +423,19 @@ def school_detail(
         .all()
     )
 
+    # 按 专业名称 + 备注 分组（不同备注视为不同专业方向）
     major_records = defaultdict(list)
     for r in records:
         # 院校最低分是学校级底线占位行，不作为独立专业展示
         if not r.major_name or "院校最低分" in r.major_name:
             continue
-        major_records[r.major_name].append({
+        key = f"{r.major_name}|{r.major_remark or ''}"
+        major_records[key].append({
             "year": r.year,
             "min_rank": r.min_rank,
             "min_score": r.min_score,
-            "plan_count": r.admit_count
+            "plan_count": r.admit_count,
+            "major_remark": r.major_remark or "",
         })
 
     # 学科评估
@@ -465,44 +474,52 @@ def school_detail(
     }
 
     major_analysis = []
-    for major in majors_dedup:
-        recs = sorted(major_records.get(major.major_name, []), key=lambda x: x["year"])
-        bsy = detect_big_small_year(recs[-3:])
-        gem_b = hidden_gem_type_b(major.major_name)
-        emp = get_major_employment(major.major_name, db)
+    # 优先以 admission_records 中的 (专业名+备注) 组合为维度生成条目
+    for key, recs in major_records.items():
+        major_name = key.split("|")[0]
+        major_remark = key.split("|")[1] if "|" in key else ""
+        valid_recs = [r for r in recs if (r.get("min_rank") or 0) > 0]
+        if not valid_recs:
+            continue
+        recs_sorted = sorted(valid_recs, key=lambda x: x["year"])
+        bsy = detect_big_small_year(recs_sorted[-3:])
+        gem_b = hidden_gem_type_b(major_name)
+        emp = get_major_employment(major_name, db)
+        # 尝试从 majors 表补充选科要求、招生人数等信息
+        mi = majors_by_name.get(major_name)
         major_analysis.append({
-            "major_name": major.major_name,
-            "subject_req": major.subject_req,
-            "plan_count": major.plan_count,
-            "tuition": major.tuition,
-            "duration": major.duration,
-            "records": recs,
+            "major_name": major_name,
+            "major_remark": major_remark,
+            "subject_req": mi.subject_req if mi else "",
+            "plan_count": mi.plan_count if mi else None,
+            "tuition": mi.tuition if mi else None,
+            "duration": mi.duration if mi else None,
+            "records": recs_sorted,
             "big_small_year": bsy,
             "cognitive_gem": gem_b,
             "employment": emp
         })
+    # 按最近一年位次降序排列（位次高的 = 更难考 = 放前面）
+    major_analysis.sort(key=lambda x: -(x["records"][-1]["min_rank"] if x["records"] else 0))
 
-    # 非北京省份：majors表无数据，直接从录取记录构建
-    if not major_analysis and major_records:
-        for major_name, recs in major_records.items():
-            valid_recs = [r for r in recs if (r.get("min_rank") or 0) > 0]
-            if not valid_recs:
-                continue
-            recs_sorted = sorted(valid_recs, key=lambda x: x["year"])
-            bsy = detect_big_small_year(recs_sorted[-3:])
-            emp = get_major_employment(major_name, db)
+    # majors 表有数据但 admission_records 完全缺失的情况：保留条目但 records 为空
+    if not major_analysis and majors_dedup:
+        for major in majors_dedup:
+            bsy = detect_big_small_year([])
+            gem_b = hidden_gem_type_b(major.major_name)
+            emp = get_major_employment(major.major_name, db)
             major_analysis.append({
-                "major_name": major_name,
-                "subject_req": "",
-                "plan_count": None,
-                "tuition": None,
-                "duration": None,
-                "records": recs_sorted,
+                "major_name": major.major_name,
+                "major_remark": "",
+                "subject_req": major.subject_req,
+                "plan_count": major.plan_count,
+                "tuition": major.tuition,
+                "duration": major.duration,
+                "records": [],
                 "big_small_year": bsy,
-                "cognitive_gem": None,
+                "cognitive_gem": gem_b,
                 "employment": emp
             })
-        major_analysis.sort(key=lambda x: -(x["records"][-1]["min_rank"] if x["records"] else 0))
 
     # 计算学校综合质量评分
     strong_subjects_raw = get_school_top_subjects(school_name, db)

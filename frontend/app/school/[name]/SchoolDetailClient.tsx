@@ -15,6 +15,7 @@ type Employment = {
 
 type MajorAnalysis = {
   major_name: string;
+  major_remark: string;
   subject_req: string;
   plan_count: number;
   tuition: number;
@@ -131,6 +132,11 @@ function MajorCard({ major }: { major: MajorAnalysis }) {
         <div>
           <div style={{ fontSize: 15, fontWeight: 500, color: "var(--color-text-primary)", marginBottom: 3 }}>
             {major.major_name}
+            {major.major_remark && (
+              <span style={{ fontSize: 12, color: "var(--color-accent)", marginLeft: 6, fontWeight: 400 }}>
+                {major.major_remark}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", display: "flex", gap: 12 }}>
             {major.subject_req && <span>选科 {major.subject_req}</span>}
@@ -540,8 +546,37 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
 
         {/* Majors */}
         <div style={{ padding: "24px 0 0" }}>
-          <div style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 4 }}>
-            专业分析
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
+            <div style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text-primary)" }}>
+              专业分析
+            </div>
+            <select
+              value={province}
+              onChange={(e) => {
+                const p = e.target.value;
+                const url = new URL(window.location.href);
+                url.searchParams.set("province", p);
+                router.push(url.pathname + url.search);
+              }}
+              style={{
+                fontSize: 13,
+                padding: "6px 10px",
+                borderRadius: 8,
+                border: "1px solid var(--color-separator)",
+                background: "var(--color-bg)",
+                color: "var(--color-text-primary)",
+                cursor: "pointer",
+              }}
+            >
+              {[
+                "北京","上海","广东","浙江","江苏","山东","河南","湖北",
+                "湖南","四川","陕西","辽宁","吉林","黑龙江","安徽","福建",
+                "江西","山西","河北","贵州","云南","重庆","天津","内蒙古",
+                "广西","新疆","甘肃","宁夏","青海","海南","西藏",
+              ].map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
           </div>
           <div style={{ fontSize: 13, color: "var(--color-text-tertiary)", marginBottom: 16 }}>
             {province}省 · {majors.length} 个专业
@@ -554,7 +589,7 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
           ) : (
             <div>
               {majors.map((major) => (
-                <MajorCard key={major.major_name} major={major} />
+                <MajorCard key={`${major.major_name}|${major.major_remark}`} major={major} />
               ))}
             </div>
           )}

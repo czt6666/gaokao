@@ -218,7 +218,7 @@ def stats_hot_schools(db: Session = Depends(get_db)):
     for r in rows:
         try:
             data = json.loads(r.event_data or "{}")
-            school = data.get("school_name", r.event_data or "")
+            school = data.get("school_name") or data.get("school", r.event_data or "")
         except Exception:
             school = r.event_data or ""
         result.append({"school": school, "clicks": r.cnt})
@@ -275,7 +275,7 @@ def stats_demand(db: Session = Depends(get_db)):
     for r in form_schools:
         try:
             data = json.loads(r.event_data or "{}")
-            school = data.get("school_name", r.event_data or "")
+            school = data.get("school_name") or data.get("school", r.event_data or "")
         except Exception:
             school = r.event_data or ""
         form_list.append({"school": school, "count": r.cnt})
@@ -290,7 +290,7 @@ def stats_demand(db: Session = Depends(get_db)):
     for r in compare_schools:
         try:
             data = json.loads(r.event_data or "{}")
-            school = data.get("school_name", r.event_data or "")
+            school = data.get("school_name") or data.get("school", r.event_data or "")
         except Exception:
             school = r.event_data or ""
         compare_list.append({"school": school, "count": r.cnt})
@@ -996,7 +996,7 @@ def school_conversion(days: int = Query(30), db: Session = Depends(get_db)):
     for row in click_rows:
         try:
             data = json.loads(row.event_data or "{}")
-            school = data.get("school_name", "未知")
+            school = data.get("school_name") or data.get("school", row.event_data or "未知")
         except Exception:
             school = row.event_data or "未知"
         pc = paid_map.get(row.event_data, 0)

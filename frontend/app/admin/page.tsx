@@ -735,7 +735,7 @@ export default function AdminPage() {
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <thead>
                         <tr style={{ background: "#F5F5F7" }}>
-                          {["时间", "省份", "位次", "选科", "页面", "IP"].map(h => (
+                          {["时间", "省份", "位次", "分数", "选科", "页面", "IP"].map(h => (
                             <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA" }}>{h}</th>
                           ))}
                         </tr>
@@ -746,13 +746,14 @@ export default function AdminPage() {
                             <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{toBJ(q.created_at)}</td>
                             <td style={{ padding: "8px 10px" }}>{q.province || "—"}</td>
                             <td style={{ padding: "8px 10px" }}>{q.rank_input?.toLocaleString() || "—"}</td>
+                            <td style={{ padding: "8px 10px" }}>{(() => { try { return JSON.parse(q.event_data).mock_score || "—"; } catch { return "—"; } })()}</td>
                             <td style={{ padding: "8px 10px" }}>{(() => { try { return JSON.parse(q.event_data).subject || "—"; } catch { return "—"; } })()}</td>
                             <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{q.page || "—"}</td>
                             <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{q.ip || "—"}</td>
                           </tr>
                         ))}
                         {!userDetail.queries.length && (
-                          <tr><td colSpan={6} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无查询记录</td></tr>
+                          <tr><td colSpan={7} style={{ padding: "24px", textAlign: "center", color: "#aeaeb2" }}>暂无查询记录</td></tr>
                         )}
                       </tbody>
                     </table>
@@ -1624,13 +1625,20 @@ export default function AdminPage() {
               <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                 <thead>
                   <tr style={{ background: "#F5F5F7" }}>
-                    {["ID", "用户ID", "手机号", "来源", "事件", "省份", "位次", "选科", "考试模式", "约束条件", "时间", "IP"].map(h => (
+                    {["ID", "用户ID", "手机号", "来源", "事件", "省份", "位次", "分数", "选科", "考试模式", "约束条件", "时间", "IP"].map(h => (
                       <th key={h} style={{ padding: "8px 10px", textAlign: "left", fontWeight: 600, color: "#6E6E73", borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {events.map(ev => (
+                  {events.map(ev => {
+                    // 从 event_data 解析 mock_score（如有）
+                    let mockScore: string | null = null;
+                    try {
+                      const d = JSON.parse(ev.event_data || "{}");
+                      if (d.mock_score) mockScore = String(d.mock_score);
+                    } catch {}
+                    return (
                     <tr key={ev.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.id}</td>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.user_id ?? "—"}</td>
@@ -1641,6 +1649,7 @@ export default function AdminPage() {
                       </td>
                       <td style={{ padding: "8px 10px" }}>{ev.province || "—"}</td>
                       <td style={{ padding: "8px 10px" }}>{ev.rank_input?.toLocaleString() || "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{mockScore ? `${mockScore}分` : "—"}</td>
                       <td style={{ padding: "8px 10px" }}>{ev.subject || "—"}</td>
                       <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{ev.exam_mode || "—"}</td>
                       <td style={{ padding: "8px 10px" }}>
@@ -1655,9 +1664,10 @@ export default function AdminPage() {
                       <td style={{ padding: "8px 10px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(ev.created_at)}</td>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.ip || "—"}</td>
                     </tr>
-                  ))}
+                    );
+                  })}
                   {!events.length && (
-                    <tr><td colSpan={12} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无事件数据</td></tr>
+                    <tr><td colSpan={13} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无事件数据</td></tr>
                   )}
                 </tbody>
               </table>

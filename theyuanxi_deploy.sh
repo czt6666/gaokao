@@ -1,5 +1,5 @@
 #!/bin/bash
-# 部署 www.theyuanxi.cn（后端 5198 / 前端 5198）
+# 部署 www.theyuanxi.cn（后端 5198 / 前端 3000）
 # 用法: bash theyuanxi_deploy.sh
 # 环境变量：本地维护 backend/.env.production 和 frontend/.env.production
 set -e

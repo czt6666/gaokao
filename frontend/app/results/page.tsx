@@ -3,6 +3,7 @@ import { useEffect, useState, useRef, Suspense, Fragment } from "react";
 import React from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import PayModal from "@/components/PayModal";
 import AuthNav from "@/components/AuthNav";
 import { track } from "@/lib/track";
@@ -309,7 +310,10 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             ) : null}
             {/* 均位次 */}
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>近年均位次</div>
+              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
+              近年均位次
+              <span className="rank-hint-icon" title="是22-25年的位次平均">?</span>
+            </div>
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
               </div>
@@ -410,6 +414,14 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             </div>
           </div>
         )
+      )}
+
+      {/* 近年分数+位次变化折线图 */}
+      {item.recent_data && item.recent_data.length > 1 && (
+        <div style={{ marginTop: 10, padding: "10px 0", borderTop: "1px solid var(--color-separator)" }}>
+          <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8 }}>近年变化趋势</div>
+          <MiniTrendChart data={item.recent_data} />
+        </div>
       )}
 
       {/* Expandable analysis */}
@@ -546,6 +558,66 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
           borderRadius: 99, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
           zIndex: 10, pointerEvents: "auto",
         }}>{toast}</div>
+      )}
+    </div>
+  );
+}
+
+/* ── MiniTrendChart: 近年分数+位次折线图（recharts 双图） ── */
+function calcDomain(values: number[], minRange: number) {
+  if (values.length === 0) return ["auto", "auto"] as [string, string];
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min;
+  const padding = Math.max(range * 0.12, (minRange - range) / 2 + 1);
+  return [Math.floor(min - padding), Math.ceil(max + padding)] as [number, number];
+}
+
+function MiniTrendChart({ data }: { data: { year: number; min_score?: number; min_rank?: number }[] }) {
+  const rows = data.filter((x) => x.min_score || x.min_rank).slice(0, 4).reverse();
+  if (rows.length < 2) return null;
+
+  const scoreRows = rows.filter((x) => x.min_score);
+  const rankRows = rows.filter((x) => x.min_rank);
+
+  const scoreDomain = calcDomain(scoreRows.map((x) => x.min_score!), 10);
+  const rankDomain = calcDomain(rankRows.map((x) => x.min_rank!), 100);
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+      {scoreRows.length > 1 && (
+        <div>
+          <div style={{ fontSize: 11, color: "#C9922A", fontWeight: 700, marginBottom: 4 }}>分数趋势</div>
+          <ResponsiveContainer width="100%" height={90}>
+            <LineChart data={scoreRows.map((x) => ({ year: String(x.year), value: x.min_score }))}>
+              <XAxis dataKey="year" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis domain={scoreDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", padding: "6px 10px" }}
+                formatter={(value: any) => [`${value}分`, "分数"]}
+                labelStyle={{ fontSize: 11, color: "#8E8E93" }}
+              />
+              <Line type="monotone" dataKey="value" stroke="#C9922A" strokeWidth={2} dot={{ r: 3, fill: "#C9922A" }} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+      {rankRows.length > 1 && (
+        <div>
+          <div style={{ fontSize: 11, color: "#1A2744", fontWeight: 700, marginBottom: 4 }}>位次趋势</div>
+          <ResponsiveContainer width="100%" height={90}>
+            <LineChart data={rankRows.map((x) => ({ year: String(x.year), value: x.min_rank }))}>
+              <XAxis dataKey="year" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+              <YAxis domain={rankDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={(v: number) => v.toLocaleString()} />
+              <Tooltip
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", padding: "6px 10px" }}
+                formatter={(value: any) => [`${value.toLocaleString()}位`, "位次"]}
+                labelStyle={{ fontSize: 11, color: "#8E8E93" }}
+              />
+              <Line type="monotone" dataKey="value" stroke="#1A2744" strokeWidth={2} dot={{ r: 3, fill: "#1A2744" }} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       )}
     </div>
   );

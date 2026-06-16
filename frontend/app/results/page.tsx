@@ -312,7 +312,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
               近年均位次
-              <span className="rank-hint-icon" title="是22-25年的位次平均">?</span>
+              <span className="rank-hint-icon" title="是22-25年有数据的年份的平均位次" onClick={() => showToast("是22-25年有数据的年份的平均位次")}>?</span>
             </div>
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
@@ -574,47 +574,63 @@ function calcDomain(values: number[], minRange: number) {
 }
 
 function MiniTrendChart({ data }: { data: { year: number; min_score?: number; min_rank?: number }[] }) {
-  const rows = data.filter((x) => x.min_score || x.min_rank).slice(0, 4).reverse();
-  if (rows.length < 2) return null;
+  const ALL_YEARS = ["2022", "2023", "2024", "2025"];
 
-  const scoreRows = rows.filter((x) => x.min_score);
-  const rankRows = rows.filter((x) => x.min_rank);
+  // 只保留有数据的行（用于判断是否需要显示图表）
+  const rows = data.filter((x) => x.min_score || x.min_rank);
+  if (rows.length < 1) return null;
 
-  const scoreDomain = calcDomain(scoreRows.map((x) => x.min_score!), 10);
-  const rankDomain = calcDomain(rankRows.map((x) => x.min_rank!), 100);
+  // 准备分数数据：固定4年横轴，缺失年份 value 为 null
+  const scoreData = ALL_YEARS.map((year) => {
+    const found = rows.find((x) => String(x.year) === year);
+    return { year, value: found?.min_score ?? null };
+  });
+
+  // 准备位次数据：固定4年横轴，缺失年份 value 为 null
+  const rankData = ALL_YEARS.map((year) => {
+    const found = rows.find((x) => String(x.year) === year);
+    return { year, value: found?.min_rank ?? null };
+  });
+
+  // 计算 domain 时只过滤有效数值
+  const scoreValues = scoreData.map((d) => d.value).filter((v): v is number => v !== null);
+  const rankValues = rankData.map((d) => d.value).filter((v): v is number => v !== null);
+
+  const scoreDomain = calcDomain(scoreValues, 10);
+  const rankDomain = calcDomain(rankValues, 100);
 
   return (
     <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-      {scoreRows.length > 1 && (
+      {scoreValues.length > 0 && (
         <div>
           <div style={{ fontSize: 11, color: "#C9922A", fontWeight: 700, marginBottom: 4 }}>分数趋势</div>
           <ResponsiveContainer width="100%" height={90}>
-            <LineChart data={scoreRows.map((x) => ({ year: String(x.year), value: x.min_score }))}>
+            <LineChart data={scoreData}>
               <XAxis dataKey="year" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
               <YAxis domain={scoreDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={36} />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", padding: "6px 10px" }}
-                formatter={(value: any) => [`${value}分`, "分数"]}
+                formatter={(value: any) => (value !== null ? [`${value}分`, "分数"] : ["无数据", "分数"])}
                 labelStyle={{ fontSize: 11, color: "#8E8E93" }}
               />
-              <Line type="monotone" dataKey="value" stroke="#C9922A" strokeWidth={2} dot={{ r: 3, fill: "#C9922A" }} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="value" stroke="#C9922A" strokeWidth={2} dot={{ r: 3, fill: "#C9922A" }} activeDot={{ r: 4 }} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
-      {rankRows.length > 1 && (
+      {rankValues.length > 0 && (
         <div>
           <div style={{ fontSize: 11, color: "#1A2744", fontWeight: 700, marginBottom: 4 }}>位次趋势</div>
           <ResponsiveContainer width="100%" height={90}>
-            <LineChart data={rankRows.map((x) => ({ year: String(x.year), value: x.min_rank }))}>
+            <LineChart data={rankData}>
               <XAxis dataKey="year" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis domain={rankDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={(v: number) => v.toLocaleString()} />
+              <YAxis domain={rankDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={(v: any) => (v !== null ? v.toLocaleString() : "")} />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", padding: "6px 10px" }}
-                formatter={(value: any) => [`${value.toLocaleString()}位`, "位次"]}
+                formatter={(value: any) => (value !== null ? [`${value.toLocaleString()}位`, "位次"] : ["无数据", "位次"])}
                 labelStyle={{ fontSize: 11, color: "#8E8E93" }}
               />
-              <Line type="monotone" dataKey="value" stroke="#1A2744" strokeWidth={2} dot={{ r: 3, fill: "#1A2744" }} activeDot={{ r: 4 }} />
+              <Line type="monotone" dataKey="value" stroke="#1A2744" strokeWidth={2} dot={{ r: 3, fill: "#1A2744" }} activeDot={{ r: 4 }} connectNulls={false} />
             </LineChart>
           </ResponsiveContainer>
         </div>
@@ -1106,7 +1122,10 @@ function ResultsContent() {
           <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
           <div style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 8 }}>分析失败</div>
           <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 24 }}>{fetchError}</div>
-          <button className="btn-primary" onClick={() => router.push("/")}>返回重新查询</button>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+            <button className="btn-primary" onClick={() => { setFetchError(null); setLoading(true); setRefreshTrigger(v => v + 1); }}>重试</button>
+            <button className="btn-secondary" onClick={() => router.push("/")}>返回首页</button>
+          </div>
         </div>
       </div>
     );

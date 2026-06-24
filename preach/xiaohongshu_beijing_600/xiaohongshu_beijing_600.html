@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北京600分能去的学校</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #eef0f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+    gap: 24px;
+  }
+
+  .card {
+    width: 900px;
+    height: 1350px;
+    background: #ffffff;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cover-card {
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 60%, #9b59b6 100%);
+    color: #fff;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 60px;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    padding: 12px 32px;
+    border-radius: 28px;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    margin-bottom: 48px;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .cover-title {
+    font-size: 108px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 40px;
+    text-shadow: 0 6px 30px rgba(0,0,0,0.22);
+  }
+  .cover-sub {
+    font-size: 40px;
+    opacity: 0.88;
+    font-weight: 400;
+    margin-bottom: 80px;
+  }
+  .cover-stats {
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+  }
+  .cover-stat {
+    text-align: center;
+  }
+  .cover-stat-num {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .cover-stat-label {
+    font-size: 26px;
+    opacity: 0.75;
+    margin-top: 14px;
+  }
+  .cover-deco {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    top: -140px;
+    right: -140px;
+  }
+  .cover-deco2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    bottom: -100px;
+    left: -100px;
+  }
+
+  .school-card { padding: 0; }
+  .card-header {
+    padding: 48px 52px 0;
+  }
+  .card-rank {
+    font-size: 22px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .card-name {
+    font-size: 52px;
+    font-weight: 900;
+    color: #1a1a2e;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .card-tags {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 20px;
+    padding: 7px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+  .tag-985 { background: #fce4ec; color: #c62828; }
+  .tag-211 { background: #fff3e0; color: #e65100; }
+  .tag-shuang { background: #e8f5e9; color: #2e7d32; }
+  .tag-city { background: #e3f2fd; color: #1565c0; }
+  .tag-score { background: #f3e5f5; color: #6a1b9a; }
+
+  .card-body {
+    padding: 32px 52px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-text {
+    font-size: 26px;
+    color: #444;
+    line-height: 1.75;
+  }
+  .card-text strong {
+    color: #1a1a2e;
+    font-weight: 700;
+  }
+  .highlight {
+    text-decoration: underline;
+    text-decoration-color: #ffc107;
+    text-decoration-thickness: 10px;
+    text-underline-offset: -5px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .chart-wrap {
+    margin-top: 24px;
+    height: 260px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .chart-wrap canvas { max-height: 260px; }
+
+  .card-footer {
+    padding: 0 52px 48px;
+    flex-shrink: 0;
+  }
+  .rec-box {
+    background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+    border-left: 5px solid #ffc107;
+    padding: 20px 24px;
+    border-radius: 0 16px 16px 0;
+    font-size: 24px;
+    color: #555;
+    line-height: 1.6;
+  }
+  .rec-box strong { color: #e65100; }
+
+  .score-note {
+    font-size: 20px;
+    color: #999;
+    text-align: center;
+    margin-top: 16px;
+  }
+
+  .analysis-card .card-body {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
+    width: 100%;
+    margin-top: 40px;
+  }
+  .analysis-item {
+    background: #f8f9fb;
+    border-radius: 20px;
+    padding: 36px 24px;
+  }
+  .analysis-item .num {
+    font-size: 48px;
+    font-weight: 900;
+    color: #667eea;
+  }
+  .analysis-item .label {
+    font-size: 24px;
+    color: #666;
+    margin-top: 10px;
+  }
+  .analysis-desc {
+    font-size: 28px;
+    color: #555;
+    line-height: 1.8;
+    margin-top: 40px;
+  }
+
+  .summary-card .card-body {
+    padding: 40px 52px;
+  }
+  .summary-list {
+    font-size: 28px;
+    color: #444;
+    line-height: 2.0;
+  }
+  .summary-list strong { color: #1a1a2e; }
+
+  .end-card {
+    background: #1a1a2e;
+    color: #fff;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .end-card h2 {
+    font-size: 56px;
+    font-weight: 900;
+    margin-bottom: 24px;
+  }
+  .end-card p {
+    font-size: 26px;
+    opacity: 0.6;
+  }
+  .end-card .qr-hint {
+    margin-top: 40px;
+    font-size: 22px;
+    opacity: 0.4;
+  }
+
+  .shot-btn {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 20px 40px;
+    font-size: 24px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(102,126,234,0.4);
+    z-index: 1000;
+    transition: transform 0.2s;
+    font-family: inherit;
+  }
+  .shot-btn:hover { transform: scale(1.05); }
+  .shot-btn:active { transform: scale(0.95); }
+
+  .progress-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    font-size: 28px;
+    color: #fff;
+    font-weight: 700;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .progress-bar {
+    width: 400px;
+    height: 12px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 6px;
+    transition: width 0.3s;
+  }
+
+  @media (max-width: 960px) {
+    .card { width: 100%; height: auto; min-height: 100vh; }
+  }
+</style>
+</head>
+<body>
+
+<button class="shot-btn" onclick="exportCards()">📸 一键导出所有卡片</button>
+
+<!-- 封面 -->
+<div class="card cover-card" id="card-cover">
+  <div class="cover-deco"></div>
+  <div class="cover-deco2"></div>
+  <div class="cover-badge">北京高考 · 志愿填报</div>
+  <div class="cover-title">北京600分<br>能去的学校</div>
+  <div class="cover-sub">近三年录取数据分析 · 10所高性价比推荐</div>
+  <div class="cover-stats">
+    <div class="cover-stat">
+      <div class="cover-stat-num">600</div>
+      <div class="cover-stat-label">预估分数</div>
+    </div>
+    <div class="cover-stat">
+      <div class="cover-stat-num">~10,980</div>
+      <div class="cover-stat-label">预估位次</div>
+    </div>
+    <div class="cover-stat">
+      <div class="cover-stat-num">10</div>
+      <div class="cover-stat-label">精选推荐</div>
+    </div>
+  </div>
+</div>
+
+<!-- 定位分析 -->
+<div class="card analysis-card" id="card-analysis">
+  <div class="card-header">
+    <div class="card-name" style="font-size:44px">分数定位分析</div>
+  </div>
+  <div class="card-body">
+    <div class="analysis-grid">
+      <div class="analysis-item">
+        <div class="num">523</div>
+        <div class="label">2024特招线</div>
+      </div>
+      <div class="analysis-item">
+        <div class="num">10,980</div>
+        <div class="label">599分位次</div>
+      </div>
+      <div class="analysis-item">
+        <div class="num">590-610</div>
+        <div class="label">可冲分数带</div>
+      </div>
+    </div>
+    <div class="analysis-desc">
+      600分比特招线高77分，可冲部分<span class="highlight">中下游985</span>及<span class="highlight">优质211</span>。<br>以下10所按「城市+层次+专业适配度」综合排序。
+    </div>
+  </div>
+</div>
+
+<!-- 1. 东华大学 -->
+<div class="card school-card" id="card-dhu">
+  <div class="card-header">
+    <div class="card-rank">NO.01 上海被低估的211</div>
+    <div class="card-name">东华大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">上海</span>
+      <span class="tag tag-score">2024最低604</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>人工智能（609）、材料类（606）、智能科学与技术（604）、电子信息类（604）。<br><br>
+      原名中国纺织大学，<span class="highlight">纺织科学与工程全国A+</span>。近年大力发展计算机、人工智能等新工科。2024届就业率<span class="highlight">97.08%</span>，410人进入世界500强，比亚迪/华为/中芯国际大量招聘。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-dhu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>上海区位 + 97%就业率 + 新工科转型快 + 考研不歧视双非，600分段的性价比之王。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 2. 深圳大学 -->
+<div class="card school-card" id="card-szu">
+  <div class="card-header">
+    <div class="card-rank">NO.02 双非就业天花板</div>
+    <div class="card-name">深圳大学</div>
+    <div class="card-tags">
+      <span class="tag tag-city">双非</span>
+      <span class="tag tag-city">深圳</span>
+      <span class="tag tag-score">2024最低604</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>广告学（609）、自动化（607）、临床医学（605）、工商管理（605）、英语（604）。<br><br>
+      位于深圳粤海街道，周边<span class="highlight">200+家上市公司</span>，腾讯/华为/比亚迪均在2-3公里内。87%毕业生留深就业，<span class="highlight">用人单位满意度100%</span>。20个学科进入ESI全球前1%。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-szu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>深圳区位 + 双非就业天花板 + 腾讯华为校招目标，想去大湾区发展的首选。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 3. 东北大学秦皇岛分校 -->
+<div class="card school-card" id="card-neuq">
+  <div class="card-header">
+    <div class="card-rank">NO.03 低分高报985</div>
+    <div class="card-name">东北大学秦皇岛分校</div>
+    <div class="card-tags">
+      <span class="tag tag-985">985</span>
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-city">秦皇岛</span>
+      <span class="tag tag-score">2024最低604</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>经济学类（609）、工商管理类（606）、外国语言文学类（604）。<br><br>
+      <span class="highlight">毕业证与本部完全一致</span>（2018年起不再显示"秦皇岛分校"），保研/出国/进国企享受同等待遇。计算机/自动化见长，<span class="highlight">就业率95%+</span>，国家电网录取11人。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-neuq"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>985文凭 + 计算机自动化强 + 比本部低20-40分，600分上985的捷径。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 4. 暨南大学 -->
+<div class="card school-card" id="card-jnu">
+  <div class="card-header">
+    <div class="card-rank">NO.04 华侨最高学府</div>
+    <div class="card-name">暨南大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">广州</span>
+      <span class="tag tag-score">2024最低605</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>国际新闻与传播（610）、电子科学与技术（610）、国际经济与贸易（607）、汉语国际教育（607）、日语（605）。<br><br>
+      中国第一所由国家创办的华侨高等学府，<span class="highlight">新闻传播/金融/药学</span>全国知名。位于广州天河，粤港澳大湾区的核心人才库。校友遍布海外，国际化程度高。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-jnu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211 + 广州区位 + 新闻/金融强 + 海外校友网络，文科生尤其推荐。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 5. 中央民族大学 -->
+<div class="card school-card" id="card-muc">
+  <div class="card-header">
+    <div class="card-rank">NO.05 北京985保底</div>
+    <div class="card-name">中央民族大学</div>
+    <div class="card-tags">
+      <span class="tag tag-985">985</span>
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-city">北京</span>
+      <span class="tag tag-score">2024最低601</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>数据科学与大数据技术（604）、环境科学（601）。<br><br>
+      <span class="highlight">北京市属985</span>，文科/民族学全国顶尖，但近年大力发展大数据、人工智能等新工科。留京就业优势显著，985牌子在考公/选调/国企中通行无阻。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-muc"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>北京985 + 留京便利 + 600分刚好压线，想留京读985的最后机会。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 6. 天津医科大学 -->
+<div class="card school-card" id="card-tmu">
+  <div class="card-header">
+    <div class="card-rank">NO.06 医学211首选</div>
+    <div class="card-name">天津医科大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">天津</span>
+      <span class="tag tag-score">2024最低603</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>临床医学（603）、医学影像学（603）、口腔医学（603）、医学技术类（603）、基础医学（603）。<br><br>
+      国家"211工程"重点建设市属院校，<span class="highlight">临床医学进入ESI全球前1‰</span>。天津医科大学总医院等附属医院资源丰富，医学类就业稳定，京津冀医疗系统认可度高。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-tmu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>医学211 + 临床医学顶尖 + 京津冀医院系统认可，想当医生的必选。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 7. 华中师范大学 -->
+<div class="card school-card" id="card-ccnu">
+  <div class="card-header">
+    <div class="card-rank">NO.07 师范六金花</div>
+    <div class="card-name">华中师范大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">武汉</span>
+      <span class="tag tag-score">2024最低599</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>计算机类（600）、数字媒体技术（600）、化学类（599）、教育学类（610）、社会学类（610）。<br><br>
+      教育部直属六所师范院校之一，<span class="highlight">教育学/心理学全国顶尖</span>。师范生就业保障强，但非师范专业（计算机、数字媒体技术）近年同样热门，分数恰好卡在600分附近。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-ccnu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>部属师范211 + 教育学顶尖 + 非师范专业可冲，600分稳中带冲。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 8. 武汉理工大学 -->
+<div class="card school-card" id="card-whut">
+  <div class="card-header">
+    <div class="card-rank">NO.08 材料车辆黄埔军校</div>
+    <div class="card-name">武汉理工大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">武汉</span>
+      <span class="tag tag-score">2024最低596</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>计算机类（610）、电子信息类（609）、经济学类（608）、车辆工程（606）、金融学（603）。<br><br>
+      材料科学与工程<span class="highlight">全国A+</span>，车辆工程全国顶尖。合并了武汉汽车工业大学和武汉交通科技大学，<span class="highlight">汽车行业校友网络极强</span>，上汽/东风/比亚迪大量招聘。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-whut"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211 + 材料A+ + 汽车行业校友网络 + 分数友好，想去车企的必选。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 9. 中国石油大学（北京） -->
+<div class="card school-card" id="card-cupb">
+  <div class="card-header">
+    <div class="card-rank">NO.09 北京行业211</div>
+    <div class="card-name">中国石油大学（北京）</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">北京</span>
+      <span class="tag tag-score">2024最低591</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>计算机科学与技术（609）、信息管理与信息系统（610）、工商管理类（608）、电子信息工程（608）、自动化（607）。<br><br>
+      不要被"石油"二字误导——其<span class="highlight">计算机、电子信息、自动化</span>等通用专业同样强势，且就业并不局限于石油行业。作为北京211，其通用工科毕业生同样进入IT、金融、国企等多领域。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-cupb"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>北京211 + 通用工科可冲 + 分数友好（591），"石油"校名带来的低估值是机会。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 10. 哈尔滨工程大学 -->
+<div class="card school-card" id="card-hrbeu">
+  <div class="card-header">
+    <div class="card-rank">NO.10 国防七子之一</div>
+    <div class="card-name">哈尔滨工程大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">哈尔滨</span>
+      <span class="tag tag-score">2024最低590</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>600分可冲：</strong>自动化（609）、船舶与海洋工程（609）、轮机工程（608）、机械设计制造及其自动化（605）。<br><br>
+      "国防七子"之一，<span class="highlight">船舶与海洋工程全国A+</span>，核科学与技术全国顶尖。三海一核（船舶、海洋、海军装备、核能）行业壁垒极高，<span class="highlight">军工央企/科研院所校招目标</span>，男生尤其抢手。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-hrbeu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211 + 船舶A+ + 军工央企通道 + 国防七子光环，想进体制/军工的首选。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 总结 -->
+<div class="card summary-card" id="card-summary">
+  <div class="card-header">
+    <div class="card-name" style="font-size:44px">填报策略总结</div>
+  </div>
+  <div class="card-body">
+    <div class="summary-list">
+      1. <strong>600分可以上985</strong>：中央民族大学、东北大学秦皇岛分校是600分段唯二可选的985。<br><br>
+      2. <strong>地域优先</strong>：东华大学（上海）、深圳大学（深圳）、暨南大学（广州）在本地就业认可度极高。<br><br>
+      3. <strong>行业特色校</strong>：天津医科大学（医学）、哈尔滨工程大学（军工）、武汉理工大学（汽车），在各自领域有<strong>行业壁垒</strong>。<br><br>
+      4. <strong>深造导向</strong>：东北大学秦皇岛分校（985保研率）、中国石油大学北京（211+北京区位）是深造跳板。<br><br>
+      5. <strong>留京策略</strong>：中央民族大学、中国石油大学（北京）是600分段留京读985/211的保底选择。<br><br>
+      <span class="highlight">提醒：以上数据基于近三年录取最低分，2025年实际录取受招生计划、专业组调整影响，建议以官方招生简章为准。</span>
+    </div>
+  </div>
+</div>
+
+<!-- 结尾 -->
+<div class="card end-card" id="card-end">
+  <h2>祝每位考生金榜题名</h2>
+  <p>数据整理自北京市教育考试院及高校公开录取数据<br>仅供志愿填报参考</p>
+  <div class="qr-hint">长按保存图片 | 分享给需要的同学</div>
+</div>
+
+<script>
+const chartColors = {
+  line: '#667eea',
+  fill: 'rgba(102,126,234,0.12)',
+  point: '#764ba2',
+  grid: '#f0f1f3',
+  text: '#888'
+};
+
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: { label: function(ctx) { return ctx.parsed.y + '分'; } },
+      backgroundColor: '#1a1a2e',
+      titleFont: { size: 18 },
+      bodyFont: { size: 18 },
+      padding: 14,
+      cornerRadius: 12
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: chartColors.text, font: { size: 18, weight: '600' } }
+    },
+    y: {
+      min: 560,
+      max: 640,
+      grid: { color: chartColors.grid, borderDash: [6, 4] },
+      ticks: { color: chartColors.text, font: { size: 16 }, stepSize: 20 }
+    }
+  },
+  elements: { line: { tension: 0.4 }, point: { radius: 6, hoverRadius: 9, borderWidth: 3 } }
+};
+
+function makeChart(id, data) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['2022','2023','2024','2025'],
+      datasets: [{
+        data: data,
+        borderColor: chartColors.line,
+        backgroundColor: chartColors.fill,
+        fill: true,
+        pointBackgroundColor: chartColors.point,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 3,
+        borderWidth: 4
+      }]
+    },
+    options: commonOptions
+  });
+}
+
+makeChart('chart-dhu', [595, 607, 604, null]);
+makeChart('chart-szu', [593, 602, 604, 611]);
+makeChart('chart-neuq', [579, 593, 604, null]);
+makeChart('chart-jnu', [606, 606, 605, null]);
+makeChart('chart-muc', [602, 606, 601, 604]);
+makeChart('chart-tmu', [602, 596, 603, null]);
+makeChart('chart-ccnu', [602, 611, 599, 599]);
+makeChart('chart-whut', [572, 590, 596, 603]);
+makeChart('chart-cupb', [578, 592, 591, 604]);
+makeChart('chart-hrbeu', [576, 602, 590, null]);
+
+async function exportCards() {
+  const btn = document.querySelector('.shot-btn');
+  btn.style.display = 'none';
+
+  const cards = document.querySelectorAll('.card');
+  const names = [
+    '01-封面',
+    '02-分数定位',
+    '03-东华大学',
+    '04-深圳大学',
+    '05-东北大学秦皇岛分校',
+    '06-暨南大学',
+    '07-中央民族大学',
+    '08-天津医科大学',
+    '09-华中师范大学',
+    '10-武汉理工大学',
+    '11-中国石油大学北京',
+    '12-哈尔滨工程大学',
+    '13-填报策略',
+    '14-结尾'
+  ];
+
+  const overlay = document.createElement('div');
+  overlay.className = 'progress-overlay';
+  overlay.innerHTML = `
+    <div>正在导出 ${cards.length} 张卡片...</div>
+    <div class="progress-bar"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <div id="prog-text">0 / ${cards.length}</div>
+  `;
+  document.body.appendChild(overlay);
+
+  const zip = new JSZip();
+  const folder = zip.folder('北京600分能去的学校');
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    try {
+      const canvas = await html2canvas(card, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: 900,
+        height: 1350
+      });
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const fileName = (names[i] || `card-${String(i+1).padStart(2,'0')}`) + '.png';
+      folder.file(fileName, blob);
+
+      const pct = Math.round(((i + 1) / cards.length) * 100);
+      document.getElementById('prog-fill').style.width = pct + '%';
+      document.getElementById('prog-text').textContent = `${i + 1} / ${cards.length}`;
+    } catch (err) {
+      console.error('截图失败:', err);
+    }
+  }
+
+  document.body.removeChild(overlay);
+  btn.style.display = 'block';
+
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  saveAs(zipBlob, '北京600分能去的学校.zip');
+}
+</script>
+
+</body>
+</html>

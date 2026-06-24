@@ -842,6 +842,7 @@ function ResultsContent() {
   const [toast, setToast] = useState<string | null>(null);
   const [filterTier, setFilterTier] = useState("");
   const [exporting, setExporting] = useState(false);
+  const [showExportLoading, setShowExportLoading] = useState(false);
   const [emailSending, setEmailSending] = useState(false);
   const [showPayModal, setShowPayModal] = useState(false);
   const [defaultProductType, setDefaultProductType] = useState<string | undefined>(undefined);
@@ -895,6 +896,7 @@ function ResultsContent() {
     }
     track("export_click", { province, rankInput: Number(rank), eventData: { subject } });
     setExporting(true);
+    setShowExportLoading(true);
     try {
       const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
       const constraintParams = [
@@ -922,6 +924,7 @@ function ResultsContent() {
       alert(`报告生成失败：${e.message}`);
     } finally {
       setExporting(false);
+      setShowExportLoading(false);
     }
   }
 
@@ -1872,6 +1875,55 @@ function ResultsContent() {
           defaultProductType={defaultProductType}
           existingProductType={data?.is_trial ? "trial_report" : undefined}
         />
+      )}
+
+      {/* PDF 生成中 loading 弹窗 */}
+      {showExportLoading && (
+        <div
+          style={{
+            position: "fixed", inset: 0, zIndex: 10000,
+            background: "rgba(0,0,0,0.45)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            padding: 20,
+          }}
+          onClick={() => setShowExportLoading(false)}
+        >
+          <div
+            style={{
+              background: "var(--color-bg)", borderRadius: 16,
+              padding: "28px 32px", maxWidth: 320, width: "100%",
+              boxShadow: "0 12px 40px rgba(0,0,0,0.25)",
+              position: "relative", textAlign: "center",
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowExportLoading(false)}
+              aria-label="关闭"
+              style={{
+                position: "absolute", top: 12, right: 14,
+                background: "none", border: "none", fontSize: 20, lineHeight: 1,
+                color: "var(--color-text-tertiary)", cursor: "pointer",
+              }}
+            >
+              ×
+            </button>
+            <div style={{
+              width: 36, height: 36, margin: "4px auto 16px",
+              border: "3px solid var(--color-separator)",
+              borderTopColor: "var(--color-accent)",
+              borderRadius: "50%",
+              animation: "pdfspin 0.8s linear infinite",
+            }} />
+            <div style={{ fontSize: 15, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 6 }}>
+              PDF 报告生成中…
+            </div>
+            <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", lineHeight: 1.6 }}>
+              报告内容较多，通常需要十几秒，请稍候。<br />可关闭此窗口，生成完成后将自动下载。
+            </div>
+          </div>
+          <style>{`@keyframes pdfspin { to { transform: rotate(360deg); } }`}</style>
+        </div>
       )}
 
       {/* Toast notification */}

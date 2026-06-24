@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>北京580分冲这些学校</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: #eef0f4;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 0;
+    gap: 24px;
+  }
+
+  /* 每个卡片固定 3:2 竖版 */
+  .card {
+    width: 900px;
+    height: 1350px;
+    background: #ffffff;
+    border-radius: 28px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.08);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 封面 — 文字放大两倍 */
+  .cover-card {
+    background: linear-gradient(145deg, #667eea 0%, #764ba2 60%, #9b59b6 100%);
+    color: #fff;
+    text-align: center;
+    justify-content: center;
+    align-items: center;
+    padding: 60px 60px;
+  }
+  .cover-badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.18);
+    backdrop-filter: blur(8px);
+    padding: 12px 32px;
+    border-radius: 28px;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: 3px;
+    margin-bottom: 48px;
+    border: 1px solid rgba(255,255,255,0.25);
+  }
+  .cover-title {
+    font-size: 108px;
+    font-weight: 900;
+    line-height: 1.05;
+    margin-bottom: 40px;
+    text-shadow: 0 6px 30px rgba(0,0,0,0.22);
+  }
+  .cover-sub {
+    font-size: 40px;
+    opacity: 0.88;
+    font-weight: 400;
+    margin-bottom: 80px;
+  }
+  .cover-stats {
+    display: flex;
+    justify-content: center;
+    gap: 80px;
+  }
+  .cover-stat {
+    text-align: center;
+  }
+  .cover-stat-num {
+    font-size: 72px;
+    font-weight: 900;
+    line-height: 1;
+  }
+  .cover-stat-label {
+    font-size: 26px;
+    opacity: 0.75;
+    margin-top: 14px;
+  }
+  .cover-deco {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+    top: -140px;
+    right: -140px;
+  }
+  .cover-deco2 {
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.05);
+    bottom: -100px;
+    left: -100px;
+  }
+
+  /* 学校卡片通用 */
+  .school-card { padding: 0; }
+  .card-header {
+    padding: 48px 52px 0;
+  }
+  .card-rank {
+    font-size: 22px;
+    font-weight: 700;
+    color: #667eea;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .card-name {
+    font-size: 52px;
+    font-weight: 900;
+    color: #1a1a2e;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .card-tags {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 20px;
+    padding: 7px 18px;
+    border-radius: 12px;
+    font-weight: 700;
+  }
+  .tag-211 { background: #fff3e0; color: #e65100; }
+  .tag-shuang { background: #e8f5e9; color: #2e7d32; }
+  .tag-city { background: #e3f2fd; color: #1565c0; }
+  .tag-score { background: #f3e5f5; color: #6a1b9a; }
+
+  .card-body {
+    padding: 32px 52px 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  .card-text {
+    font-size: 26px;
+    color: #444;
+    line-height: 1.75;
+  }
+  .card-text strong {
+    color: #1a1a2e;
+    font-weight: 700;
+  }
+  .highlight {
+    text-decoration: underline;
+    text-decoration-color: #ffc107;
+    text-decoration-thickness: 10px;
+    text-underline-offset: -5px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+  .highlight-blue {
+    text-decoration: underline;
+    text-decoration-color: #64b5f6;
+    text-decoration-thickness: 10px;
+    text-underline-offset: -5px;
+    font-weight: 700;
+    color: #1a1a2e;
+  }
+
+  .chart-wrap {
+    margin-top: 24px;
+    height: 260px;
+    position: relative;
+    flex-shrink: 0;
+  }
+  .chart-wrap canvas { max-height: 260px; }
+
+  .card-footer {
+    padding: 0 52px 48px;
+    flex-shrink: 0;
+  }
+  .rec-box {
+    background: linear-gradient(135deg, #fff8e1 0%, #fff3e0 100%);
+    border-left: 5px solid #ffc107;
+    padding: 20px 24px;
+    border-radius: 0 16px 16px 0;
+    font-size: 24px;
+    color: #555;
+    line-height: 1.6;
+  }
+  .rec-box strong { color: #e65100; }
+
+  .score-note {
+    font-size: 20px;
+    color: #999;
+    text-align: center;
+    margin-top: 16px;
+  }
+
+  /* 定位分析卡片 */
+  .analysis-card .card-body {
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 36px;
+    width: 100%;
+    margin-top: 40px;
+  }
+  .analysis-item {
+    background: #f8f9fb;
+    border-radius: 20px;
+    padding: 36px 24px;
+  }
+  .analysis-item .num {
+    font-size: 48px;
+    font-weight: 900;
+    color: #667eea;
+  }
+  .analysis-item .label {
+    font-size: 24px;
+    color: #666;
+    margin-top: 10px;
+  }
+  .analysis-desc {
+    font-size: 28px;
+    color: #555;
+    line-height: 1.8;
+    margin-top: 40px;
+  }
+
+  /* 总结卡片 */
+  .summary-card .card-body {
+    padding: 40px 52px;
+  }
+  .summary-list {
+    font-size: 28px;
+    color: #444;
+    line-height: 2.0;
+  }
+  .summary-list strong { color: #1a1a2e; }
+
+  /* 结尾卡片 */
+  .end-card {
+    background: #1a1a2e;
+    color: #fff;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .end-card h2 {
+    font-size: 56px;
+    font-weight: 900;
+    margin-bottom: 24px;
+  }
+  .end-card p {
+    font-size: 26px;
+    opacity: 0.6;
+  }
+  .end-card .qr-hint {
+    margin-top: 40px;
+    font-size: 22px;
+    opacity: 0.4;
+  }
+
+  /* 截图按钮 */
+  .shot-btn {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #fff;
+    border: none;
+    padding: 20px 40px;
+    font-size: 24px;
+    font-weight: 700;
+    border-radius: 50px;
+    cursor: pointer;
+    box-shadow: 0 8px 32px rgba(102,126,234,0.4);
+    z-index: 1000;
+    transition: transform 0.2s;
+    font-family: inherit;
+  }
+  .shot-btn:hover { transform: scale(1.05); }
+  .shot-btn:active { transform: scale(0.95); }
+
+  /* 进度浮层 */
+  .progress-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    font-size: 28px;
+    color: #fff;
+    font-weight: 700;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .progress-bar {
+    width: 400px;
+    height: 12px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 6px;
+    transition: width 0.3s;
+  }
+
+  @media (max-width: 960px) {
+    .card { width: 100%; height: auto; min-height: 100vh; }
+  }
+</style>
+</head>
+<body>
+
+<button class="shot-btn" onclick="exportCards()">📸 一键导出所有卡片</button>
+
+<!-- 封面 -->
+<div class="card cover-card" id="card-cover">
+  <div class="cover-deco"></div>
+  <div class="cover-deco2"></div>
+  <div class="cover-badge">北京高考 · 志愿填报</div>
+  <div class="cover-title">北京580分<br>冲这些学校</div>
+  <div class="cover-sub">近三年录取数据分析 · 10所高性价比推荐</div>
+  <div class="cover-stats">
+    <div class="cover-stat">
+      <div class="cover-stat-num">580</div>
+      <div class="cover-stat-label">预估分数</div>
+    </div>
+    <div class="cover-stat">
+      <div class="cover-stat-num">~14,000</div>
+      <div class="cover-stat-label">预估位次</div>
+    </div>
+    <div class="cover-stat">
+      <div class="cover-stat-num">10</div>
+      <div class="cover-stat-label">精选推荐</div>
+    </div>
+  </div>
+</div>
+
+<!-- 定位分析 -->
+<div class="card analysis-card" id="card-analysis">
+  <div class="card-header">
+    <div class="card-name" style="font-size:44px">分数定位分析</div>
+  </div>
+  <div class="card-body">
+    <div class="analysis-grid">
+      <div class="analysis-item">
+        <div class="num">523</div>
+        <div class="label">2024特招线</div>
+      </div>
+      <div class="analysis-item">
+        <div class="num">14,596</div>
+        <div class="label">580分位次</div>
+      </div>
+      <div class="analysis-item">
+        <div class="num">575-590</div>
+        <div class="label">可冲分数带</div>
+      </div>
+    </div>
+    <div class="analysis-desc">
+      580分比特招线高57分，可冲部分<span class="highlight">中下游211</span>及<span class="highlight">优质双非</span>。<br>以下10所按「城市+层次+专业适配度」综合排序。
+    </div>
+  </div>
+</div>
+
+<!-- 1. 天津工业大学 -->
+<div class="card school-card" id="card-tjpu">
+  <div class="card-header">
+    <div class="card-rank">NO.01 最具性价比双一流</div>
+    <div class="card-name">天津工业大学</div>
+    <div class="card-tags">
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">天津</span>
+      <span class="tag tag-score">2024最低587</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>人工智能（588）、计算机科学与技术（588）、通信工程（589）。<br><br>
+      纺织工程全国<span class="highlight">A+</span>，但近年<strong>新工科</strong>发展迅速。位于天津西青，紧邻市区，<span class="highlight">就业落实率88%+</span>。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-tjpu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>双一流牌子 + 计算机/通信可冲 + 天津区位优势，580分段最香选择之一。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 2. 西安邮电大学 -->
+<div class="card school-card" id="card-xiyou">
+  <div class="card-header">
+    <div class="card-rank">NO.02 四邮性价比之王</div>
+    <div class="card-name">西安邮电大学</div>
+    <div class="card-tags">
+      <span class="tag tag-city">双非</span>
+      <span class="tag tag-city">西安</span>
+      <span class="tag tag-score">2024最低579</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>网络工程（579）、智能科学与技术（581）。<br><br>
+      西北地区唯一<span class="highlight">邮电通信类高校</span>，通信工程学科评估B级。华为、中兴、三大运营商校招目标，<span class="highlight">就业率87%+</span>，超20%进世界500强。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-xiyou"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>四邮之一，行业壁垒强，IT通信就业不输部分211，580分稳中带冲。</div>
+    <div class="score-note">数据来源：北京市教育考试院 / 掌上高考</div>
+  </div>
+</div>
+
+<!-- 3. 上海理工大学 -->
+<div class="card school-card" id="card-usst">
+  <div class="card-header">
+    <div class="card-rank">NO.03 上海非211最强工科</div>
+    <div class="card-name">上海理工大学</div>
+    <div class="card-tags">
+      <span class="tag tag-city">双非</span>
+      <span class="tag tag-city">上海</span>
+      <span class="tag tag-score">2024最低578</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>工科试验班（586）、光电信息（585）、电气工程（583）、理科试验班（589）。<br><br>
+      被誉为"上海非211中最好的工科院校"，<span class="highlight">就业率96.92%</span>，平均起薪<strong>9,542元/月</strong>。72%毕业生留沪，<strong>可任意转专业</strong>。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-usst"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>上海区位 + 96%+就业率 + 近万月薪 + 转专业自由，工科强烈推荐。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 4. 浙江工业大学 -->
+<div class="card school-card" id="card-zjut">
+  <div class="card-header">
+    <div class="card-rank">NO.04 浙江就业王者</div>
+    <div class="card-name">浙江工业大学</div>
+    <div class="card-tags">
+      <span class="tag tag-city">双非</span>
+      <span class="tag tag-city">杭州</span>
+      <span class="tag tag-score">2024最低576</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>计算机类（582）、数据科学（579）、工业设计（576）。<br><br>
+      浙江省内仅次于浙大的<strong>工科强校</strong>，位于杭州，阿里、网易、海康环绕。CWUR国内约<span class="highlight">72名</span>，部分专业就业率超过传统名校。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-zjut"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>杭州互联网产业红利 + 省内就业王者 + 分数友好，长三角必选。</div>
+    <div class="score-note">数据来源：北京市教育考试院 / 掌上高考（2022年564分）</div>
+  </div>
+</div>
+
+<!-- 5. 江南大学 -->
+<div class="card school-card" id="card-jnu">
+  <div class="card-header">
+    <div class="card-rank">NO.05 被低估的211</div>
+    <div class="card-name">江南大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">无锡</span>
+      <span class="tag tag-score">2024最低583</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>人工智能（584）、应用化学（583）、高分子材料（583）、食品营养（585）。<br><br>
+      教育部直属211，<span class="highlight">食品科学全国前三</span>，设计学院"小清华"。近年大力发展集成电路、AI，对接长三角半导体产业。本科生<span class="highlight">去双一流深造比例94.59%</span>。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-jnu"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211平台 + 深造率极高 + 长三角宜居 + 新工科转型快，被低估的211。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 6. 中国石油大学（华东） -->
+<div class="card school-card" id="card-upc">
+  <div class="card-header">
+    <div class="card-rank">NO.06 央企就业直通车</div>
+    <div class="card-name">中国石油大学（华东）</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">青岛</span>
+      <span class="tag tag-score">2024最低581</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>软件工程（582）、光电信息（582）、人工智能（583）、自动化（586）。<br><br>
+      "石油科技人才的摇篮"，但<strong>通用工科同样强势</strong>。校招<span class="highlight">国企/央企占比超75%</span>，三桶油+新能源每年招收超1000人。保研率<span class="highlight">17.18%</span>，本科起薪约8,500元/月。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-upc"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211 + 高保研率 + 央企就业通道 + 海滨城市，580分上211的捷径。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 7. 长安大学 -->
+<div class="card school-card" id="card-chd">
+  <div class="card-header">
+    <div class="card-rank">NO.07 公路交通黄埔军校</div>
+    <div class="card-name">长安大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">西安</span>
+      <span class="tag tag-score">2024最低581</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>计算机类（589）、经济学类（586）、自动化类（583）、土木类（582）。<br><br>
+      "<span class="highlight">公路交通人才培养的黄埔军校</span>"，港珠澳大桥总工程师即校友。工科就业率<span class="highlight">95%+</span>，中铁/中建/中交等央企大量校招，<strong>国家电网有提前批</strong>。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-chd"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211 + 央企就业强 + 行业黄埔 + 工科95%+，男生尤其抢手。</div>
+    <div class="score-note">数据来源：北京市教育考试院 / 掌上高考（2025年580分）</div>
+  </div>
+</div>
+
+<!-- 8. 河北工业大学 -->
+<div class="card school-card" id="card-hebut">
+  <div class="card-header">
+    <div class="card-rank">NO.08 深造党理想选择</div>
+    <div class="card-name">河北工业大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">天津</span>
+      <span class="tag tag-score">2024最低584</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>金融学（584）、机械设计制造（587）、车辆工程（589）、高分子材料（588）。<br><br>
+      全国唯一<strong>异地办学的211</strong>（隶属河北，位于天津），电气专业约<span class="highlight">70%进国家电网</span>。2024届升学率<span class="highlight">51.54%</span>，转专业成功率<strong>80.77%</strong>。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-hebut"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>211+双一流 + 升学率过半 + 电气直通电网 + 天津区位，深造党首选。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 9. 北京工业大学 -->
+<div class="card school-card" id="card-bjut">
+  <div class="card-header">
+    <div class="card-rank">NO.09 留京211保底</div>
+    <div class="card-name">北京工业大学</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">北京</span>
+      <span class="tag tag-score">2024最低585</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>金融学（585）、材料类（585）、土木类（586）、交通运输类（587）。<br><br>
+      <span class="highlight">北京市属唯一211</span>，本地招生规模大。热门专业（计算机/电子信息）需620+，但<strong>基础工科和经管类</strong>585左右可上。留京就业优势显著，校友网络覆盖北京各大国企/事业单位。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-bjut"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>北京本地211 + 留京就业便利 + 招生规模大，想留京又不想出京的首选。</div>
+    <div class="score-note">数据来源：北京市教育考试院（2022年数据缺失，采用掌上高考580分）</div>
+  </div>
+</div>
+
+<!-- 10. 中国地质大学（北京） -->
+<div class="card school-card" id="card-cugb">
+  <div class="card-header">
+    <div class="card-rank">NO.10 被名字耽误的211</div>
+    <div class="card-name">中国地质大学（北京）</div>
+    <div class="card-tags">
+      <span class="tag tag-211">211</span>
+      <span class="tag tag-shuang">双一流</span>
+      <span class="tag tag-city">北京</span>
+      <span class="tag tag-score">2024最低585</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="card-text">
+      <strong>580分可冲：</strong>电子信息工程（589）、数据科学与大数据（588）、测绘工程（587）、安全工程（590）。<br><br>
+      不要被"地质"二字误导——<strong>软件工程、电子信息、数据科学</strong>等通用专业近年持续走高。北京211保研率约<span class="highlight">15%</span>，深造去向北航、北邮等名校比例高。
+    </div>
+    <div class="chart-wrap"><canvas id="chart-cugb"></canvas></div>
+  </div>
+  <div class="card-footer">
+    <div class="rec-box"><strong>推荐理由：</strong>北京211 + 通用工科可冲 + 深造通道好，"地质"校名带来的低估值是机会。</div>
+    <div class="score-note">数据来源：北京市教育考试院</div>
+  </div>
+</div>
+
+<!-- 总结 -->
+<div class="card summary-card" id="card-summary">
+  <div class="card-header">
+    <div class="card-name" style="font-size:44px">填报策略总结</div>
+  </div>
+  <div class="card-body">
+    <div class="summary-list">
+      1. <strong>580分不是高分</strong>，但足够上211。关键是<strong>选对专业组</strong>，避开热门专业组。<br><br>
+      2. <strong>地域优先</strong>：上海理工、浙江工业、天津工业等双非，在本地就业认可度可能超过偏远211。<br><br>
+      3. <strong>行业特色校</strong>：西安邮电、中国石油、长安大学，在各自领域有<strong>行业壁垒</strong>，就业不输综合211。<br><br>
+      4. <strong>深造导向</strong>：河北工业（升学率51%）、江南大学（深造率94%）、中国石油（保研率17%）是深造跳板。<br><br>
+      5. <strong>留京策略</strong>：北京工业大学、中国地质大学（北京）是580分段留京读211的最后机会。<br><br>
+      <span class="highlight">提醒：以上数据基于近三年录取最低分，2025年实际录取受招生计划、专业组调整影响，建议以官方招生简章为准。</span>
+    </div>
+  </div>
+</div>
+
+<!-- 结尾 -->
+<div class="card end-card" id="card-end">
+  <h2>祝每位考生金榜题名</h2>
+  <p>数据整理自北京市教育考试院及高校公开录取数据<br>仅供志愿填报参考</p>
+  <div class="qr-hint">长按保存图片 | 分享给需要的同学</div>
+</div>
+
+<script>
+const chartColors = {
+  line: '#667eea',
+  fill: 'rgba(102,126,234,0.12)',
+  point: '#764ba2',
+  grid: '#f0f1f3',
+  text: '#888'
+};
+
+const commonOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: { label: function(ctx) { return ctx.parsed.y + '分'; } },
+      backgroundColor: '#1a1a2e',
+      titleFont: { size: 18 },
+      bodyFont: { size: 18 },
+      padding: 14,
+      cornerRadius: 12
+    }
+  },
+  scales: {
+    x: {
+      grid: { display: false },
+      ticks: { color: chartColors.text, font: { size: 18, weight: '600' } }
+    },
+    y: {
+      min: 540,
+      max: 620,
+      grid: { color: chartColors.grid, borderDash: [6, 4] },
+      ticks: { color: chartColors.text, font: { size: 16 }, stepSize: 20 }
+    }
+  },
+  elements: { line: { tension: 0.4 }, point: { radius: 6, hoverRadius: 9, borderWidth: 3 } }
+};
+
+function makeChart(id, data) {
+  const ctx = document.getElementById(id).getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['2022','2023','2024','2025'],
+      datasets: [{
+        data: data,
+        borderColor: chartColors.line,
+        backgroundColor: chartColors.fill,
+        fill: true,
+        pointBackgroundColor: chartColors.point,
+        pointBorderColor: '#fff',
+        pointBorderWidth: 3,
+        borderWidth: 4
+      }]
+    },
+    options: commonOptions
+  });
+}
+
+makeChart('chart-tjpu', [571, 590, 590, 592]);
+makeChart('chart-xiyou', [554, 580, 579, 583]);
+makeChart('chart-usst', [555, 573, 578, 566]);
+makeChart('chart-zjut', [564, 584, 576, 580]);
+makeChart('chart-jnu', [565, 583, 583, 589]);
+makeChart('chart-upc', [567, 583, 581, 596]);
+makeChart('chart-chd', [568, 585, 581, 580]);
+makeChart('chart-hebut', [572, 590, 584, null]);
+makeChart('chart-bjut', [580, 592, 585, 586]);
+makeChart('chart-cugb', [577, 587, 585, 591]);
+
+async function exportCards() {
+  const btn = document.querySelector('.shot-btn');
+  btn.style.display = 'none';
+
+  const cards = document.querySelectorAll('.card');
+  const names = [
+    '01-封面',
+    '02-分数定位',
+    '03-天津工业大学',
+    '04-西安邮电大学',
+    '05-上海理工大学',
+    '06-浙江工业大学',
+    '07-江南大学',
+    '08-中国石油大学华东',
+    '09-长安大学',
+    '10-河北工业大学',
+    '11-北京工业大学',
+    '12-中国地质大学北京',
+    '13-填报策略',
+    '14-结尾'
+  ];
+
+  // 创建进度浮层
+  const overlay = document.createElement('div');
+  overlay.className = 'progress-overlay';
+  overlay.innerHTML = `
+    <div>正在导出 ${cards.length} 张卡片...</div>
+    <div class="progress-bar"><div class="progress-bar-fill" id="prog-fill" style="width:0%"></div></div>
+    <div id="prog-text">0 / ${cards.length}</div>
+  `;
+  document.body.appendChild(overlay);
+
+  const zip = new JSZip();
+  const folder = zip.folder('北京580分冲这些学校');
+
+  for (let i = 0; i < cards.length; i++) {
+    const card = cards[i];
+    try {
+      const canvas = await html2canvas(card, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        width: 900,
+        height: 1350
+      });
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+      const fileName = (names[i] || `card-${String(i+1).padStart(2,'0')}`) + '.png';
+      folder.file(fileName, blob);
+
+      const pct = Math.round(((i + 1) / cards.length) * 100);
+      document.getElementById('prog-fill').style.width = pct + '%';
+      document.getElementById('prog-text').textContent = `${i + 1} / ${cards.length}`;
+    } catch (err) {
+      console.error('截图失败:', err);
+    }
+  }
+
+  document.body.removeChild(overlay);
+  btn.style.display = 'block';
+
+  // 生成并下载 zip
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  saveAs(zipBlob, '北京580分冲这些学校.zip');
+}
+</script>
+
+</body>
+</html>

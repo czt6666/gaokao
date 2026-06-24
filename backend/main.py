@@ -1,6 +1,7 @@
 """
 高考志愿填报决策引擎 - FastAPI 后端（真实数据版）
 """
+
 from fastapi import FastAPI, Depends, Query, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -10,6 +11,7 @@ from collections import defaultdict
 import sys, os, json, datetime, logging, re, time
 
 from dotenv import load_dotenv
+
 load_dotenv()
 
 logger = logging.getLogger("gaokao")
@@ -17,16 +19,33 @@ logger = logging.getLogger("gaokao")
 sys.path.insert(0, os.path.dirname(__file__))
 
 from database import (
-    get_db, init_db, School, Major, AdmissionRecord,
-    SubjectEvaluation, MajorEmployment, RankTable,
-    NationalProgram, ProvinceControlLine, User, UserEvent,
-    SchoolEmployment, SchoolReview, Order,
+    get_db,
+    init_db,
+    School,
+    Major,
+    AdmissionRecord,
+    SubjectEvaluation,
+    MajorEmployment,
+    RankTable,
+    NationalProgram,
+    ProvinceControlLine,
+    User,
+    UserEvent,
+    SchoolEmployment,
+    SchoolReview,
+    Order,
 )
 from algorithms.rank_method import build_gradient_plan, detect_big_small_year
 from algorithms.hidden_gem import (
-    hidden_gem_type_b, school_quality_score, COGNITIVE_DISCOUNT_MAJORS
+    hidden_gem_type_b,
+    school_quality_score,
+    COGNITIVE_DISCOUNT_MAJORS,
 )
-from routers import auth as auth_router, payment as payment_router, track as track_router
+from routers import (
+    auth as auth_router,
+    payment as payment_router,
+    track as track_router,
+)
 from routers import report as report_router, admin as admin_router
 from routers import tracking as tracking_router
 from routers import agent as agent_router
@@ -71,6 +90,7 @@ app.add_middleware(
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request as StarletteRequest
 
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: StarletteRequest, call_next):
         response = await call_next(request)
@@ -78,6 +98,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         return response
+
 
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -92,6 +113,7 @@ def version():
     return {
         "version": os.getenv("BACKEND_VERSION", "3.0.1"),
     }
+
 
 @app.on_event("startup")
 def on_startup():
@@ -113,6 +135,7 @@ def _start_scheduler():
             logger.info("[Scheduler] 开始每周口碑数据更新...")
             try:
                 from scrapers.student_review_scraper import run as scraper_run
+
                 scraper_run(limit=200, delay=3.0)
                 logger.info("[Scheduler] 口碑数据更新完成")
             except Exception as e:
@@ -128,7 +151,9 @@ def _start_scheduler():
         scheduler.start()
         logger.info("[Scheduler] APScheduler 已启动（每周日03:00更新口碑数据）")
     except ImportError:
-        logger.warning("[Scheduler] apscheduler 未安装，跳过定时任务（pip install apscheduler）")
+        logger.warning(
+            "[Scheduler] apscheduler 未安装，跳过定时任务（pip install apscheduler）"
+        )
     except Exception as e:
         logger.error(f"[Scheduler] 启动失败: {e}", exc_info=True)
 
@@ -138,18 +163,22 @@ def get_school_top_subjects(school_name: str, db: Session) -> List[dict]:
     """从 subject_evaluations 表查询该校的学科评估，返回A类学科列表"""
     grade_order = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-"]
 
-    evals = db.query(SubjectEvaluation).filter(
-        SubjectEvaluation.school_name == school_name
-    ).all()
+    evals = (
+        db.query(SubjectEvaluation)
+        .filter(SubjectEvaluation.school_name == school_name)
+        .all()
+    )
 
     result = []
     for ev in evals:
         grade = ev.grade.strip() if ev.grade else ""
-        result.append({
-            "subject_name": ev.subject_name,
-            "grade": grade,
-            "grade_rank": grade_order.index(grade) if grade in grade_order else 99
-        })
+        result.append(
+            {
+                "subject_name": ev.subject_name,
+                "grade": grade,
+                "grade_rank": grade_order.index(grade) if grade in grade_order else 99,
+            }
+        )
     # 只返回 A 类（A+ A A-）
     a_class = [r for r in result if r["grade_rank"] <= 2]
     return sorted(a_class, key=lambda x: x["grade_rank"])
@@ -157,9 +186,11 @@ def get_school_top_subjects(school_name: str, db: Session) -> List[dict]:
 
 def get_major_employment(major_name: str, db: Session) -> Optional[dict]:
     """从 major_employment 表查询专业就业信息"""
-    emp = db.query(MajorEmployment).filter(
-        MajorEmployment.major_name == major_name
-    ).first()
+    emp = (
+        db.query(MajorEmployment)
+        .filter(MajorEmployment.major_name == major_name)
+        .first()
+    )
     if not emp:
         return None
     return {
@@ -191,10 +222,13 @@ def _get_paid_status(request: Request, db: Session) -> bool:
 
 
 # ── 简易IP限流（防止恶意请求打死数据库）──────────────────────
-_RATE_LIMIT_WINDOW = 60       # 窗口：60秒
-_RATE_LIMIT_MAX    = 15       # 每个IP每分钟最多15次 recommend 请求
-def _build_recent_data_simple(records: list, school_name: str,
-                              baseline_cache: dict) -> list:
+_RATE_LIMIT_WINDOW = 60  # 窗口：60秒
+_RATE_LIMIT_MAX = 15  # 每个IP每分钟最多15次 recommend 请求
+
+
+def _build_recent_data_simple(
+    records: list, school_name: str, baseline_cache: dict
+) -> list:
     """专业级数据 + 学校级院校最低分补充，返回最新6年。
     复用于 major_first_query 等非核心推荐端点。"""
     major_data = sorted(records, key=lambda x: x["year"], reverse=True)
@@ -212,13 +246,22 @@ def _build_recent_data_simple(records: list, school_name: str,
 
 _rate_limit_store: dict = {}  # {ip: [timestamp, ...]}
 
+
 def _check_rate_limit(request: Request):
     """返回 True 表示通过，False 表示被限流"""
-    ip = request.headers.get("X-Forwarded-For", request.client.host if request.client else "unknown").split(",")[0].strip()
+    ip = (
+        request.headers.get(
+            "X-Forwarded-For", request.client.host if request.client else "unknown"
+        )
+        .split(",")[0]
+        .strip()
+    )
     now = time.time()
     # 清理过期记录（懒清理，每次只清当前IP）
     if ip in _rate_limit_store:
-        _rate_limit_store[ip] = [t for t in _rate_limit_store[ip] if now - t < _RATE_LIMIT_WINDOW]
+        _rate_limit_store[ip] = [
+            t for t in _rate_limit_store[ip] if now - t < _RATE_LIMIT_WINDOW
+        ]
     else:
         _rate_limit_store[ip] = []
     if len(_rate_limit_store[ip]) >= _RATE_LIMIT_MAX:
@@ -226,7 +269,10 @@ def _check_rate_limit(request: Request):
     _rate_limit_store[ip].append(now)
     # 定期清理：如果总IP数超过5000，清掉最旧的一半（防止内存泄漏）
     if len(_rate_limit_store) > 5000:
-        oldest = sorted(_rate_limit_store.keys(), key=lambda k: _rate_limit_store[k][0] if _rate_limit_store[k] else 0)
+        oldest = sorted(
+            _rate_limit_store.keys(),
+            key=lambda k: _rate_limit_store[k][0] if _rate_limit_store[k] else 0,
+        )
         for k in oldest[:2500]:
             del _rate_limit_store[k]
     return True
@@ -245,18 +291,31 @@ def recommend(
     c_city: str = Query("", description="目标城市等级，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
-    batch_filter: str = Query("", description="批次类型筛选，逗号分隔（undergraduate,junior_college,advance_batch,special_type,art,sports,preparatory,other）"),
-    exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔。不传=默认排除所有已知限制；空字符串=不排除任何限制"),
-    score: int | None = Query(None, description="考生分数（用于分数分桶，优先于位次分桶）"),
-    db: Session = Depends(get_db)
+    batch_filter: str = Query(
+        "",
+        description="批次类型筛选，逗号分隔（undergraduate,junior_college,advance_batch,special_type,art,sports,preparatory,other）",
+    ),
+    exclude_restrictions: str | None = Query(
+        None,
+        description="排除的专业限制标签，逗号分隔。不传=默认排除所有已知限制；空字符串=不排除任何限制",
+    ),
+    score: int | None = Query(
+        None, description="考生分数（用于分数分桶，优先于位次分桶）"
+    ),
+    db: Session = Depends(get_db),
 ):
     """主推荐接口（wrapper，调用核心逻辑）"""
     if not _check_rate_limit(request):
-        raise HTTPException(status_code=429, detail="请求过于频繁，请稍后再试（每分钟最多15次）")
+        raise HTTPException(
+            status_code=429, detail="请求过于频繁，请稍后再试（每分钟最多15次）"
+        )
     if rank <= 0:
         raise HTTPException(status_code=422, detail=f"rank 必须大于 0，当前值: {rank}")
     if rank > 2000000:
-        raise HTTPException(status_code=422, detail=f"rank 超出合理范围（最大 2,000,000），当前值: {rank}")
+        raise HTTPException(
+            status_code=422,
+            detail=f"rank 超出合理范围（最大 2,000,000），当前值: {rank}",
+        )
     if len(province) > 20 or not province.strip():
         raise HTTPException(status_code=422, detail="省份格式不正确")
 
@@ -274,34 +333,50 @@ def recommend(
     # order_no 必须同时满足：已支付 + province/rank/subject 与当前查询匹配
     is_paid = False
     if order_no:
-        paid_order = db.query(Order).filter(
-            Order.order_no == order_no,
-            Order.status == "paid"
-        ).first()
+        paid_order = (
+            db.query(Order)
+            .filter(Order.order_no == order_no, Order.status == "paid")
+            .first()
+        )
         if paid_order:
             # 省份必须匹配（空字符串=历史兼容，视为匹配）
-            province_match = (paid_order.province == "" or paid_order.province == province)
+            province_match = (
+                paid_order.province == "" or paid_order.province == province
+            )
             # 位次微调容差 ±50 视为同次查询
             rank_match = (
-                paid_order.rank_input is None or
-                abs(paid_order.rank_input - rank) <= 50
+                paid_order.rank_input is None or abs(paid_order.rank_input - rank) <= 50
             )
             # 选科必须匹配（空字符串=历史兼容订单，视为匹配）
-            subject_match = (paid_order.subject == "" or paid_order.subject == subject)
+            subject_match = paid_order.subject == "" or paid_order.subject == subject
             is_paid = province_match and rank_match and subject_match
 
             # 订阅制订单：即使订单本身有效，也需检查用户订阅状态是否仍然有效
-            if is_paid and paid_order.product_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+            if is_paid and paid_order.product_type in (
+                "season_2026",
+                "monthly_sub",
+                "quarterly_sub",
+            ):
                 if paid_order.user_id:
-                    order_user = db.query(User).filter(User.id == paid_order.user_id).first()
+                    order_user = (
+                        db.query(User).filter(User.id == paid_order.user_id).first()
+                    )
                     now = datetime.datetime.utcnow()
-                    if not order_user or not order_user.is_paid or not (order_user.subscription_end_at and order_user.subscription_end_at > now):
+                    if (
+                        not order_user
+                        or not order_user.is_paid
+                        or not (
+                            order_user.subscription_end_at
+                            and order_user.subscription_end_at > now
+                        )
+                    ):
                         is_paid = False
 
     if not is_paid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
             from routers.auth import _verify_token
+
             tok_payload = _verify_token(auth_header[7:])
             if tok_payload:
                 uid = tok_payload.get("uid")
@@ -314,14 +389,18 @@ def recommend(
                 if u:
                     # JWT路径：查该用户是否有与当前 province+rank+subject 匹配的 paid order
                     # 位次微调容差 ±50 视为同次查询
-                    matching_order = db.query(Order).filter(
-                        Order.user_id == u.id,
-                        Order.status == "paid",
-                        Order.province == province,
-                        Order.subject == subject,
-                        Order.rank_input >= rank - 50,
-                        Order.rank_input <= rank + 50,
-                    ).first()
+                    matching_order = (
+                        db.query(Order)
+                        .filter(
+                            Order.user_id == u.id,
+                            Order.status == "paid",
+                            Order.province == province,
+                            Order.subject == subject,
+                            Order.rank_input >= rank - 50,
+                            Order.rank_input <= rank + 50,
+                        )
+                        .first()
+                    )
                     if matching_order:
                         is_paid = True
                     # 订阅制会员：未过期内无限次查询（不依赖单笔订单匹配）
@@ -333,26 +412,46 @@ def recommend(
 
     constraints = {}
     if c_major.strip():
-        constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
+        constraints["major_keywords"] = [
+            k.strip() for k in c_major.strip().split() if k.strip()
+        ]
     if c_city.strip():
-        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+        constraints["city_levels"] = [
+            x.strip() for x in c_city.strip().split(",") if x.strip()
+        ]
     if c_nature.strip():
-        constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
+        constraints["natures"] = [
+            x.strip() for x in c_nature.strip().split(",") if x.strip()
+        ]
     if c_tier.strip():
-        constraints["tiers"] = [x.strip() for x in c_tier.strip().split(",") if x.strip()]
+        constraints["tiers"] = [
+            x.strip() for x in c_tier.strip().split(",") if x.strip()
+        ]
 
     # 试看层门控：trial_report 只解锁前 3 所
     trial_limit = None
     if is_paid and order_no:
-        paid_order = db.query(Order).filter(Order.order_no == order_no, Order.status == "paid").first()
+        paid_order = (
+            db.query(Order)
+            .filter(Order.order_no == order_no, Order.status == "paid")
+            .first()
+        )
         if paid_order and paid_order.product_type == "trial_report":
             trial_limit = 3
 
     _DEFAULT_SPECIAL = [
-        "special:experiment", "special:national_special", "special:local_special",
-        "special:oriented", "special:free_teacher", "special:sino_foreign",
+        "special:experiment",
+        "special:national_special",
+        "special:local_special",
+        "special:oriented",
+        "special:free_teacher",
+        "special:sino_foreign",
     ]
-    _batch_filter = [x.strip() for x in batch_filter.split(",") if x.strip()] if batch_filter else None
+    _batch_filter = (
+        [x.strip() for x in batch_filter.split(",") if x.strip()]
+        if batch_filter
+        else None
+    )
     if exclude_restrictions is None:
         # 无参数 = 默认排除所有特殊计划
         _exclude_restrictions = _DEFAULT_SPECIAL
@@ -370,26 +469,36 @@ def recommend(
             _exclude_restrictions = _parsed
 
     try:
-        result = _run_recommend_core(province=province, rank=rank, subject=subject,
-                                     exam_mode=exam_mode, mode=mode, db=db, is_paid=is_paid,
-                                     constraints=constraints or None, trial_limit=trial_limit,
-                                     batch_filter=_batch_filter or None,
-                                     exclude_restrictions=_exclude_restrictions or None,
-                                     user_score=score)
+        result = _run_recommend_core(
+            province=province,
+            rank=rank,
+            subject=subject,
+            exam_mode=exam_mode,
+            mode=mode,
+            db=db,
+            is_paid=is_paid,
+            constraints=constraints or None,
+            trial_limit=trial_limit,
+            batch_filter=_batch_filter or None,
+            exclude_restrictions=_exclude_restrictions or None,
+            user_score=score,
+        )
         result["is_trial"] = trial_limit is not None
         result["trial_limit"] = trial_limit
         return result
     except Exception as e:
-        logger.error(f"recommend error province={province} rank={rank}: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试")
+        logger.error(
+            f"recommend error province={province} rank={rank}: {e}", exc_info=True
+        )
+        raise HTTPException(
+            status_code=500, detail="推荐系统暂时无法处理该请求，请稍后重试"
+        )
 
 
 # ── 学校详情 ──────────────────────────────────────────────────
 @app.get("/api/school/{school_name}")
 def school_detail(
-    school_name: str,
-    province: str = Query("北京"),
-    db: Session = Depends(get_db)
+    school_name: str, province: str = Query("北京"), db: Session = Depends(get_db)
 ):
     school = db.query(School).filter(School.name == school_name).first()
     if not school:
@@ -418,7 +527,10 @@ def school_detail(
     # 历年录取记录
     records = (
         db.query(AdmissionRecord)
-        .filter(AdmissionRecord.school_name == school_name, AdmissionRecord.province == province)
+        .filter(
+            AdmissionRecord.school_name == school_name,
+            AdmissionRecord.province == province,
+        )
         .order_by(AdmissionRecord.year)
         .all()
     )
@@ -430,18 +542,23 @@ def school_detail(
         if not r.major_name or "院校最低分" in r.major_name:
             continue
         key = f"{r.major_name}|{r.major_remark or ''}"
-        major_records[key].append({
-            "year": r.year,
-            "min_rank": r.min_rank,
-            "min_score": r.min_score,
-            "plan_count": r.admit_count,
-            "major_remark": r.major_remark or "",
-        })
+        major_records[key].append(
+            {
+                "year": r.year,
+                "min_rank": r.min_rank,
+                "min_score": r.min_score,
+                "plan_count": r.admit_count,
+                "major_remark": r.major_remark or "",
+            }
+        )
 
     # 学科评估
-    evals = db.query(SubjectEvaluation).filter(
-        SubjectEvaluation.school_name == school_name
-    ).order_by(SubjectEvaluation.grade).all()
+    evals = (
+        db.query(SubjectEvaluation)
+        .filter(SubjectEvaluation.school_name == school_name)
+        .order_by(SubjectEvaluation.grade)
+        .all()
+    )
 
     subject_eval_map = {}
     for ev in evals:
@@ -470,7 +587,7 @@ def school_detail(
             {"subject": k, "grade": v}
             for k, v in sorted(subject_eval_map.items(), key=lambda x: x[1])
             if v in ["A+", "A", "A-", "B+"]
-        ][:12]
+        ][:12],
     }
 
     major_analysis = []
@@ -487,20 +604,24 @@ def school_detail(
         emp = get_major_employment(major_name, db)
         # 尝试从 majors 表补充选科要求、招生人数等信息
         mi = majors_by_name.get(major_name)
-        major_analysis.append({
-            "major_name": major_name,
-            "major_remark": major_remark,
-            "subject_req": mi.subject_req if mi else "",
-            "plan_count": mi.plan_count if mi else None,
-            "tuition": mi.tuition if mi else None,
-            "duration": mi.duration if mi else None,
-            "records": recs_sorted,
-            "big_small_year": bsy,
-            "cognitive_gem": gem_b,
-            "employment": emp
-        })
+        major_analysis.append(
+            {
+                "major_name": major_name,
+                "major_remark": major_remark,
+                "subject_req": mi.subject_req if mi else "",
+                "plan_count": mi.plan_count if mi else None,
+                "tuition": mi.tuition if mi else None,
+                "duration": mi.duration if mi else None,
+                "records": recs_sorted,
+                "big_small_year": bsy,
+                "cognitive_gem": gem_b,
+                "employment": emp,
+            }
+        )
     # 按最近一年位次降序排列（位次高的 = 更难考 = 放前面）
-    major_analysis.sort(key=lambda x: -(x["records"][-1]["min_rank"] if x["records"] else 0))
+    major_analysis.sort(
+        key=lambda x: -(x["records"][-1]["min_rank"] if x["records"] else 0)
+    )
 
     # majors 表有数据但 admission_records 完全缺失的情况：保留条目但 records 为空
     if not major_analysis and majors_dedup:
@@ -508,18 +629,20 @@ def school_detail(
             bsy = detect_big_small_year([])
             gem_b = hidden_gem_type_b(major.major_name)
             emp = get_major_employment(major.major_name, db)
-            major_analysis.append({
-                "major_name": major.major_name,
-                "major_remark": "",
-                "subject_req": major.subject_req,
-                "plan_count": major.plan_count,
-                "tuition": major.tuition,
-                "duration": major.duration,
-                "records": [],
-                "big_small_year": bsy,
-                "cognitive_gem": gem_b,
-                "employment": emp
-            })
+            major_analysis.append(
+                {
+                    "major_name": major.major_name,
+                    "major_remark": "",
+                    "subject_req": major.subject_req,
+                    "plan_count": major.plan_count,
+                    "tuition": major.tuition,
+                    "duration": major.duration,
+                    "records": [],
+                    "big_small_year": bsy,
+                    "cognitive_gem": gem_b,
+                    "employment": emp,
+                }
+            )
 
     # 计算学校综合质量评分
     strong_subjects_raw = get_school_top_subjects(school_name, db)
@@ -541,7 +664,9 @@ def school_detail(
         "rank_2025": school.rank_2025,
         "postgrad_rate": school.postgrad_rate,
     }
-    quality = school_quality_score(school_dict_for_quality, strong_subjects_for_quality, emp_list)
+    quality = school_quality_score(
+        school_dict_for_quality, strong_subjects_for_quality, emp_list
+    )
 
     return {
         "school": {
@@ -550,10 +675,10 @@ def school_detail(
             "city": school.city,
             "tier": school.tier,
             "tags": school_tags,
-            **school_info_extra
+            **school_info_extra,
         },
         "majors": major_analysis,
-        "quality": quality
+        "quality": quality,
     }
 
 
@@ -575,12 +700,19 @@ def school_outlook(school_name: str, db: Session = Depends(get_db)):
 
     # 构造 school_data
     strong = [
-        ev.subject_name for ev in
-        db.query(SubjectEvaluation)
-        .filter(SubjectEvaluation.school_name == school_name, SubjectEvaluation.grade.in_(["A+", "A", "A-"]))
+        ev.subject_name
+        for ev in db.query(SubjectEvaluation)
+        .filter(
+            SubjectEvaluation.school_name == school_name,
+            SubjectEvaluation.grade.in_(["A+", "A", "A-"]),
+        )
         .all()
     ]
-    emp_row = db.query(SchoolEmployment).filter(SchoolEmployment.school_name == school_name).first()
+    emp_row = (
+        db.query(SchoolEmployment)
+        .filter(SchoolEmployment.school_name == school_name)
+        .first()
+    )
     emp = {}
     if emp_row:
         emp = {
@@ -591,8 +723,12 @@ def school_outlook(school_name: str, db: Session = Depends(get_db)):
 
     # 最近 5 年录取位次
     recent = (
-        db.query(AdmissionRecord.year, func.min(AdmissionRecord.min_rank).label("min_rank"))
-        .filter(AdmissionRecord.school_name == school_name, AdmissionRecord.min_rank > 0)
+        db.query(
+            AdmissionRecord.year, func.min(AdmissionRecord.min_rank).label("min_rank")
+        )
+        .filter(
+            AdmissionRecord.school_name == school_name, AdmissionRecord.min_rank > 0
+        )
         .group_by(AdmissionRecord.year)
         .order_by(AdmissionRecord.year.desc())
         .limit(5)
@@ -621,14 +757,18 @@ def rank_lookup(
     province: str = Query("北京"),
     year: int = Query(2025),
     score: int = Query(..., description="高考分数"),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """根据分数查询对应的全省位次"""
-    row = db.query(RankTable).filter(
-        RankTable.province == province,
-        RankTable.year == year,
-        RankTable.score == score
-    ).first()
+    row = (
+        db.query(RankTable)
+        .filter(
+            RankTable.province == province,
+            RankTable.year == year,
+            RankTable.score == score,
+        )
+        .first()
+    )
 
     if row:
         return {
@@ -638,15 +778,20 @@ def rank_lookup(
             "rank": row.count_cum,
             "count_this_score": row.count_this,
             "rank_min": row.rank_min,
-            "rank_max": row.rank_max
+            "rank_max": row.rank_max,
         }
 
     # 找最近的分数段
-    closest = db.query(RankTable).filter(
-        RankTable.province == province,
-        RankTable.year == year,
-        RankTable.score <= score
-    ).order_by(RankTable.score.desc()).first()
+    closest = (
+        db.query(RankTable)
+        .filter(
+            RankTable.province == province,
+            RankTable.year == year,
+            RankTable.score <= score,
+        )
+        .order_by(RankTable.score.desc())
+        .first()
+    )
 
     if closest:
         return {
@@ -655,7 +800,7 @@ def rank_lookup(
             "score": score,
             "rank": closest.count_cum,
             "closest_score": closest.score,
-            "note": f"未找到精确分数，返回 {closest.score} 分对应的位次"
+            "note": f"未找到精确分数，返回 {closest.score} 分对应的位次",
         }
 
     return {"error": f"未找到 {province} {year} 年的一分一段数据"}
@@ -667,17 +812,24 @@ def simulate(
     mock_score: int = Query(..., description="模拟考分数"),
     province: str = Query("北京"),
     subject: str = Query(""),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     """考前模拟：将高考分数转换为预估位次区间"""
     try:
-        return _simulate_inner(mock_score=mock_score, province=province, subject=subject, db=db)
+        return _simulate_inner(
+            mock_score=mock_score, province=province, subject=subject, db=db
+        )
     except Exception as e:
-        logger.error(f"simulate error province={province} mock_score={mock_score}: {e}", exc_info=True)
+        logger.error(
+            f"simulate error province={province} mock_score={mock_score}: {e}",
+            exc_info=True,
+        )
         raise HTTPException(status_code=500, detail="模拟估分暂时不可用，请稍后重试")
 
 
-def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Optional[dict]:
+def _estimate_rank_from_admissions(
+    target_score: int, province: str, db
+) -> Optional[dict]:
     """
     P0.2: 当省份无一分一段数据时，用录取记录反推估算考生位次。
     原理：admission_records 中的 (min_score, min_rank) 是省份考生分数-位次曲线的采样点。
@@ -688,7 +840,8 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
     from sqlalchemy import text as _text
 
     # 步骤1：从录取记录提取该省分数-位次映射（最近3年，取每个分数点的最小min_rank）
-    rows = db.execute(_text("""
+    rows = db.execute(
+        _text("""
         SELECT min_score, MIN(min_rank) AS best_rank
         FROM admission_records
         WHERE province = :prov
@@ -697,7 +850,9 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
         GROUP BY min_score
         HAVING COUNT(*) >= 1
         ORDER BY min_score DESC
-    """), {"prov": province}).fetchall()
+    """),
+        {"prov": province},
+    ).fetchall()
 
     if len(rows) < 5:
         return None  # 数据点太少，无法可靠插值
@@ -720,8 +875,8 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
     below = [(s, r) for s, r in monotonic if s < target_score]
 
     if above and below:
-        s1, r1 = above[-1]   # 分数略高于目标（位次更小/更难）
-        s2, r2 = below[0]    # 分数略低于目标（位次更大/更容易）
+        s1, r1 = above[-1]  # 分数略高于目标（位次更小/更难）
+        s2, r2 = below[0]  # 分数略低于目标（位次更大/更容易）
         if s1 != s2:
             t = (target_score - s2) / (s1 - s2)
             est_rank = round(r2 + t * (r1 - r2))
@@ -735,7 +890,7 @@ def _estimate_rank_from_admissions(target_score: int, province: str, db) -> Opti
         return None
 
     est_rank = max(100, est_rank)
-    margin = max(5000, round(est_rank * 0.35))   # ±35%，最小±5000
+    margin = max(5000, round(est_rank * 0.35))  # ±35%，最小±5000
 
     return {
         "estimated_rank": est_rank,
@@ -762,9 +917,13 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
     if subject:
         s = subject.split("+")[0].strip()
         # 查询该省份有哪些 category
-        cats = {c[0] for c in db.query(RankTable.category).filter(
-            RankTable.province == province, RankTable.year >= 2024
-        ).distinct().all()}
+        cats = {
+            c[0]
+            for c in db.query(RankTable.category)
+            .filter(RankTable.province == province, RankTable.year >= 2024)
+            .distinct()
+            .all()
+        }
         # 如果省份有多个科类（非纯综合），按传入的选科映射
         if len(cats) > 1 or (cats and "综合" not in cats):
             for candidate in _subject_to_category.get(s, []):
@@ -783,7 +942,7 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
         q2 = db.query(RankTable).filter(
             RankTable.province == province,
             RankTable.year == latest_year,
-            RankTable.score <= target_score
+            RankTable.score <= target_score,
         )
         if rank_category_filter:
             q2 = q2.filter(RankTable.category == rank_category_filter)
@@ -792,7 +951,12 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
         if rank_row:
             estimated_rank = rank_row.count_cum
             from algorithms.population_data import get_province_total as _pop_total
-            _prov_total = _pop_total(province, latest_year) or _pop_total(province, 2025) or 500_000
+
+            _prov_total = (
+                _pop_total(province, latest_year)
+                or _pop_total(province, 2025)
+                or 500_000
+            )
             _range_margin = max(2000, int(_prov_total * 0.008))
             return {
                 "mock_score": mock_score,
@@ -819,10 +983,13 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
             "mock_score": mock_score,
             "estimated_real_score": target_score,
             "estimated_rank": admission_est["estimated_rank"],
-            "estimated_rank_range": [admission_est["range_lo"], admission_est["range_hi"]],
+            "estimated_rank_range": [
+                admission_est["range_lo"],
+                admission_est["range_hi"],
+            ],
             "based_on_year": "2022-2024录取数据",
             "method": "admission_records",
-            "reliability": "low",   # 无一分一段，插值误差大，不可靠
+            "reliability": "low",  # 无一分一段，插值误差大，不可靠
             "no_data": False,
             "note": (
                 f"⚠️【可靠性：低】{province}暂无一分一段官方数据，"
@@ -837,7 +1004,7 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
         "estimated_real_score": None,
         "estimated_rank": None,
         "no_data": True,
-        "note": f"暂未收录{province}一分一段数据，无法自动转换位次。请出分后直接输入您的高考位次查询。"
+        "note": f"暂未收录{province}一分一段数据，无法自动转换位次。请出分后直接输入您的高考位次查询。",
     }
 
 
@@ -848,7 +1015,7 @@ def search_schools(
     tier: str = Query("", description="985/211/双一流/普通"),
     province_school: str = Query("", description="学校所在省份"),
     limit: int = Query(20),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
 ):
     query = db.query(School)
     if q:
@@ -877,7 +1044,7 @@ def search_schools(
                 "intro": s.intro[:120] if s.intro else "",
             }
             for s in schools
-        ]
+        ],
     }
 
 
@@ -887,13 +1054,15 @@ def list_cognitive_gems():
     """返回认知折价专业完整词库"""
     result = []
     for name, info in COGNITIVE_DISCOUNT_MAJORS.items():
-        result.append({
-            "major_name": name,
-            "real_direction": info["real_direction"],
-            "industry_prospect": info["industry_prospect"],
-            "misconception": info["misconception"],
-            "discount_level": info["discount_level"]
-        })
+        result.append(
+            {
+                "major_name": name,
+                "real_direction": info["real_direction"],
+                "industry_prospect": info["industry_prospect"],
+                "misconception": info["misconception"],
+                "discount_level": info["discount_level"],
+            }
+        )
     return {"gems": result, "total": len(result)}
 
 
@@ -911,52 +1080,85 @@ def search_by_major(
     适合"我想学X，有哪些学校可以去"的查询模式。
     """
     # 1. 找所有包含关键词的专业名
-    records = db.query(AdmissionRecord).filter(
-        AdmissionRecord.province == province,
-        AdmissionRecord.major_name.contains(major),
-        AdmissionRecord.major_name != "[院校最低分]",
-    ).all()
+    records = (
+        db.query(AdmissionRecord)
+        .filter(
+            AdmissionRecord.province == province,
+            AdmissionRecord.major_name.contains(major),
+            AdmissionRecord.major_name != "[院校最低分]",
+        )
+        .all()
+    )
 
     if not records:
-        return {"major_query": major, "province": province, "rank": rank, "schools": [], "total": 0}
+        return {
+            "major_query": major,
+            "province": province,
+            "rank": rank,
+            "schools": [],
+            "total": 0,
+        }
 
     # 2. 按(学校, 专业)分组，计算位次和概率
     from collections import defaultdict
+
     grouped: dict = defaultdict(list)
     for r in records:
-        grouped[(r.school_name, r.major_name)].append({
-            "year": r.year, "min_rank": r.min_rank, "min_score": r.min_score,
-            "subject_req": r.subject_req or "",
-        })
+        grouped[(r.school_name, r.major_name)].append(
+            {
+                "year": r.year,
+                "min_rank": r.min_rank,
+                "min_score": r.min_score,
+                "subject_req": r.subject_req or "",
+            }
+        )
 
     # 2b. 预加载学校级院校最低分（补充近年数据缺失）
     _school_names_mfq = list({k[0] for k in grouped.keys()})
     _bl_cache_mfq: dict = defaultdict(list)
-    _bl_rows = db.query(AdmissionRecord).filter(
-        AdmissionRecord.province == province,
-        AdmissionRecord.major_name.contains("院校最低分"),
-        AdmissionRecord.min_rank > 0,
-        AdmissionRecord.school_name.in_(_school_names_mfq),
-    ).order_by(AdmissionRecord.year.desc()).all()
+    _bl_rows = (
+        db.query(AdmissionRecord)
+        .filter(
+            AdmissionRecord.province == province,
+            AdmissionRecord.major_name.contains("院校最低分"),
+            AdmissionRecord.min_rank > 0,
+            AdmissionRecord.school_name.in_(_school_names_mfq),
+        )
+        .order_by(AdmissionRecord.year.desc())
+        .all()
+    )
     for _br in _bl_rows:
-        _bl_cache_mfq[_br.school_name].append({
-            "year": _br.year, "min_rank": _br.min_rank, "min_score": _br.min_score,
-            "plan_count": 0, "is_school_baseline": True,
-        })
+        _bl_cache_mfq[_br.school_name].append(
+            {
+                "year": _br.year,
+                "min_rank": _br.min_rank,
+                "min_score": _br.min_score,
+                "plan_count": 0,
+                "is_school_baseline": True,
+            }
+        )
 
     # 3. 选科过滤 + 概率计算
     _alias = {"理科": "物理", "文科": "历史", "物理类": "物理", "历史类": "历史"}
-    user_subjects = set(_alias.get(s.strip(), s.strip()) for s in subject.split("+") if s.strip()) if subject else set()
+    user_subjects = (
+        set(_alias.get(s.strip(), s.strip()) for s in subject.split("+") if s.strip())
+        if subject
+        else set()
+    )
     _has_wuli = "物理" in user_subjects
     _has_lishi = "历史" in user_subjects
     _OPEN = {"不限", "nan", "-", "", "综合", "不限选科"}
 
     def _subj_ok(req: str) -> bool:
-        if not subject: return True
+        if not subject:
+            return True
         req = req.strip()
-        if not req or req in _OPEN: return True
-        if "物理" in req and "历史" not in req: return _has_wuli
-        if "历史" in req and "物理" not in req: return _has_lishi
+        if not req or req in _OPEN:
+            return True
+        if "物理" in req and "历史" not in req:
+            return _has_wuli
+        if "历史" in req and "物理" not in req:
+            return _has_lishi
         return True
 
     school_cache = {s.name: s for s in db.query(School).all()}
@@ -965,51 +1167,86 @@ def search_by_major(
 
     for (school_name, major_name), recs in grouped.items():
         # 选科过滤
-        latest_req = sorted(recs, key=lambda x: x["year"], reverse=True)[0]["subject_req"]
-        if not _subj_ok(latest_req): continue
+        latest_req = sorted(recs, key=lambda x: x["year"], reverse=True)[0][
+            "subject_req"
+        ]
+        if not _subj_ok(latest_req):
+            continue
 
         # 简单位次预测
         from algorithms.rank_method import predict_admission
+
         pred = predict_admission(rank, recs)
         avg_rank = pred.get("avg_min_rank_3yr", 0)
-        if avg_rank == 0: continue
+        if avg_rank == 0:
+            continue
         # 位次窗口
-        if avg_rank > rank * 3.0 + _rank_buf: continue
-        if avg_rank < rank * 0.3 - _rank_buf: continue
+        if avg_rank > rank * 3.0 + _rank_buf:
+            continue
+        if avg_rank < rank * 0.3 - _rank_buf:
+            continue
 
         school_info = school_cache.get(school_name)
         # 查学科评估等级
-        eval_records = db.query(SubjectEvaluation).filter(
-            SubjectEvaluation.school_name == school_name,
-            SubjectEvaluation.subject_name.contains(major),
-        ).order_by(SubjectEvaluation.grade).first()
+        eval_records = (
+            db.query(SubjectEvaluation)
+            .filter(
+                SubjectEvaluation.school_name == school_name,
+                SubjectEvaluation.subject_name.contains(major),
+            )
+            .order_by(SubjectEvaluation.grade)
+            .first()
+        )
         grade = eval_records.grade if eval_records else ""
 
-        results.append({
-            "school_name": school_name,
-            "major_name": major_name,
-            "subject_req": latest_req,
-            "probability": pred["probability"],
-            "avg_min_rank_3yr": avg_rank,
-            "rank_diff": pred.get("rank_diff", 0),
-            "confidence": pred["confidence"],
-            "tier": school_info.tier if school_info else "普通",
-            "is_985": school_info.is_985 if school_info else "否",
-            "is_211": school_info.is_211 if school_info else "否",
-            "rank_2025": school_info.rank_2025 if school_info else 0,
-            "city": school_info.city if school_info else "",
-            "province_school": school_info.province if school_info else "",
-            "subject_eval_grade": grade,  # A+/A/B+等学科评估等级
-            "recent_data": _build_recent_data_simple(recs, school_name, _bl_cache_mfq),
-        })
+        results.append(
+            {
+                "school_name": school_name,
+                "major_name": major_name,
+                "subject_req": latest_req,
+                "probability": pred["probability"],
+                "avg_min_rank_3yr": avg_rank,
+                "rank_diff": pred.get("rank_diff", 0),
+                "confidence": pred["confidence"],
+                "tier": school_info.tier if school_info else "普通",
+                "is_985": school_info.is_985 if school_info else "否",
+                "is_211": school_info.is_211 if school_info else "否",
+                "rank_2025": school_info.rank_2025 if school_info else 0,
+                "city": school_info.city if school_info else "",
+                "province_school": school_info.province if school_info else "",
+                "subject_eval_grade": grade,  # A+/A/B+等学科评估等级
+                "recent_data": _build_recent_data_simple(
+                    recs, school_name, _bl_cache_mfq
+                ),
+            }
+        )
 
     # 按综合排序：概率×0.4 + 学校质量×0.4 + 学科评估×0.2
-    _grade_score = {"A+": 100, "A": 90, "A-": 80, "B+": 70, "B": 60, "B-": 50, "C+": 40, "C": 30, "": 0}
-    results.sort(key=lambda x: -(
-        x["probability"] * 0.4 +
-        (100 - min(x["rank_2025"], 100) if x["rank_2025"] and x["rank_2025"] > 0 else 30) * 0.4 +
-        _grade_score.get(x["subject_eval_grade"], 0) * 0.2
-    ))
+    _grade_score = {
+        "A+": 100,
+        "A": 90,
+        "A-": 80,
+        "B+": 70,
+        "B": 60,
+        "B-": 50,
+        "C+": 40,
+        "C": 30,
+        "": 0,
+    }
+    results.sort(
+        key=lambda x: (
+            -(
+                x["probability"] * 0.4
+                + (
+                    100 - min(x["rank_2025"], 100)
+                    if x["rank_2025"] and x["rank_2025"] > 0
+                    else 30
+                )
+                * 0.4
+                + _grade_score.get(x["subject_eval_grade"], 0) * 0.2
+            )
+        )
+    )
 
     return {
         "major_query": major,
@@ -1042,35 +1279,42 @@ def portfolio_optimize(
 
     # 复用推荐引擎获取候选学校
     recommend_data = _run_recommend_core(
-        province=province, rank=rank, subject=subject,
-        exam_mode=exam_mode, mode="all", db=db, is_paid=True
+        province=province,
+        rank=rank,
+        subject=subject,
+        exam_mode=exam_mode,
+        mode="all",
+        db=db,
+        is_paid=True,
     )
 
     # 将冲稳保结果展平为候选列表
     candidates = []
     all_results = (
-        recommend_data.get("surge", []) +
-        recommend_data.get("stable", []) +
-        recommend_data.get("safe", []) +
-        recommend_data.get("hidden_gems", [])
+        recommend_data.get("surge", [])
+        + recommend_data.get("stable", [])
+        + recommend_data.get("safe", [])
+        + recommend_data.get("hidden_gems", [])
     )
     for r in all_results:
         if r.get("probability", 0) <= 0:
             continue
-        candidates.append({
-            "school_name": r["school_name"],
-            "major_name":  r["major_name"],
-            "probability": r["probability"] / 100,
-            "utility":     r.get("quality_score", 50) / 100,
-            "avg_rank":    r.get("avg_min_rank_3yr", rank),
-            "std_rank":    max(500, r.get("avg_min_rank_3yr", rank) * 0.12),
-            # school_tier = 985/211/普通 quality label; intentionally NOT "tier"
-            # so Monte Carlo falls through to _classify_tier(probability) → 冲/稳/保/垫
-            "school_tier": r.get("tier", "普通"),
-            "is_985":      r.get("is_985", "否"),
-            "city":        r.get("city", ""),
-            "is_hidden_gem": r.get("is_hidden_gem", False),
-        })
+        candidates.append(
+            {
+                "school_name": r["school_name"],
+                "major_name": r["major_name"],
+                "probability": r["probability"] / 100,
+                "utility": r.get("quality_score", 50) / 100,
+                "avg_rank": r.get("avg_min_rank_3yr", rank),
+                "std_rank": max(500, r.get("avg_min_rank_3yr", rank) * 0.12),
+                # school_tier = 985/211/普通 quality label; intentionally NOT "tier"
+                # so Monte Carlo falls through to _classify_tier(probability) → 冲/稳/保/垫
+                "school_tier": r.get("tier", "普通"),
+                "is_985": r.get("is_985", "否"),
+                "city": r.get("city", ""),
+                "is_hidden_gem": r.get("is_hidden_gem", False),
+            }
+        )
 
     if not candidates:
         raise HTTPException(status_code=404, detail="未找到足够候选学校")
@@ -1109,6 +1353,7 @@ def portfolio_simulate(
     def _probit(p: float) -> float:
         """Normal inverse CDF approximation (Beasley-Springer-Moro)"""
         import math
+
         p = max(1e-6, min(1 - 1e-6, p))
         if p < 0.5:
             return -_probit(1 - p)
@@ -1116,17 +1361,24 @@ def portfolio_simulate(
         t = math.sqrt(-2 * math.log(1 - p))
         c = [2.515517, 0.802853, 0.010328]
         d = [1.432788, 0.189269, 0.001308]
-        return t - (c[0] + c[1]*t + c[2]*t*t) / (1 + d[0]*t + d[1]*t*t + d[2]*t*t*t)
+        return t - (c[0] + c[1] * t + c[2] * t * t) / (
+            1 + d[0] * t + d[1] * t * t + d[2] * t * t * t
+        )
 
     recommend_data = _run_recommend_core(
-        province=province, rank=rank, subject=subject,
-        exam_mode=exam_mode, mode="all", db=db, is_paid=True
+        province=province,
+        rank=rank,
+        subject=subject,
+        exam_mode=exam_mode,
+        mode="all",
+        db=db,
+        is_paid=True,
     )
     candidates = []
     all_results = (
-        recommend_data.get("surge", []) +
-        recommend_data.get("stable", []) +
-        recommend_data.get("safe", [])
+        recommend_data.get("surge", [])
+        + recommend_data.get("stable", [])
+        + recommend_data.get("safe", [])
     )
     for r in all_results:
         p_cal = r.get("probability", 0) / 100
@@ -1137,19 +1389,21 @@ def portfolio_simulate(
         # → avg_rank = student_rank + std_rank × Φ^{-1}(p_cal)
         sim_std = max(800, rank * 0.15)  # 模拟用波动幅度
         effective_avg_rank = rank + sim_std * _probit(p_cal)
-        candidates.append({
-            "school_name": r["school_name"],
-            "major_name":  r["major_name"],
-            "probability": p_cal,
-            "utility":     r.get("quality_score", 50) / 100,
-            "avg_rank":    max(100, round(effective_avg_rank)),
-            "std_rank":    sim_std,
-            # school_tier stores 985/211/普通 category; intentionally NOT "tier"
-            # so that _run_single_simulation falls through to _classify_tier(probability)
-            # and labels outcomes as 冲/稳/保/垫 based on admission probability.
-            "school_tier": r.get("tier", "普通"),
-            "student_rank": rank,
-        })
+        candidates.append(
+            {
+                "school_name": r["school_name"],
+                "major_name": r["major_name"],
+                "probability": p_cal,
+                "utility": r.get("quality_score", 50) / 100,
+                "avg_rank": max(100, round(effective_avg_rank)),
+                "std_rank": sim_std,
+                # school_tier stores 985/211/普通 category; intentionally NOT "tier"
+                # so that _run_single_simulation falls through to _classify_tier(probability)
+                # and labels outcomes as 冲/稳/保/垫 based on admission probability.
+                "school_tier": r.get("tier", "普通"),
+                "student_rank": rank,
+            }
+        )
 
     if not candidates:
         raise HTTPException(status_code=404, detail="未找到足够候选学校")
@@ -1184,7 +1438,10 @@ def calibration_info():
 def population_info(province: str = Query(...), year: int = Query(2025)):
     """返回指定省份高考报名人数及2026预测"""
     try:
-        from algorithms.population_data import get_province_total, get_population_scale_factor
+        from algorithms.population_data import (
+            get_province_total,
+            get_population_scale_factor,
+        )
     except ImportError:
         from population_data import get_province_total, get_population_scale_factor
     total = get_province_total(province, year)
@@ -1194,11 +1451,12 @@ def population_info(province: str = Query(...), year: int = Query(2025)):
         "year": year,
         "total_candidates": total,
         "scale_to_2026": round(scale_2026, 4),
-        "note": "scale_to_2026 = 2026预测人数/当年人数，用于调整历史位次的可比性"
+        "note": "scale_to_2026 = 2026预测人数/当年人数，用于调整历史位次的可比性",
     }
 
 
 # ── 专业风向标 ────────────────────────────────────────────────
+
 
 def _estimate_employment_rate(category: str | None) -> float:
     """MajorEmployment 表中 employment_rate 大量为0，按专业类别给合理默认值"""
@@ -1224,6 +1482,8 @@ def _estimate_employment_rate(category: str | None) -> float:
     if cat == "哲学":
         return 0.60
     return 0.82
+
+
 @app.get("/api/major/trend")
 def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
     """查询指定专业的历年招生量趋势（用于专业风向标页面）"""
@@ -1232,7 +1492,9 @@ def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
         db.query(
             AdmissionRecord.year,
             func.sum(AdmissionRecord.admit_count).label("total_admit"),
-            func.count(func.distinct(AdmissionRecord.school_name)).label("school_count"),
+            func.count(func.distinct(AdmissionRecord.school_name)).label(
+                "school_count"
+            ),
         )
         .filter(AdmissionRecord.major_name.ilike(f"%{name}%"))
         .group_by(AdmissionRecord.year)
@@ -1248,8 +1510,13 @@ def major_trend(name: str = Query(...), db: Session = Depends(get_db)):
     )
 
     yearly = [
-        {"year": r.year, "admit": int(r.total_admit or 0), "schools": int(r.school_count or 0)}
-        for r in rows if r.year >= 2019 and (r.total_admit or 0) > 0
+        {
+            "year": r.year,
+            "admit": int(r.total_admit or 0),
+            "schools": int(r.school_count or 0),
+        }
+        for r in rows
+        if r.year >= 2019 and (r.total_admit or 0) > 0
     ]
 
     # 趋势方向：对比最近2年 vs 前2年
@@ -1307,19 +1574,26 @@ def major_search(q: str = Query(..., min_length=1), db: Session = Depends(get_db
 # ── 用户反馈 ──────────────────────────────────────────────────
 from pydantic import BaseModel as _BaseModel
 
+
 class _FeedbackPayload(_BaseModel):
     content: str
     contact: str = ""
     user_id: int | None = None
 
+
 @app.post("/api/feedback")
-def submit_feedback(req: _FeedbackPayload, request: Request, db: Session = Depends(get_db)):
+def submit_feedback(
+    req: _FeedbackPayload, request: Request, db: Session = Depends(get_db)
+):
     from database import Feedback
+
     fb = Feedback(
         content=req.content[:2000],
         contact=req.contact[:100],
         user_id=req.user_id,
-        ip=request.headers.get("X-Forwarded-For", request.client.host if request.client else ""),
+        ip=request.headers.get(
+            "X-Forwarded-For", request.client.host if request.client else ""
+        ),
     )
     db.add(fb)
     db.commit()
@@ -1341,10 +1615,11 @@ def health(db: Session = Depends(get_db)):
             "national_programs": db.query(NationalProgram).count(),
             "province_control_lines": db.query(ProvinceControlLine).count(),
             "rank_tables": db.query(RankTable).count(),
-        }
+        },
     }
 
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=5198, reload=False)

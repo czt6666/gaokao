@@ -13,6 +13,20 @@ from typing import Optional
 
 SUBJECTS = ["物理", "化学", "生物", "政治", "历史", "地理"]
 
+# 单字缩写（部分省份用 物/化/生(3选1) 这种写法）
+_ABBREV = {"物": "物理", "化": "化学", "生": "生物", "史": "历史", "政": "政治", "地": "地理"}
+
+
+def _find_subjects(text):
+    """识别一段文本里的学科：优先全名(物理)；无全名时按单字缩写(物/化/生、物化生)。
+    避免对全名逐字误拆（如 生物 不会被拆成 生→生物 + 物→物理）。保持 SUBJECTS 顺序。"""
+    text = text or ""
+    full = [s for s in SUBJECTS if s in text]
+    if full:
+        return full
+    found = {_ABBREV[ch] for ch in text if ch in _ABBREV}
+    return [s for s in SUBJECTS if s in found]
+
 
 class SubjectRequirement:
     """
@@ -135,8 +149,7 @@ def parse_subject_req(text: str) -> SubjectRequirement:
     multi_req_match = re.search(r"(.*?)(\d+科必选)", text)
     if multi_req_match:
         subj_part = multi_req_match.group(1)
-        found = [s for s in SUBJECTS if s in subj_part]
-        req.required.update(found)
+        req.required.update(_find_subjects(subj_part))   # 兼容缩写 物化生(3科必选)
         return req
 
     # 4. 识别 "首选物理，再选化学、生物(2科必选)"
@@ -156,18 +169,16 @@ def parse_subject_req(text: str) -> SubjectRequirement:
             req.required.update(found)
         return req
 
-    # 5. 识别 "物理/化学" 或 "物理/化学/生物"（选其一，OR关系）
-    if "/" in text:
-        parts = re.split(r"[、/]", text)
-        found = [s for s in SUBJECTS if any(s in p for p in parts)]
+    # 5. 识别 "物理/化学" 或 "物理或化学或生物" 或缩写 "物/化/生(3选1)"（OR关系）。"或"=OR
+    if "/" in text or "或" in text:
+        found = _find_subjects(text)
         if found:
             req.one_of.append(set(found))
         return req
 
-    # 6. 识别 "物理,化学" 或 "历史,政治"（AND关系）
-    if "," in text or "，" in text or "、" in text:
-        parts = re.split(r"[,，、]", text)
-        found = [s for s in SUBJECTS if any(s in p for p in parts)]
+    # 6. 识别 "物理,化学" 或 "物理和化学"（AND关系）。"和"=AND（专家版表常用）
+    if "," in text or "，" in text or "、" in text or "和" in text:
+        found = _find_subjects(text)
         if found:
             req.required.update(found)
         return req

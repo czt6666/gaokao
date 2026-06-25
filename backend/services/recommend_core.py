@@ -35,6 +35,110 @@ def _get_province_total(province: str, year: int = 2025) -> int:
         return 500000  # fallback
 
 
+def _norm_major(name: str) -> str:
+    """专业名归一化：去括号内容 + 去空白，用于停招匹配，降低误判。"""
+    return re.sub(r"\s+", "", re.sub(r"[（(].*?[)）]", "", name or "")).strip()
+
+
+def aggregate_plan_2026(rows: list) -> dict:
+    """把同一 (校,专业) 的多行 2026 计划聚合成展示用摘要。
+    rows: [(group_name, major_full, major_remark, plan_count, tuition, duration,
+            subject_req, is_new, ruanke_grade, ruanke_rank, discipline_eval,
+            major_level_tag, major_master, major_phd, batch), ...]
+    """
+    directions, tuitions, prof = [], [], {}
+    total, is_new = 0, False
+    for (gn, mf, rmk, pc, tu, dur, sreq, isn, rg, rr, de, mlt, mm, mp, batch) in rows:
+        pc = pc or 0
+        total += pc
+        if tu and str(tu) not in tuitions:
+            tuitions.append(str(tu))
+        if isn == "新增":
+            is_new = True
+        directions.append({
+            "group_name": gn or "", "major_full": mf or "", "major_remark": rmk or "",
+            "plan_count": pc, "tuition": tu or "", "duration": dur or "",
+            "subject_req": sreq or "", "batch": batch or "",
+        })
+        for k, v in (("ruanke_grade", rg), ("ruanke_rank", rr), ("discipline_eval", de),
+                     ("major_level_tag", mlt), ("major_master", mm), ("major_phd", mp)):
+            if v and not prof.get(k):
+                prof[k] = v
+    return {
+        "plan_count_total": total,
+        "tuition": tuitions[0] if len(tuitions) == 1 else "、".join(tuitions),
+        "is_new": is_new, "directions": directions, **prof,
+    }
+
+
+_PLAN_COLS = ("group_name, major_full, major_remark, plan_count, tuition, duration, "
+              "subject_req, is_new, ruanke_grade, ruanke_rank, discipline_eval, "
+              "major_level_tag, major_master, major_phd, batch")
+
+# 进程内缓存：province -> {"map": {(校,专业): 摘要}, "norm": {(校,归一化专业): 摘要},
+#                          "schools": 2026出现过的学校集合}
+_plan_2026_cache: dict = {}
+
+
+def _load_2026(db: Session, province: str) -> dict:
+    """一次加载全省 2026 计划，按 (校,专业) 聚合，供过滤与逐条挂载共用（带缓存）。"""
+    if province in _plan_2026_cache:
+        return _plan_2026_cache[province]
+    grouped: dict = {}
+    schools = set()
+    try:
+        rows = db.execute(_sqla_text(
+            f"SELECT school_name, major_name, {_PLAN_COLS} "
+            "FROM admission_2026 WHERE province=:p"
+        ), {"p": province}).fetchall()
+        for r in rows:
+            sch, mj = r[0], r[1]
+            schools.add(sch)
+            grouped.setdefault((sch, mj), []).append(tuple(r[2:]))
+    except Exception:
+        # admission_2026 不存在时返回空，调用方据此不过滤/不挂载
+        pass
+    plan_map = {k: aggregate_plan_2026(v) for k, v in grouped.items()}
+    norm_map = {(s, _norm_major(m)): summ for (s, m), summ in plan_map.items()}
+    val = {"map": plan_map, "norm": norm_map, "schools": schools}
+    _plan_2026_cache[province] = val
+    return val
+
+
+def _plan_2026_for(cache: dict, school: str, major: str):
+    """取某 (校,专业) 的 2026 计划摘要（先精确后归一化）。"""
+    return cache["map"].get((school, major)) or cache["norm"].get((school, _norm_major(major)))
+
+
+# 兼容旧签名：返回 (在招(校,专业)集合, 在招(校,归一化专业)集合, 学校集合)
+def _load_2026_recruit(db: Session, province: str):
+    c = _load_2026(db, province)
+    return (set(c["map"].keys()), set(c["norm"].keys()), c["schools"])
+
+
+def _filter_stopped_2026(db: Session, province: str, results: list) -> list:
+    """隐藏 2026 停招专业 + 给保留项挂上 2026 计划摘要。
+    该校在 2026 文件中出现、但该(校,专业)无 2026 计划 → 过滤；
+    学校未出现在 2026 文件中的（数据缺失）一律保留、但不挂计划。"""
+    c = _load_2026(db, province)
+    schools = c["schools"]
+    if not schools:
+        return results  # 无 2026 数据，不过滤
+    kept = []
+    for r in results:
+        sch = r.get("school_name", "")
+        mj = r.get("major_name", "")
+        if sch not in schools:
+            kept.append(r)            # 该校无 2026 数据 → 保留，不挂计划
+            continue
+        plan = _plan_2026_for(c, sch, mj)
+        if plan is not None:
+            r["plan_2026"] = plan     # 2026 在招 → 保留并挂上计划摘要
+            kept.append(r)
+        # 否则：该校在招但此专业无 2026 计划 → 停招，丢弃
+    return kept
+
+
 # ── 上市公司招聘数据辅助函数（供 _build_reason 使用）────────────
 # 数据来源：A股上市公司2024-2025年真实招聘数据，37,000条本科应届样本
 
@@ -1647,6 +1751,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         results.append(result)
         _scan["kept"] += 1
 
+    # 5.9 隐藏 2026 停招专业（可用环境变量 HIDE_STOPPED_2026=0 关闭）
+    if os.getenv("HIDE_STOPPED_2026", "1") == "1":
+        _before = len(results)
+        results = _filter_stopped_2026(db, province, results)
+        if _before != len(results):
+            _scan["stopped_2026_hidden"] = _before - len(results)
 
     # 6. 按桶定义独立排序函数（各桶权重不同，体现不同决策逻辑）
     def _opp_n(x): return (x.get("opportunity_score", 0) + 20) / 65  # [-20,45]→[0,1]

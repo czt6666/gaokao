@@ -1,0 +1,70 @@
+# admission_2026 数据字典
+
+| 列名 | 类型 | 含义 |
+|---|---|---|
+| id_src | TEXT | 源表行ID（部分省份有） |
+| plan_year | INT | 招生年份（2026） |
+| province | TEXT | 考生生源地省份（数据归属省） |
+| batch | TEXT | 录取批次 |
+| category | TEXT | 科类（综合/物理/历史等） |
+| plan_category | TEXT | 计划类别（部分省份） |
+| school_code | TEXT | 院校招生代码（省内代码，跨省不通用） |
+| school_name | TEXT | 院校名称（跨表关联主键） |
+| group_full_code | TEXT | 院校专业组完整代码 |
+| group_code | TEXT | 专业组代码 |
+| group_name | TEXT | 专业组名称 |
+| major_code | TEXT | 专业代码 |
+| major_full | TEXT | 专业全称（含备注） |
+| major_name | TEXT | 专业名称（跨表关联主键） |
+| major_remark | TEXT | 专业备注（方向/办学地点等） |
+| foreign_lang | TEXT | 外语语种要求 |
+| major_level | TEXT | 本科/专科 |
+| subject_req | TEXT | 2026选科要求 |
+| subject_req_25 | TEXT | 2025选科要求（个别省份） |
+| duration | TEXT | 学制 |
+| tuition | TEXT | 学费（含'待定'，故存文本） |
+| plan_count | INT | 2026计划招生人数 |
+| group_majors | TEXT | 专业组内全部专业摘要 |
+| group_plan | INT | 专业组计划总人数 |
+| group_major_num | INT | 组内专业数量 |
+| group_purity | TEXT | 专业组干净度指标 |
+| discipline | TEXT | 学科门类 |
+| major_class | TEXT | 专业类 |
+| est_rank_26 | INT | 2026预估录取位次 |
+| is_new | TEXT | 是否2026新增专业 |
+| group_admit_2025 | INT | 2025专业组录取人数 |
+| group_min_score_2025 | INT | 2025专业组最低分 |
+| group_min_rank_2025 | INT | 2025专业组最低位次 |
+| school_province | TEXT | 院校所在省 |
+| city | TEXT | 院校所在城市 |
+| city_level | TEXT | 城市层级（一线/新一线…） |
+| school_tags | TEXT | 院校标签（985/211/双一流…） |
+| school_level | TEXT | 院校水平 |
+| rename_merge | TEXT | 更名/合并/转设历史 |
+| admin_dept | TEXT | 主管/隶属单位 |
+| school_type | TEXT | 院校类型（综合/理工…） |
+| nature | TEXT | 公办/民办 |
+| ben_zhuan | TEXT | 本科/专科 |
+| postgrad_rate | TEXT | 保研率 |
+| school_rank | TEXT | 院校排名 |
+| transfer_policy | TEXT | 转专业政策 |
+| master_num | INT | 全校硕士点数 |
+| master_list | TEXT | 全校硕士专业列表 |
+| phd_num | INT | 全校博士点数 |
+| phd_list | TEXT | 全校博士专业列表 |
+| admit_rule | TEXT | 录取规则 |
+| zhangcheng | TEXT | 招生章程链接 |
+| admit_unit | TEXT | 招生单位（个别省份） |
+| other_remark | TEXT | 其他备注（个别省份） |
+| ruanke_grade | TEXT | 软科专业评级 |
+| ruanke_rank | TEXT | 软科专业排名 |
+| discipline_eval | TEXT | 教育部学科评估等级 |
+| major_level_tag | TEXT | 专业水平标签 |
+| major_master | TEXT | 本专业硕士点 |
+| major_phd | TEXT | 本专业博士点 |
+| source_file | TEXT | 来源文件名 |
+| extra_json | TEXT | 未识别列的原始值(JSON) |
+| row_uid | TEXT | 行唯一标识(省+院校代码+专业组代码+专业代码) |
+
+## 历年录取（回填至 admission_records）
+块1=2025、块2=2024、块3=2023（辽宁仅2块）；仅 admit_count/min_score/min_rank 入库，平均/最高分因现表无列而丢弃。

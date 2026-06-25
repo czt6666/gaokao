@@ -52,7 +52,9 @@ from routers import agent as agent_router
 from routers import commission as commission_router
 from routers.auth import _verify_token as _auth_verify_token
 
-from services.recommend_core import _run_recommend_core
+from services.recommend_core import (
+    _run_recommend_core, _load_2026_recruit, _norm_major, aggregate_plan_2026, _PLAN_COLS,
+)
 from services._prewarm_cache import start_prewarm_daemon
 
 app = FastAPI(title="高考志愿填报决策引擎", version="3.0.0")
@@ -495,6 +497,29 @@ def recommend(
         )
 
 
+# ── 2026 招生计划（推荐理由展开时按需调用）──────────────────────
+@app.get("/api/plan_2026")
+def plan_2026(
+    province: str = Query(...),
+    school: str = Query(...),
+    major: str = Query(...),
+    db: Session = Depends(get_db),
+):
+    """返回某 (省, 校, 专业) 的 2026 招生计划：聚合计划数/学费 + 各方向明细 + 专业基础信息。
+    注：推荐列表已在响应里内联 plan_2026，前端无需逐条调用；此接口供单点查询备用。"""
+    from sqlalchemy import text as _text
+    rows = db.execute(_text(
+        f"SELECT {_PLAN_COLS} FROM admission_2026 "
+        "WHERE province=:p AND school_name=:s AND major_name=:m"
+    ), {"p": province, "s": school, "m": major}).fetchall()
+    if not rows:
+        return {"found": False, "province": province, "school_name": school, "major_name": major}
+    return {
+        "found": True, "province": province, "school_name": school, "major_name": major,
+        **aggregate_plan_2026([tuple(r) for r in rows]),
+    }
+
+
 # ── 学校详情 ──────────────────────────────────────────────────
 @app.get("/api/school/{school_name}")
 def school_detail(
@@ -643,6 +668,17 @@ def school_detail(
                     "employment": emp,
                 }
             )
+
+    # 仅显示 2026 仍在招的专业：该校在 2026 数据中出现时按名过滤（带归一化）；
+    # 该校未出现在 2026 数据中（数据缺失）则不过滤，避免误删整校专业。
+    _pairs, _pairs_norm, _schools_2026 = _load_2026_recruit(db, province)
+    if school_name in _schools_2026:
+        _recruit = {mj for (s, mj) in _pairs if s == school_name}
+        _recruit_norm = {mj for (s, mj) in _pairs_norm if s == school_name}
+        major_analysis = [
+            ma for ma in major_analysis
+            if ma["major_name"] in _recruit or _norm_major(ma["major_name"]) in _recruit_norm
+        ]
 
     # 计算学校综合质量评分
     strong_subjects_raw = get_school_top_subjects(school_name, db)
@@ -1620,6 +1656,9 @@ def health(db: Session = Depends(get_db)):
 
 
 if __name__ == "__main__":
+    import sys as _sys
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=5198, reload=False)
+    # 命令行带 --reload 时启用热加载（改完代码自动重启，开发用）
+    _reload = "--reload" in _sys.argv
+    uvicorn.run("main:app", host="0.0.0.0", port=5198, reload=_reload)

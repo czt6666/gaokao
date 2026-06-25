@@ -82,6 +82,21 @@ type SchoolResult = {
   volatility_warning?: string;
   reason?: string;
   reason_sections?: ReasonSection[];
+  plan_2026?: Plan2026 | null;
+};
+
+type Plan2026Direction = {
+  group_name: string; major_full: string; major_remark: string;
+  plan_count: number; tuition: string; duration: string; subject_req: string; batch: string;
+};
+type Plan2026 = {
+  found?: boolean;
+  plan_count_total?: number;
+  tuition?: string;
+  is_new?: boolean;
+  ruanke_grade?: string; ruanke_rank?: string; discipline_eval?: string;
+  major_level_tag?: string; major_master?: string; major_phd?: string;
+  directions?: Plan2026Direction[];
 };
 
 type RecommendResult = {
@@ -119,7 +134,7 @@ function addToForm(item: SchoolResult, showToast?: (msg: string) => void) {
     localStorage.setItem(FORM_KEY, JSON.stringify([...saved, newItem]));
     track("add_to_form", { eventData: { school: item.school_name, major: item.major_name } });
     showToast?.(`✅ 已加入志愿表（共 ${saved.length + 1} 条）`);
-  } catch {}
+  } catch { }
 }
 
 function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
@@ -130,11 +145,12 @@ function addToCompare(schoolName: string, showToast?: (msg: string) => void) {
     localStorage.setItem(COMPARE_KEY, JSON.stringify([...saved, schoolName]));
     track("compare_add", { eventData: { school: schoolName } });
     showToast?.(`📊 已加入对比（${saved.length + 1}/3）`);
-  } catch {}
+  } catch { }
 }
 
 function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: { item: SchoolResult; province: string; rank: string; score?: string; subject: string; isPaid?: boolean; onUnlock?: () => void }) {
   const [expanded, setExpanded] = useState(false);
+  const [chartOpen, setChartOpen] = useState(false);
   const [toast, setToast] = useState<React.ReactNode | null>(null);
   const toastRef = useRef<NodeJS.Timeout | null>(null);
   const showToast = (msg: React.ReactNode) => {
@@ -143,6 +159,9 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
     toastRef.current = setTimeout(() => setToast(null), 3500);
   };
   useEffect(() => () => { if (toastRef.current) clearTimeout(toastRef.current); }, []);
+
+  // 2026 招生计划：后端已随推荐结果内联返回，无需逐条请求
+  const plan2026 = item.plan_2026;
   const prob = item.probability ?? 0;
   const scoreDiff = (score && item.last_year_min_score) ? (Number(score) - item.last_year_min_score) : null;
   const isGem = item.is_hidden_gem && item.top_gem;
@@ -171,8 +190,8 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             {item.tier && (
               <span className={
                 item.tier === "985" ? "badge badge-985" :
-                item.tier === "211" ? "badge badge-211" :
-                item.tier === "双一流" ? "badge badge-syl" : "badge badge-plain"
+                  item.tier === "211" ? "badge badge-211" :
+                    item.tier === "双一流" ? "badge badge-syl" : "badge badge-plain"
               }>{item.tier}</span>
             )}
             {item.rank_2025 && item.rank_2025 > 0 && (
@@ -311,9 +330,9 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             {/* 均位次 */}
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-              近年均位次
-              <span className="rank-hint-icon" title="是22-25年有数据的年份的平均位次" onClick={() => showToast("是22-25年有数据的年份的平均位次")}>?</span>
-            </div>
+                近年均位次
+                <span className="rank-hint-icon" title="是22-25年有数据的年份的平均位次" onClick={() => showToast("是22-25年有数据的年份的平均位次")}>?</span>
+              </div>
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
               </div>
@@ -416,11 +435,70 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
         )
       )}
 
-      {/* 近年分数+位次变化折线图 */}
+      {/* 2026 招生计划（直接展示在专业 item 上，不折叠）*/}
+      {plan2026 && (
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid var(--color-separator)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 10 }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: "var(--color-navy)", letterSpacing: "0.08em" }}>2026 招生计划</span>
+            {plan2026.is_new && (
+              <span style={{ fontSize: 10, fontWeight: 600, color: "#6366F1", background: "#EEF2FF", borderRadius: 4, padding: "2px 7px" }}>新增专业</span>
+            )}
+          </div>
+          {/* 核心数据：计划人数 + 学费 */}
+          <div style={{ display: "flex", gap: 28, alignItems: "baseline" }}>
+            <div>
+              <span style={{ fontSize: 24, fontWeight: 700, color: "var(--color-navy)", lineHeight: 1 }}>{plan2026.plan_count_total ?? 0}</span>
+              <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginLeft: 4 }}>人 / 计划招生</span>
+            </div>
+            {plan2026.tuition && (
+              <div>
+                <span style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)", lineHeight: 1 }}>{plan2026.tuition}</span>
+                <span style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginLeft: 4 }}>元/年 学费</span>
+              </div>
+            )}
+          </div>
+          {/* 专业实力标签 */}
+          {(plan2026.discipline_eval || plan2026.ruanke_grade || plan2026.major_level_tag) && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 12 }}>
+              {plan2026.discipline_eval && (
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>学科评估 {plan2026.discipline_eval}</span>
+              )}
+              {plan2026.ruanke_grade && (
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>软科 {plan2026.ruanke_grade}{plan2026.ruanke_rank ? ` · #${plan2026.ruanke_rank}` : ""}</span>
+              )}
+              {plan2026.major_level_tag && (
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>{plan2026.major_level_tag.length > 16 ? plan2026.major_level_tag.slice(0, 16) + "…" : plan2026.major_level_tag}</span>
+              )}
+            </div>
+          )}
+          {/* 多方向明细 */}
+          {plan2026.directions && plan2026.directions.length > 1 && (
+            <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 6 }}>
+              {plan2026.directions.map((d, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 12, fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.5 }}>
+                  <span>{d.group_name && <span style={{ color: "var(--color-text-tertiary)" }}>[{d.group_name}] </span>}{d.major_remark || d.major_full}</span>
+                  <span style={{ whiteSpace: "nowrap", color: "var(--color-text-tertiary)" }}>{d.plan_count}人{d.tuition ? ` · ${d.tuition}元` : ""}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* 近年分数+位次变化折线图（默认折叠）*/}
       {item.recent_data && item.recent_data.length > 1 && (
-        <div style={{ marginTop: 10, padding: "10px 0", borderTop: "1px solid var(--color-separator)" }}>
-          <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 8 }}>近年变化趋势</div>
-          <MiniTrendChart data={item.recent_data} />
+        <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--color-separator)" }}>
+          <button
+            onClick={() => setChartOpen(!chartOpen)}
+            style={{ fontSize: 12, color: "var(--color-accent)", background: "none", border: "none", cursor: "pointer", padding: 0, fontWeight: 500 }}
+          >
+            {chartOpen ? "收起近年变化趋势 ↑" : "查看近年变化趋势 ↓"}
+          </button>
+          {chartOpen && (
+            <div style={{ marginTop: 8 }}>
+              <MiniTrendChart data={item.recent_data} />
+            </div>
+          )}
         </div>
       )}
 
@@ -442,12 +520,12 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
           {item.reason_sections && item.reason_sections.length > 0 ? (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {item.reason_sections.map((sec, idx) => {
-                const isGemSec  = sec.title.includes("💎");
-                const isRisk    = sec.title.includes("⚠️");
-                const isProb    = sec.title.includes("📊");
-                const isAction  = sec.title.includes("✅");
-                const isReview  = sec.title.includes("🗣");
-                const bg        = isGemSec ? "#FFFBEB" : isRisk ? "#FEF2F2" : isAction ? "#F0FDF4" : isReview ? "#F5F3FF" : "var(--color-bg-secondary)";
+                const isGemSec = sec.title.includes("💎");
+                const isRisk = sec.title.includes("⚠️");
+                const isProb = sec.title.includes("📊");
+                const isAction = sec.title.includes("✅");
+                const isReview = sec.title.includes("🗣");
+                const bg = isGemSec ? "#FFFBEB" : isRisk ? "#FEF2F2" : isAction ? "#F0FDF4" : isReview ? "#F5F3FF" : "var(--color-bg-secondary)";
                 const titleColor = isGemSec ? "#92400E" : isRisk ? "#991B1B" : isAction ? "#166534" : isProb ? "var(--color-navy)" : isReview ? "#4C1D95" : "var(--color-text-primary)";
 
                 // Free users see first 2 modules fully; rest are teaser-locked
@@ -641,7 +719,7 @@ function MiniTrendChart({ data }: { data: { year: number; min_score?: number; mi
 
 function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult; onUnlock: () => void; unlockLabel?: string }) {
   const tierColor = item.tier === "冲" ? "#DC2626" : item.tier === "稳" ? "#1A2744" : "#059669";
-  const tierBg   = item.tier === "冲" ? "#FEF2F2" : item.tier === "稳" ? "#EFF6FF" : "#F0FDF4";
+  const tierBg = item.tier === "冲" ? "#FEF2F2" : item.tier === "稳" ? "#EFF6FF" : "#F0FDF4";
   return (
     <div style={{
       position: "relative", borderRadius: 14, marginBottom: 12,
@@ -680,7 +758,7 @@ function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult;
                 就业率 {item.employment.school_employment_rate.toFixed(0)}%
               </span>
             )}
-            {item.city_level && ["一线","新一线"].includes(item.city_level) && (
+            {item.city_level && ["一线", "新一线"].includes(item.city_level) && (
               <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "#EFF6FF", color: "#1E40AF", fontWeight: 500 }}>
                 {item.city_level}城市
               </span>
@@ -832,7 +910,7 @@ function ResultsContent() {
   // 从 URL 读取邀请码并存入 sessionStorage（兼容直接分享 results 链接）
   const urlRef = searchParams.get("ref") || "";
   if (urlRef) {
-    try { sessionStorage.setItem("gaokao_ref", urlRef); } catch {}
+    try { sessionStorage.setItem("gaokao_ref", urlRef); } catch { }
   }
 
   const [data, setData] = useState<RecommendResult | null>(null);
@@ -869,7 +947,7 @@ function ResultsContent() {
   useEffect(() => {
     try {
       localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode, fromMock, mockScore }));
-    } catch {}
+    } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [province, rank, subject, examMode, fromMock, mockScore]);
 
@@ -1000,7 +1078,7 @@ function ResultsContent() {
               setRefreshTrigger((n) => n + 1);
             }
           }
-        } catch {}
+        } catch { }
         // 清理 paid 参数避免刷新重复查
         url.searchParams.delete("paid");
         window.history.replaceState({}, "", url.toString());
@@ -1019,10 +1097,10 @@ function ResultsContent() {
           if (res.ok) {
             const d = await res.json();
             if (d.openid) {
-              try { sessionStorage.setItem("wx_openid", d.openid); } catch {}
+              try { sessionStorage.setItem("wx_openid", d.openid); } catch { }
             }
           }
-        } catch {}
+        } catch { }
         // 不论成败，清理 code/state 避免重复换（微信 code 仅一次性有效）
         url.searchParams.delete("code");
         url.searchParams.delete("state");
@@ -1033,7 +1111,7 @@ function ResultsContent() {
 
     // —— 进页面静默跳 OAuth2（仅微信内 + 无 openid + 没正在回跳）——
     let hasOpenid = false;
-    try { hasOpenid = !!sessionStorage.getItem("wx_openid"); } catch {}
+    try { hasOpenid = !!sessionStorage.getItem("wx_openid"); } catch { }
     if (isWeChat && !hasOpenid && SERVICE_APPID && !code) {
       const redirect = encodeURIComponent(window.location.href);
       const oauthUrl =
@@ -1094,7 +1172,7 @@ function ResultsContent() {
           const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
           const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject && h.exam_mode === examMode));
           localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...filtered].slice(0, 5)));
-        } catch {}
+        } catch { }
       })
       .catch((e: any) => {
         if (stale) return;
@@ -1149,8 +1227,8 @@ function ResultsContent() {
 
   const baseList = activeTab === "gems" ? (data?.hidden_gems || [])
     : activeTab === "surge" ? (data?.surge || [])
-    : activeTab === "stable" ? (data?.stable || [])
-    : (data?.safe || []);
+      : activeTab === "stable" ? (data?.stable || [])
+        : (data?.safe || []);
 
   const currentList = filterTier ? baseList.filter((item) => item.tier === filterTier) : baseList;
 
@@ -1262,55 +1340,55 @@ function ResultsContent() {
                   }}
                   onClick={() => setShowMobileMenu(false)}
                 >
-                {data?.is_paid ? (
-                  <button
-                    onClick={handleExportPDF}
-                    disabled={exporting || !data || data.total_matched === 0}
+                  {data?.is_paid ? (
+                    <button
+                      onClick={handleExportPDF}
+                      disabled={exporting || !data || data.total_matched === 0}
+                      style={{
+                        fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                        border: "1px solid var(--color-accent)",
+                        background: "rgba(201,146,42,0.08)", color: "var(--color-accent)",
+                        cursor: "pointer", opacity: exporting ? 0.6 : 1, fontWeight: 500, textAlign: "left",
+                      }}
+                    >
+                      {exporting ? "生成中…" : "↓ 下载PDF报告"}
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => { setShowMobileMenu(false); openPayModal(data?.is_trial ? "single_report" : undefined); }}
+                      disabled={!data || data.total_matched === 0}
+                      style={{
+                        fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                        background: "var(--color-navy)", color: "#fff",
+                        border: "none", cursor: "pointer", fontWeight: 600, textAlign: "left",
+                      }}
+                    >
+                      解锁完整报告
+                    </button>
+                  )}
+                  <Link
+                    href="/form"
                     style={{
                       fontSize: 14, padding: "10px 16px", borderRadius: 10,
-                      border: "1px solid var(--color-accent)",
-                      background: "rgba(201,146,42,0.08)", color: "var(--color-accent)",
-                      cursor: "pointer", opacity: exporting ? 0.6 : 1, fontWeight: 500, textAlign: "left",
+                      background: "var(--color-accent)", color: "#fff",
+                      textDecoration: "none", fontWeight: 500, display: "block",
                     }}
                   >
-                    {exporting ? "生成中…" : "↓ 下载PDF报告"}
-                  </button>
-                ) : (
-                  <button
-                    onClick={() => { setShowMobileMenu(false); openPayModal(data?.is_trial ? "single_report" : undefined); }}
-                    disabled={!data || data.total_matched === 0}
+                    我的志愿表
+                  </Link>
+                  <Link
+                    href="/ai-chat"
+                    onClick={() => setShowMobileMenu(false)}
                     style={{
                       fontSize: 14, padding: "10px 16px", borderRadius: 10,
-                      background: "var(--color-navy)", color: "#fff",
-                      border: "none", cursor: "pointer", fontWeight: 600, textAlign: "left",
+                      border: "1px solid var(--color-separator)",
+                      color: "var(--color-accent)", textDecoration: "none",
+                      fontWeight: 600, display: "block",
                     }}
                   >
-                    解锁完整报告
-                  </button>
-                )}
-                <Link
-                  href="/form"
-                  style={{
-                    fontSize: 14, padding: "10px 16px", borderRadius: 10,
-                    background: "var(--color-accent)", color: "#fff",
-                    textDecoration: "none", fontWeight: 500, display: "block",
-                  }}
-                >
-                  我的志愿表
-                </Link>
-                <Link
-                  href="/ai-chat"
-                  onClick={() => setShowMobileMenu(false)}
-                  style={{
-                    fontSize: 14, padding: "10px 16px", borderRadius: 10,
-                    border: "1px solid var(--color-separator)",
-                    color: "var(--color-accent)", textDecoration: "none",
-                    fontWeight: 600, display: "block",
-                  }}
-                >
-                  ✦ AI 助手
-                </Link>
-                {/* <button
+                    ✦ AI 助手
+                  </Link>
+                  {/* <button
                   onClick={() => { setShowMobileMenu(false); setShowEmailInput(!showEmailInput); }}
                   disabled={!data || data.total_matched === 0}
                   style={{
@@ -1322,26 +1400,33 @@ function ResultsContent() {
                 >
                   发送邮件报告
                 </button> */}
-                <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
-                  <button
-                    onClick={() => router.push("/dashboard")}
-                    style={{
-                      width: "100%", fontSize: 14, padding: "10px 16px", borderRadius: 10,
-                      background: "transparent", border: "none",
-                      color: "var(--color-text-secondary)", cursor: "pointer", textAlign: "left",
-                      display: "flex", alignItems: "center", justifyContent: "space-between",
-                    }}
-                  >
-                    <span>我的</span>
-                    <span style={{ color: "var(--color-text-tertiary)" }}>→</span>
-                  </button>
+                  <div style={{ paddingTop: 4, borderTop: "1px solid var(--color-separator)" }}>
+                    <button
+                      onClick={() => router.push("/dashboard")}
+                      style={{
+                        width: "100%", fontSize: 14, padding: "10px 16px", borderRadius: 10,
+                        background: "transparent", border: "none",
+                        color: "var(--color-text-secondary)", cursor: "pointer", textAlign: "left",
+                        display: "flex", alignItems: "center", justifyContent: "space-between",
+                      }}
+                    >
+                      <span>我的</span>
+                      <span style={{ color: "var(--color-text-tertiary)" }}>→</span>
+                    </button>
+                  </div>
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            )}
           </div>
         </div>
       </nav>
+
+      {/* 免责提示 */}
+      <div style={{ background: "#FEF3C7", borderBottom: "1px solid #FDE68A", padding: "8px 20px" }}>
+        <div style={{ maxWidth: 980, margin: "0 auto", fontSize: 13, color: "#92400E", textAlign: "center", fontWeight: 600 }}>
+          推荐结果仅供参考，谨慎报考！
+        </div>
+      </div>
 
       {/* 已应用约束提示 */}
       {(cMajor || cCity || cNature || cTier || hasBatchConstraint || selectedExcludeRestrictions.length > 0) && (
@@ -1558,7 +1643,7 @@ function ResultsContent() {
         </div>
 
         {/* P4: 新高考省份数据不足警告 */}
-        {data && data.total_matched > 0 && ["广东","湖南","湖北","重庆","福建","江苏","河北","辽宁"].includes(province) && (
+        {data && data.total_matched > 0 && ["广东", "湖南", "湖北", "重庆", "福建", "江苏", "河北", "辽宁"].includes(province) && (
           <div style={{
             background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8,
             padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#92400E", lineHeight: 1.7,
@@ -1842,7 +1927,7 @@ function ResultsContent() {
             <button
               onClick={() => {
                 const text = `我用「水卢冷门高报引擎」查了${province}位次${rank}的冷门院校，推荐结果很准！你也来查一下 👉 www.theyuanxi.cn`;
-                try { navigator.clipboard.writeText(text); } catch {}
+                try { navigator.clipboard.writeText(text); } catch { }
                 setToast("✓ 已复制分享文案，粘贴到微信发送即可");
                 setTimeout(() => setToast(null), 3000);
               }}

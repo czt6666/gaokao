@@ -35,8 +35,9 @@ def get_batch_type(batch: str) -> str:
     if "专科" in b or "高职" in b:
         return "junior_college"
 
-    # 5. 提前批 / 零批次 / 提前录取
-    if "提前批" in b or "零批次" in b or "零志愿" in b or b.startswith("提前"):
+    # 5. 提前批 / 零批次 / 提前录取 / 公安院校（公安类按提前批录取）
+    if ("提前批" in b or "提前录取" in b or "零批次" in b or "零志愿" in b
+            or "公安" in b or b.startswith("提前")):
         return "advance_batch"
 
     # 6. 特殊类型 / 专项计划

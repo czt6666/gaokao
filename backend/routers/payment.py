@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, Request, Depends, BackgroundTasks
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-import uuid, time, datetime, json, os, base64, hashlib, hmac
+import uuid, time, datetime, json, os, base64, hashlib, hmac, random, string
 from database import get_db, Order, User, SessionLocal, CommissionRecord
 # User 已导入 — JSAPI 端点需要查找小程序用户
 from routers.auth import _verify_token
@@ -50,6 +50,31 @@ def _get_client_ip(request: Request) -> str:
         return xri.strip()
     return request.client.host if request.client else ""
 
+
+def _uid_from_jwt(request: Request) -> int | None:
+    """从 Authorization: Bearer 解析 user_id；无/无效 token 返回 None。"""
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        payload = _verify_token(auth.replace("Bearer ", ""))
+        if payload:
+            return payload.get("uid")
+    return None
+
+
+def _resolve_or_create_user_by_openid(db: Session, field: str, openid: str) -> int:
+    """按 openid 查用户，不存在则自动注册（镜像登录回调），返回 user_id。
+    解决「老用户已有 openid 但本次无 JWT → 订单丢 user_id」：有 openid 必能绑定到用户。
+    field: 'wechat_openid'（服务号/网页）或 'wechat_mini_openid'（小程序）。"""
+    col = getattr(User, field)
+    user = db.query(User).filter(col == openid).first()
+    if not user:
+        ref = "".join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        user = User(referral_code=ref, **{field: openid})
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    return user.id
+
 # ── 支付宝配置（预留）──
 ALIPAY_APP_ID        = os.getenv("ALIPAY_APP_ID", "")
 ALIPAY_PRIVATE_KEY   = os.getenv("ALIPAY_PRIVATE_KEY", "")
@@ -73,13 +98,10 @@ class CreateOrderRequest(BaseModel):
 @router.post("/create")
 async def create_order(req: CreateOrderRequest, request: Request, db: Session = Depends(get_db)):
     """创建订单，返回微信支付二维码链接"""
-    # 从 JWT 解析用户（访客也可支付）
-    user_id = None
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        payload = _verify_token(auth.replace("Bearer ", ""))
-        if payload:
-            user_id = payload.get("uid")
+    # 桌面 Native 扫码无 openid，只能靠 JWT；无身份则拒绝下单（保证 user_id 必存在）
+    user_id = _uid_from_jwt(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="请先登录后再下单")
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
 
@@ -160,11 +182,9 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
 
-    # 查找用户
-    user_id = None
-    user = db.query(User).filter(User.wechat_mini_openid == req.openid).first()
-    if user:
-        user_id = user.id
+    # 有 openid 必能绑定用户：优先 JWT，否则按 mini openid 查找/自动注册
+    user_id = _uid_from_jwt(request) or _resolve_or_create_user_by_openid(
+        db, "wechat_mini_openid", req.openid)
 
     order_no = f"GK{int(time.time())}{uuid.uuid4().hex[:6].upper()}"
     order = Order(
@@ -218,12 +238,10 @@ class CreateH5Request(BaseModel):
 @router.post("/wechat/h5")
 async def create_h5_order(req: CreateH5Request, request: Request, db: Session = Depends(get_db)):
     """手机浏览器（非微信）H5 支付：下单返回 h5_url，前端 window.location.href 跳转"""
-    user_id = None
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        payload = _verify_token(auth.replace("Bearer ", ""))
-        if payload:
-            user_id = payload.get("uid")
+    # H5 无 openid，只能靠 JWT；无身份则拒绝下单（保证 user_id 必存在）
+    user_id = _uid_from_jwt(request)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="请先登录后再下单")
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
     order_no = f"GK{int(time.time())}{uuid.uuid4().hex[:6].upper()}"
@@ -322,12 +340,10 @@ async def create_jsapi_web_order(req: CreateJSAPIWebRequest, request: Request, d
     if not WECHAT_SERVICE_APP_ID:
         raise HTTPException(status_code=500, detail="服务号未配置")
 
-    user_id = None
-    auth = request.headers.get("Authorization", "")
-    if auth.startswith("Bearer "):
-        payload = _verify_token(auth.replace("Bearer ", ""))
-        if payload:
-            user_id = payload.get("uid")
+    # 主修复：老用户已有 wechat_openid 但本次无 JWT 时，旧逻辑只认 JWT → 订单丢 user_id。
+    # 改为优先 JWT，否则按服务号 openid 查找/自动注册，保证 user_id 必存在。
+    user_id = _uid_from_jwt(request) or _resolve_or_create_user_by_openid(
+        db, "wechat_openid", req.openid)
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
     order_no = f"GK{int(time.time())}{uuid.uuid4().hex[:6].upper()}"

@@ -27,6 +27,15 @@ build/
 *.db-wal
 *.sqlite
 *.sqlite3
+*.db.bak-*
+gaokao.db.bak-*
+
+# --- 数据同步临时产物（导出包，本地生成不入库）---
+sync_derived_*.sql.gz
+sync_derived_v*.sql.gz
+admission_sync_*.db.gz
+backend/old_bench.json
+backend/new_bench.json
 
 # --- Node / Next.js (frontend) ---
 node_modules/

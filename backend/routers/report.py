@@ -16,6 +16,23 @@ _pdf_cache: dict = {}          # key → {"bytes": bytes, "ts": float, "report_i
 _PDF_CACHE_TTL  = 1800         # 30 分钟
 _PDF_CACHE_MAX  = 20           # 最多缓存 20 份（每份 ~2-5 MB，总内存 ~100 MB 上限）
 
+def _parse_discipline_filter(raw: str):
+    """门类+专业类筛选解析（与 main.py 同语义）：竖线分隔，每项「门类」或「门类:专业类」。"""
+    if not raw or not raw.strip():
+        return None
+    out = []
+    for item in raw.split("|"):
+        item = item.strip()
+        if not item:
+            continue
+        if ":" in item:
+            d, mc = item.split(":", 1)
+            out.append({"discipline": d.strip(), "major_class": mc.strip()})
+        else:
+            out.append({"discipline": item, "major_class": None})
+    return out or None
+
+
 def _pdf_cache_key(province: str, rank: int, subject: str) -> str:
     """生成缓存 key：同省份+位次+选科共享同一份 PDF"""
     raw = f"{province}:{rank}:{subject}"
@@ -106,6 +123,7 @@ async def export_report(
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
     exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     db: Session = Depends(get_db),
 ):
@@ -163,6 +181,7 @@ async def export_report(
             constraints=constraints or None,
             batch_filter=_batch_filter or None,
             exclude_restrictions=_exclude_restrictions or None,
+            discipline_filter=_parse_discipline_filter(discipline_filter),
             user_score=score,
         )
     except Exception as e:
@@ -210,6 +229,7 @@ async def preview_report_html(
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
     exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     db: Session = Depends(get_db),
 ):
@@ -261,6 +281,7 @@ async def preview_report_html(
             constraints=constraints or None,
             batch_filter=_batch_filter or None,
             exclude_restrictions=_exclude_restrictions or None,
+            discipline_filter=_parse_discipline_filter(discipline_filter),
             user_score=score,
         )
     except Exception as e:
@@ -289,6 +310,7 @@ async def generate_report_free(
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
     exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     authorization: Optional[str] = Header(None),
     db: Session = Depends(get_db),
@@ -376,6 +398,7 @@ async def generate_report_free(
                 constraints=constraints or None,
                 batch_filter=_batch_filter or None,
                 exclude_restrictions=_exclude_restrictions or None,
+                discipline_filter=_parse_discipline_filter(discipline_filter),
                 user_score=score,
             )
         except Exception as e:
@@ -462,6 +485,7 @@ async def email_report(
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
     exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
+    discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     to_email: str = Query(..., description="收件人邮箱"),
     authorization: Optional[str] = Header(None),
@@ -523,6 +547,7 @@ async def email_report(
             constraints=constraints or None,
             batch_filter=_batch_filter or None,
             exclude_restrictions=_exclude_restrictions or None,
+            discipline_filter=_parse_discipline_filter(discipline_filter),
             user_score=score,
         )
     except Exception as e:

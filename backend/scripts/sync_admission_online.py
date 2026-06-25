@@ -27,6 +27,7 @@ COLUMNS_TO_ADD = [
     ("subject_must",      "VARCHAR(100) DEFAULT ''"),
     ("subject_any_of",    "VARCHAR(200) DEFAULT ''"),
     ("major_restrictions", "VARCHAR(200) DEFAULT ''"),
+    ("derived_category",  "VARCHAR DEFAULT ''"),
 ]
 
 BATCH_SIZE = 3000

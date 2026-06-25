@@ -5,6 +5,7 @@ import Link from "next/link";
 import { track } from "@/lib/track";
 import AuthNav from "@/components/AuthNav";
 import FeedbackModal from "@/components/FeedbackModal";
+import DisciplineFilter, { encodeDisciplineFilter, type DisciplineSelection } from "@/components/DisciplineFilter";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
@@ -138,8 +139,7 @@ export default function Home() {
     { value: "special:sino_foreign", label: "排除中外合作" },
   ];
   const [showConstraints, setShowConstraints] = useState(false);
-  const [cMajorInput, setCMajorInput] = useState("");
-  const [cMajors, setCMajors] = useState<string[]>([]);
+  const [cDisciplines, setCDisciplines] = useState<DisciplineSelection[]>([]);
   const [cCityLevels, setCCityLevels] = useState<string[]>([]);
   const [cNature, setCNature] = useState<string[]>([]);
   const [cTiers, setCTiers] = useState<string[]>([]);
@@ -149,7 +149,6 @@ export default function Home() {
 
   // 偏好约束子面板展开状态（纯 UI，不持久化）
   const [showSchoolPrefs, setShowSchoolPrefs] = useState(true);
-  const [showBatchFilter, setShowBatchFilter] = useState(false);
   const [showRestrictionFilter, setShowRestrictionFilter] = useState(false);
 
   useEffect(() => {
@@ -170,12 +169,7 @@ export default function Home() {
       const savedCons = localStorage.getItem("gaokao_constraints");
       if (savedCons) {
         const c = JSON.parse(savedCons);
-        if (c.cMajors !== undefined) {
-          setCMajors(Array.isArray(c.cMajors) ? c.cMajors : (typeof c.cMajors === "string" ? c.cMajors.split(/\s+/).filter(Boolean) : []));
-        } else if (c.cMajor !== undefined && typeof c.cMajor === "string") {
-          // 兼容旧格式
-          setCMajors(c.cMajor.split(/\s+/).filter(Boolean));
-        }
+        if (Array.isArray(c.cDisciplines)) setCDisciplines(c.cDisciplines);
         if (c.cCityLevels !== undefined) setCCityLevels(c.cCityLevels);
         if (c.cNature !== undefined) setCNature(c.cNature);
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
@@ -226,10 +220,10 @@ export default function Home() {
     if (!constraintInitRef.current) { constraintInitRef.current = true; return; }
     try {
       localStorage.setItem("gaokao_constraints", JSON.stringify({
-        cMajors, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints
+        cDisciplines, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints
       }));
     } catch {}
-  }, [cMajors, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints]);
+  }, [cDisciplines, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints]);
 
   // 省份变化自动缓存（跳过首次挂载）
   useEffect(() => {
@@ -283,7 +277,6 @@ export default function Home() {
       eventData: { mode, subject: subjectStr, exam_mode: examMode, mock_score: mode === "score" ? mockScore : undefined },
       subject: subjectStr,
       examMode,
-      cMajor: cMajors.join(" ").slice(0, 200),
       cCity: cCityLevels.join(","),
       cNature: cNature.join(","),
       cTier: cTiers.join(","),
@@ -293,11 +286,10 @@ export default function Home() {
     const timeout = setTimeout(() => controller.abort(), 15000);
 
     try {
-      // 约束参数长度限制（防止 URL 过长导致 414）
-      const cMajorTrimmed = cMajors.join(" ").slice(0, 200);
       const constraintQs = (() => {
         const parts: string[] = [];
-        if (cMajorTrimmed) parts.push(`c_major=${encodeURIComponent(cMajorTrimmed)}`);
+        const disciplineEncoded = encodeDisciplineFilter(cDisciplines);
+        if (disciplineEncoded) parts.push(`discipline_filter=${encodeURIComponent(disciplineEncoded)}`);
         if (cCityLevels.length) parts.push(`c_city=${encodeURIComponent(cCityLevels.join(","))}`);
         if (cNature.length) parts.push(`c_nature=${encodeURIComponent(cNature.join(","))}`);
         if (cTiers.length) parts.push(`c_tier=${encodeURIComponent(cTiers.join(","))}`);
@@ -359,22 +351,6 @@ export default function Home() {
 
   const scrollToQuery = () => {
     queryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
-  };
-
-  const addMajorTag = () => {
-    const v = cMajorInput.trim();
-    if (!v) return;
-    if (cMajors.includes(v)) {
-      setCMajorInput("");
-      return;
-    }
-    if (cMajors.length >= 5) return;
-    setCMajors(prev => [...prev, v]);
-    setCMajorInput("");
-  };
-
-  const removeMajorTag = (index: number) => {
-    setCMajors(prev => prev.filter((_, i) => i !== index));
   };
 
   const status = PROVINCE_STATUS[province];
@@ -569,9 +545,8 @@ export default function Home() {
               <select className="apple-select" value={province} onChange={e => setProvince(e.target.value)}>
                 {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
-              {status === "full" && province === "北京" && <p style={{ fontSize: 11, color: "var(--color-success)", marginTop: 5 }}>数据完整（2017–2025，9年）✓</p>}
-              {status === "full" && province !== "北京" && <p style={{ fontSize: 11, color: "var(--color-success)", marginTop: 5 }}>数据完整（2021–2025，含2025）✓</p>}
-              {status === "partial" && <p style={{ fontSize: 11, color: "var(--color-accent)", marginTop: 5 }}>2021–2025 院校录取数据（含2025）</p>}
+              {status === "full" && <p style={{ fontSize: 11, color: "var(--color-success)", marginTop: 5 }}>数据完整（2023–2025，含2025）✓</p>}
+              {status === "partial" && <p style={{ fontSize: 11, color: "var(--color-accent)", marginTop: 5 }}>2023–2025 院校录取数据（含2025）</p>}
               {status === "soon" && <p style={{ fontSize: 11, color: "var(--color-warning)", marginTop: 5 }}>即将支持</p>}
               {!status && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 5 }}>数据建设中</p>}
             </div>
@@ -705,7 +680,7 @@ export default function Home() {
                 fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
               }}>{showConstraints ? "−" : "+"}</span>
               添加偏好约束
-              {(cMajors.length || cCityLevels.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
+              {(cDisciplines.length || cCityLevels.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
                 <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
               ) : null}
             </button>
@@ -715,73 +690,16 @@ export default function Home() {
                 marginTop: 12, padding: 16, borderRadius: 12,
                 background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
               }}>
-                {/* 专业关键词 — 始终可见 */}
+                {/* 门类 / 专业类 / 批次 筛选 */}
                 <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>感兴趣的专业</label>
-                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <input
-                      type="text"
-                      value={cMajorInput}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setCMajorInput(v.length > 20 ? v.slice(0, 20) : v);
-                      }}
-                      onKeyDown={(e) => { if (e.key === "Enter") addMajorTag(); }}
-                      placeholder="输入关键词，如：计算机"
-                      className="apple-input"
-                      style={{ flex: 1, fontSize: 14, padding: "10px 12px", border: "1.5px solid var(--color-accent)" }}
-                    />
-                    <button
-                      onClick={addMajorTag}
-                      disabled={!cMajorInput.trim()}
-                      style={{
-                        padding: "10px 20px",
-                        borderRadius: 10,
-                        border: "none",
-                        fontSize: 14,
-                        fontWeight: 600,
-                        cursor: "pointer",
-                        background: cMajorInput.trim() ? "var(--color-navy)" : "var(--color-bg-secondary)",
-                        color: cMajorInput.trim() ? "#fff" : "var(--color-text-tertiary)",
-                        transition: "all .15s",
-                        flexShrink: 0,
-                      }}
-                    >确定</button>
-                  </div>
-                  {cMajors.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 10 }}>
-                      {cMajors.map((tag, i) => (
-                        <span
-                          key={tag + i}
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                            padding: "4px 10px",
-                            borderRadius: 6,
-                            background: "var(--color-bg)",
-                            border: "1px solid var(--color-separator)",
-                            fontSize: 13,
-                            color: "var(--color-text-primary)",
-                          }}
-                        >
-                          {tag}
-                          <button
-                            onClick={() => removeMajorTag(i)}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              fontSize: 14,
-                              color: "var(--color-text-tertiary)",
-                              lineHeight: 1,
-                              padding: "0 2px",
-                            }}
-                          >×</button>
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <DisciplineFilter
+                    province={province}
+                    selected={cDisciplines}
+                    onChange={setCDisciplines}
+                    batchTypes={cBatchTypes}
+                    onBatchChange={setCBatchTypes}
+                    batchOptions={BATCH_OPTIONS}
+                  />
                 </div>
 
                 {/* 院校偏好 — 可折叠 */}
@@ -858,46 +776,6 @@ export default function Home() {
                             })}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* 批次类型 — 可折叠 */}
-                <div style={{ marginBottom: 12 }}>
-                  <button
-                    type="button"
-                    onClick={() => setShowBatchFilter(v => !v)}
-                    style={{
-                      width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between",
-                      background: "none", border: "none", padding: "10px 0", cursor: "pointer",
-                      borderBottom: "1px solid var(--color-separator)",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>批次类型</span>
-                      {cBatchTypes.length > 0 ? (
-                        <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
-                          {BATCH_OPTIONS.find(b => b.value === cBatchTypes[0])?.label}
-                        </span>
-                      ) : null}
-                    </div>
-                    <span style={{ fontSize: 14, color: "var(--color-text-tertiary)", width: 20, textAlign: "center" }}>{showBatchFilter ? "−" : "+"}</span>
-                  </button>
-                  {showBatchFilter && (
-                    <div style={{ marginTop: 12 }}>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        {BATCH_OPTIONS.map(b => {
-                          const active = cBatchTypes.includes(b.value);
-                          return (
-                            <button key={b.value} onClick={() => setCBatchTypes(prev => active ? [] : [b.value])} style={{
-                              padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
-                              border: active ? "none" : "1px solid var(--color-separator)",
-                              background: active ? "var(--color-navy)" : "var(--color-bg)",
-                              color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
-                            }}>{b.label}</button>
-                          );
-                        })}
                       </div>
                     </div>
                   )}

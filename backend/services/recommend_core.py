@@ -81,23 +81,20 @@ _plan_2026_cache: dict = {}
 
 
 def _load_2026(db: Session, province: str) -> dict:
-    """一次加载全省 2026 计划，按 (校,专业) 聚合，供过滤与逐条挂载共用（带缓存）。"""
+    """一次加载全省 2026 计划，按 (校,专业) 聚合，供过滤与逐条挂载共用（带缓存）。
+    admission_2026 表由新版 xlsx 导入器维护，始终存在。"""
     if province in _plan_2026_cache:
         return _plan_2026_cache[province]
     grouped: dict = {}
     schools = set()
-    try:
-        rows = db.execute(_sqla_text(
-            f"SELECT school_name, major_name, {_PLAN_COLS} "
-            "FROM admission_2026 WHERE province=:p"
-        ), {"p": province}).fetchall()
-        for r in rows:
-            sch, mj = r[0], r[1]
-            schools.add(sch)
-            grouped.setdefault((sch, mj), []).append(tuple(r[2:]))
-    except Exception:
-        # admission_2026 不存在时返回空，调用方据此不过滤/不挂载
-        pass
+    rows = db.execute(_sqla_text(
+        f"SELECT school_name, major_name, {_PLAN_COLS} "
+        "FROM admission_2026 WHERE province=:p"
+    ), {"p": province}).fetchall()
+    for r in rows:
+        sch, mj = r[0], r[1]
+        schools.add(sch)
+        grouped.setdefault((sch, mj), []).append(tuple(r[2:]))
     plan_map = {k: aggregate_plan_2026(v) for k, v in grouped.items()}
     norm_map = {(s, _norm_major(m)): summ for (s, m), summ in plan_map.items()}
     val = {"map": plan_map, "norm": norm_map, "schools": schools}
@@ -760,7 +757,14 @@ _rec_cache: dict = {}   # key → (result_dict, timestamp)
 _REC_CACHE_TTL = 1800   # 30分钟
 _REC_RANK_BUCKET = 1000 # 每1000位次共用一个缓存桶
 
-def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None):
+def _discipline_filter_key(discipline_filter: list[dict] | None) -> str:
+    if not discipline_filter:
+        return ""
+    _stable = sorted(f"{d.get('discipline','')}:{d.get('major_class') or ''}" for d in discipline_filter)
+    return "|" + hashlib.md5(",".join(_stable).encode()).hexdigest()[:8]
+
+
+def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, discipline_filter: list[dict] | None = None, user_score: int | None = None):
     _c_key = ""
     if constraints:
         # 稳定的字符串表示，用于缓存 key
@@ -772,14 +776,15 @@ def _rec_cache_get(province: str, rank: int, subject: str, is_paid: bool, constr
     _rest_key = ""
     if exclude_restrictions:
         _rest_key = "|" + hashlib.md5(",".join(sorted(exclude_restrictions)).encode()).hexdigest()[:8]
+    _disc_key = _discipline_filter_key(discipline_filter)
     _score_key = f"|s{user_score}" if user_score is not None else ""
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_score_key}"
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_disc_key}{_score_key}"
     entry = _rec_cache.get(key)
     if entry and time.time() - entry[1] < _REC_CACHE_TTL:
         return entry[0]
     return None
 
-def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None):
+def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result: dict, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, discipline_filter: list[dict] | None = None, user_score: int | None = None):
     _c_key = ""
     if constraints:
         _c_key = "|" + hashlib.md5(json.dumps(constraints, sort_keys=True, ensure_ascii=False).encode()).hexdigest()[:8]
@@ -790,8 +795,9 @@ def _rec_cache_set(province: str, rank: int, subject: str, is_paid: bool, result
     _rest_key = ""
     if exclude_restrictions:
         _rest_key = "|" + hashlib.md5(",".join(sorted(exclude_restrictions)).encode()).hexdigest()[:8]
+    _disc_key = _discipline_filter_key(discipline_filter)
     _score_key = f"|s{user_score}" if user_score is not None else ""
-    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_score_key}"
+    key = f"{province}|{(rank//_REC_RANK_BUCKET)*_REC_RANK_BUCKET}|{subject}|{is_paid}|{exam_mode}{_c_key}{_trial_key}{_batch_key}{_rest_key}{_disc_key}{_score_key}"
     _rec_cache[key] = (result, time.time())
     if len(_rec_cache) > 500:  # 超过500项时清理最旧的50项
         oldest = sorted(_rec_cache.items(), key=lambda x: x[1][1])[:50]
@@ -807,6 +813,7 @@ def _build_recommend_data(
     db: Session,
     batch_filter: list[str] | None = None,
     exclude_restrictions: list[str] | None = None,
+    discipline_filter: list[dict] | None = None,
 ) -> dict:
     """
     推荐主流程的**数据基座**：一次性完成
@@ -872,26 +879,6 @@ def _build_recommend_data(
     """
     assert db is not None, "db (Session) 必填"
 
-    # ── 0. Schema 兼容性：自动添加缺失列（上线安全，无需手动 migration）
-    from sqlalchemy import inspect
-    inspector = inspect(db.bind)
-    existing_cols = {c['name'] for c in inspector.get_columns('admission_records')}
-    _missing_cols = []
-    for col_name, col_def in [
-        ("subject_must", "VARCHAR(100) DEFAULT ''"),
-        ("subject_any_of", "VARCHAR(200) DEFAULT ''"),
-        ("batch_type", "VARCHAR(50) DEFAULT ''"),
-        ("major_restrictions", "VARCHAR(200) DEFAULT ''"),
-        ("derived_category", "VARCHAR DEFAULT ''"),  # 真实科类（见 scripts/backfill_derived_category.py）
-    ]:
-        if col_name not in existing_cols:
-            _missing_cols.append((col_name, col_def))
-    if _missing_cols:
-        with db.bind.connect() as conn:
-            for col_name, col_def in _missing_cols:
-                conn.execute(_sqla_text(f"ALTER TABLE admission_records ADD COLUMN {col_name} {col_def}"))
-            conn.commit()
-
     # ── 1. SQL 级过滤 + 拉取 admission_records ───────────────────
     _sql_extra = ""
     _sql_params: dict = {"prov": province}
@@ -939,22 +926,34 @@ def _build_recommend_data(
         _sql_extra += f" AND (COALESCE(subject_any_of,'') IN ({','.join(_matching_any_ofs)}))"
 
         # 4. 首选科目（物理/历史）按派生科类硬过滤 —— 修复 3+1+2 省份跨科类串档。
-        #    subject_must/any_of 只管再选，'不限'首选记录会无差别通过，导致历史考生
-        #    被推物理学校（位次同号但科类不同）。derived_category 已把'不限'还原成真实科类。
-        #    历史考生只看历史血统(历史类/历史/文科)，物理只看物理血统(物理类/物理/理科)。
-        #    仅对「分科类省份(3+1+2/旧文理)」且已回填 derived_category 时生效；综合(3+3)省不过滤。
+        #    新版 xlsx 导入后 derived_category 已 100% 填充，不再需要空值放行。
         _prov_cats = {r[0] for r in db.execute(_sqla_text(
             "SELECT DISTINCT category FROM rank_tables WHERE province=:prov"), {"prov": province}).fetchall()}
         _is_split = bool(_prov_cats) and "综合" not in _prov_cats
         _first = "物理" if "物理" in _user_subjects_set else ("历史" if "历史" in _user_subjects_set else None)
-        _has_derived = db.execute(_sqla_text(
-            "SELECT 1 FROM admission_records WHERE province=:prov "
-            "AND COALESCE(derived_category,'')!='' LIMIT 1"), {"prov": province}).fetchone()
-        if _is_split and _first and _has_derived:
+        if _is_split and _first:
             _lineage = ("物理类", "物理", "理科") if _first == "物理" else ("历史类", "历史", "文科")
             _lineage_sql = ",".join("'" + c + "'" for c in _lineage)
-            # 空 derived_category（无法判定科类的少量记录）也放行，依赖 subject_must 做二次过滤
-            _sql_extra += f" AND (COALESCE(derived_category,'') IN ({_lineage_sql}) OR COALESCE(derived_category,'') = '')"
+            _sql_extra += f" AND COALESCE(derived_category,'') IN ({_lineage_sql})"
+
+    # 门类+专业类硬过滤：OR 拼接每个 (门类[:专业类]) 条件；用绑定参数防注入
+    if discipline_filter:
+        _disc_clauses = []
+        for _i, _df in enumerate(discipline_filter):
+            _d = _df.get("discipline")
+            _mc = _df.get("major_class")
+            if not _d:
+                continue
+            _dk = f"_df_d{_i}"
+            _sql_params[_dk] = _d
+            if _mc:
+                _mk = f"_df_m{_i}"
+                _sql_params[_mk] = _mc
+                _disc_clauses.append(f"(discipline=:{_dk} AND major_class=:{_mk})")
+            else:
+                _disc_clauses.append(f"discipline=:{_dk}")
+        if _disc_clauses:
+            _sql_extra += f" AND ({' OR '.join(_disc_clauses)})"
 
     _sql = (
         "SELECT school_name, major_name, year, min_rank, min_score, "
@@ -1419,20 +1418,20 @@ def _rank_wall_window(db: Session, province: str, subject: str, rank: int, point
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
-def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None) -> dict:
+def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, discipline_filter: list[dict] | None = None, user_score: int | None = None) -> dict:
     """
     核心推荐逻辑（纯函数，不依赖 Request）。
     供 /api/recommend 端点和 PDF 报告生成共同调用。
     主推荐接口：输入位次，返回冲稳保分层推荐 + 冷门挖掘（接入真实学科评估）
     """
     # 缓存命中快速返回
-    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, user_score)
+    _cached = _rec_cache_get(province, rank, subject, is_paid, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, discipline_filter, user_score)
     if _cached is not None:
         return _cached
 
     # ── 数据层：一次性加载全部 cache + 组合候选画像 ───────────
     try:
-        data = _build_recommend_data(province, rank, subject, db, batch_filter=batch_filter, exclude_restrictions=exclude_restrictions)
+        data = _build_recommend_data(province, rank, subject, db, batch_filter=batch_filter, exclude_restrictions=exclude_restrictions, discipline_filter=discipline_filter)
     except Exception:
         raise
     grouped                = data["grouped"]
@@ -1564,6 +1563,10 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 位次桶壁：把 ±25 分换算成位次区间（与分数桶壁同语义，按省份/分段自适应）。
     # 仅在位次模式（未提供 user_score）下用；一分一段缺失时回退比例墙。
     _rank_wall = None if user_score else _rank_wall_window(db, province, subject, rank)
+    # 稳区桶壁：把 ±10 分换算成位次区间（与分数模式「±10分=稳」同语义）。
+    # 高位次（低 rank 数）时分段稀疏，固定 ±15% 位次窗会过窄、几乎无稳区，
+    # 故用一分一段把「±10分」翻译成自适应位次窗；缺失时回退 ±15%。
+    _stab_wall = None if user_score else _rank_wall_window(db, province, subject, rank, points=10)
     for (school_name, major_name, batch), records in grouped.items():
 
         # 选科过滤（使用预加载缓存，O(1) 查询）
@@ -1753,6 +1756,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             "school_name": school_name,
             "major_name": _display_major,
             "major_remark": records[0].get("major_remark", "") if records else "",
+            "batch_type": records[0].get("batch_type", "") if records else "",
             "city": school_info.city if school_info else "",
             "province_school": school_info.province if school_info else "",
             "tier": tier,
@@ -1841,6 +1845,21 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         results.append(result)
         _scan["kept"] += 1
 
+    # 5.85 智能批次默认：避免给本科生推专科/预科。
+    #   问题案例：江苏物理位次1000 → 推荐南京铁道职业学院（定向铁路专科，rank 864-983 异常高）。
+    #   本科 options 充足时，专科/预科里少量异常高位次（定向/特殊计划）会污染推荐。
+    #   规则：用户未显式指定 batch_filter 且本科候选 ≥ 15 时，隐藏 junior_college / preparatory。
+    #   低分考生（本科候选不足）仍保留专科，保证有结果。
+    if not batch_filter:
+        _undergrad_n = sum(1 for r in results
+                           if r.get("batch_type") in ("undergraduate", "advance_batch"))
+        if _undergrad_n >= 15:
+            _before = len(results)
+            results = [r for r in results
+                       if r.get("batch_type") not in ("junior_college", "preparatory")]
+            if _before != len(results):
+                _scan["junior_college_hidden"] = _before - len(results)
+
     # 5.9 隐藏 2026 停招专业（可用环境变量 HIDE_STOPPED_2026=0 关闭）
     if os.getenv("HIDE_STOPPED_2026", "1") == "1":
         _before = len(results)
@@ -1888,13 +1907,15 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         stable = [r for r in results if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10]
         safe   = [r for r in results if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10]
     else:
-        # 位次分桶：完全看最近一年实际位次 vs 考生位次
-        # 学校位次 < 考生位次*0.85 → 学校更难 → 冲
-        # 考生位次*0.85 ≤ 学校位次 ≤ 考生位次*1.15 → 稳
-        # 学校位次 > 考生位次*1.15 → 保
-        surge  = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < rank * 0.85]
-        stable = [r for r in results if r["last_year_min_rank"] > 0 and rank * 0.85 <= r["last_year_min_rank"] <= rank * 1.15]
-        safe   = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > rank * 1.15]
+        # 位次分桶：稳区桶壁优先用「±10分换算位次」(_stab_wall)，与硬过滤(±25分)
+        # 及分数模式(±10分=稳)同语义、按分段自适应；一分一段缺失时回退 ±15% 位次窗。
+        # 学校位次 < 稳区下壁 → 学校更难 → 冲
+        # 稳区下壁 ≤ 学校位次 ≤ 稳区上壁 → 稳
+        # 学校位次 > 稳区上壁 → 保
+        _stab_lo, _stab_hi = _stab_wall if _stab_wall else (rank * 0.85, rank * 1.15)
+        surge  = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < _stab_lo]
+        stable = [r for r in results if r["last_year_min_rank"] > 0 and _stab_lo <= r["last_year_min_rank"] <= _stab_hi]
+        safe   = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > _stab_hi]
 
     # 每所学校各桶独立计数（原来跨桶共享导致某桶学校不足）
     _SCHOOL_CAP = 5
@@ -2010,14 +2031,15 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             sorted([r for r in display_list if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10], key=_safe_sort),
             25, defaultdict(int))
     else:
+        _stab_lo, _stab_hi = _stab_wall if _stab_wall else (rank * 0.85, rank * 1.15)
         surge_list  = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < rank * 0.85], key=_surge_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < _stab_lo], key=_surge_sort),
             25, defaultdict(int))
         stable_list = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and rank * 0.85 <= r["last_year_min_rank"] <= rank * 1.15],  key=_stable_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and _stab_lo <= r["last_year_min_rank"] <= _stab_hi],  key=_stable_sort),
             46, defaultdict(int))
         safe_list   = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > rank * 1.15],  key=_safe_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > _stab_hi],  key=_safe_sort),
             25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
 
@@ -2144,5 +2166,5 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                     _result[_key][_i] = _paywall_strip(_item)
     
 
-    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, user_score)
+    _rec_cache_set(province, rank, subject, is_paid, _result, constraints, exam_mode, trial_limit, batch_filter, exclude_restrictions, discipline_filter, user_score)
     return _result

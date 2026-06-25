@@ -163,6 +163,20 @@ function MajorCard({ major }: { major: MajorAnalysis }) {
           {sorted.length > 0 && (
             <div style={{ marginBottom: 12 }}>
               <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginBottom: 8 }}>历年录取位次</div>
+              <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "4px 0",
+                borderBottom: "1px solid var(--color-separator)",
+                fontSize: 11,
+                color: "var(--color-text-tertiary)",
+                fontWeight: 600,
+              }}>
+                <span style={{ width: 48 }}>年份</span>
+                <span>录取最低分</span>
+                <span>最低分位次</span>
+                <span style={{ fontSize: 11 }}>计划人数</span>
+              </div>
               <div style={{ display: "grid", gap: 1 }}>
                 {sorted.map((r, ri) => (
                   <div key={`${r.year}-${ri}`} style={{

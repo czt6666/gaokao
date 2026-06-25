@@ -325,6 +325,10 @@ def recommend(
         None,
         description="排除的专业限制标签，逗号分隔。不传=默认排除所有已知限制；空字符串=不排除任何限制",
     ),
+    discipline_filter: str = Query(
+        "",
+        description="门类+专业类筛选，竖线分隔。每项为「门类」(该门类全选) 或「门类:专业类」(仅该专业类)。例：工学:计算机类|工学:机械类|管理学",
+    ),
     score: int | None = Query(
         None, description="考生分数（用于分数分桶，优先于位次分桶）"
     ),
@@ -496,6 +500,21 @@ def recommend(
         else:
             _exclude_restrictions = _parsed
 
+    # 门类+专业类筛选解析：竖线分隔，每项「门类」或「门类:专业类」
+    _discipline_filter = None
+    if discipline_filter.strip():
+        _df = []
+        for item in discipline_filter.split("|"):
+            item = item.strip()
+            if not item:
+                continue
+            if ":" in item:
+                d, mc = item.split(":", 1)
+                _df.append({"discipline": d.strip(), "major_class": mc.strip()})
+            else:
+                _df.append({"discipline": item, "major_class": None})
+        _discipline_filter = _df or None
+
     try:
         result = _run_recommend_core(
             province=province,
@@ -509,6 +528,7 @@ def recommend(
             trial_limit=trial_limit,
             batch_filter=_batch_filter or None,
             exclude_restrictions=_exclude_restrictions or None,
+            discipline_filter=_discipline_filter,
             user_score=score,
         )
         result["is_trial"] = trial_limit is not None
@@ -555,25 +575,49 @@ def school_detail(
     if not school:
         return {"error": "学校不存在"}
 
-    # 该校在该省的招生专业（取最新年份）
-    majors = (
-        db.query(Major)
-        .filter(Major.school_name == school_name, Major.province == province)
-        .order_by(Major.year.desc())
-        .all()
-    )
-    # 去重：专业名称 + 专业组（同一专业名不同专业组视为不同专业）
-    seen_majors = {}
-    for m in majors:
-        key = f"{m.major_name}|{m.major_group or ''}"
-        if key not in seen_majors:
-            seen_majors[key] = m
-    majors_dedup = list(seen_majors.values())
-    # 建立 major_name -> major_info 的映射（用于补充 subject_req 等）
+    # 从 admission_2026 获取该校在该省的招生专业（新版 xlsx 导入，含 major_full + 2026预估位次）
+    from sqlalchemy import text as _sqla_text
+    a26_rows = db.execute(
+        _sqla_text(
+            "SELECT DISTINCT major_name, major_full, major_remark, subject_req, "
+            "plan_count, tuition, duration, major_code, group_name, group_code, "
+            "discipline, major_class, major_level, ruanke_grade, ruanke_rank, "
+            "discipline_eval, major_level_tag, est_rank_26 "
+            "FROM admission_2026 "
+            "WHERE school_name=:sn AND province=:p"
+        ),
+        {"sn": school_name, "p": province}
+    ).fetchall()
+    # 建立 major_name -> info 的映射（同名多方向：取首条作代表，预估位次取最优/最小的非空值）
     majors_by_name = {}
-    for m in majors_dedup:
-        if m.major_name not in majors_by_name:
-            majors_by_name[m.major_name] = m
+    for r in a26_rows:
+        mn = r[0]
+        _est = r[17]
+        if mn not in majors_by_name:
+            majors_by_name[mn] = {
+                "major_full": r[1] or mn,
+                "major_remark": r[2] or "",
+                "subject_req": r[3] or "",
+                "est_rank_26": _est,
+                "plan_count": r[4],
+                "tuition": r[5] or "",
+                "duration": r[6] or "",
+                "major_code": r[7] or "",
+                "group_name": r[8] or "",
+                "group_code": r[9] or "",
+                "discipline": r[10] or "",
+                "major_class": r[11] or "",
+                "major_level": r[12] or "",
+                "ruanke_grade": r[13] or "",
+                "ruanke_rank": r[14] or "",
+                "discipline_eval": r[15] or "",
+                "major_level_tag": r[16] or "",
+            }
+        else:
+            # 同名其它方向：补一个更优(更小)的预估位次作代表
+            _cur = majors_by_name[mn]["est_rank_26"]
+            if _est and (not _cur or _est < _cur):
+                majors_by_name[mn]["est_rank_26"] = _est
 
     # 历年录取记录
     records = (
@@ -586,22 +630,34 @@ def school_detail(
         .all()
     )
 
-    # 按 专业名称 + 备注 分组（不同备注视为不同专业方向）
-    major_records = defaultdict(list)
+    # 按 专业名称 分组（同名不同方向/校区/专项合并为一个专业，避免学校页专业列表碎片化）。
+    # 每年保留一条代表记录：优先普通批(无特殊限制)，再取 min_rank 最大(最易录取的主线)，
+    # 避免定向/专项等异常高位次记录污染该专业的历年展示。
+    _by_name_year = defaultdict(dict)  # major_name -> {year: best_rec}
     for r in records:
         # 院校最低分是学校级底线占位行，不作为独立专业展示
         if not r.major_name or "院校最低分" in r.major_name:
             continue
-        key = f"{r.major_name}|{r.major_remark or ''}"
-        major_records[key].append(
-            {
-                "year": r.year,
-                "min_rank": r.min_rank,
-                "min_score": r.min_score,
-                "plan_count": r.admit_count,
-                "major_remark": r.major_remark or "",
-            }
-        )
+        rec = {
+            "year": r.year,
+            "min_rank": r.min_rank,
+            "min_score": r.min_score,
+            "plan_count": r.admit_count,
+            "major_remark": r.major_remark or "",
+            "restricted": bool((r.major_restrictions or "").strip()),
+        }
+        slot = _by_name_year[r.major_name]
+        cur = slot.get(r.year)
+        if cur is None:
+            slot[r.year] = rec
+        else:
+            # 代表性优先级：普通批 > 特殊计划；同类取 min_rank 更大者(更典型的主录取线)
+            cur_key = (not cur["restricted"], cur.get("min_rank") or 0)
+            new_key = (not rec["restricted"], rec.get("min_rank") or 0)
+            if new_key > cur_key:
+                slot[r.year] = rec
+
+    major_records = {name: list(yrs.values()) for name, yrs in _by_name_year.items()}
 
     # 学科评估
     evals = (
@@ -642,28 +698,39 @@ def school_detail(
     }
 
     major_analysis = []
-    # 优先以 admission_records 中的 (专业名+备注) 组合为维度生成条目
-    for key, recs in major_records.items():
-        major_name = key.split("|")[0]
-        major_remark = key.split("|")[1] if "|" in key else ""
+    # 以专业名为维度生成条目（同名已合并）
+    for major_name, recs in major_records.items():
         valid_recs = [r for r in recs if (r.get("min_rank") or 0) > 0]
         if not valid_recs:
             continue
         recs_sorted = sorted(valid_recs, key=lambda x: x["year"])
+        major_remark = recs_sorted[-1].get("major_remark", "") if recs_sorted else ""
         bsy = detect_big_small_year(recs_sorted[-3:])
         gem_b = hidden_gem_type_b(major_name)
         emp = get_major_employment(major_name, db)
-        # 尝试从 majors 表补充选科要求、招生人数等信息
-        mi = majors_by_name.get(major_name)
+        # 从 admission_2026 补充选科要求、招生人数、专业全称等信息
+        mi = majors_by_name.get(major_name, {})
         major_analysis.append(
             {
                 "major_name": major_name,
-                "major_remark": major_remark,
-                "subject_req": mi.subject_req if mi else "",
-                "plan_count": mi.plan_count if mi else None,
-                "tuition": mi.tuition if mi else None,
-                "duration": mi.duration if mi else None,
-                "records": recs_sorted,
+                "major_full": mi.get("major_full", major_name),
+                "major_remark": major_remark or mi.get("major_remark", ""),
+                "subject_req": mi.get("subject_req", ""),
+                "plan_count": mi.get("plan_count"),
+                "tuition": mi.get("tuition"),
+                "duration": mi.get("duration"),
+                "major_code": mi.get("major_code", ""),
+                "group_name": mi.get("group_name", ""),
+                "group_code": mi.get("group_code", ""),
+                "discipline": mi.get("discipline", ""),
+                "major_class": mi.get("major_class", ""),
+                "major_level": mi.get("major_level", ""),
+                "ruanke_grade": mi.get("ruanke_grade", ""),
+                "ruanke_rank": mi.get("ruanke_rank", ""),
+                "discipline_eval": mi.get("discipline_eval", ""),
+                "major_level_tag": mi.get("major_level_tag", ""),
+                "est_rank_26": mi.get("est_rank_26"),  # 2026预估位次（前端高亮展示）
+                "records": recs_sorted,                 # 仅历年真实录取(2023-2025)
                 "big_small_year": bsy,
                 "cognitive_gem": gem_b,
                 "employment": emp,
@@ -674,20 +741,32 @@ def school_detail(
         key=lambda x: -(x["records"][-1]["min_rank"] if x["records"] else 0)
     )
 
-    # majors 表有数据但 admission_records 完全缺失的情况：保留条目但 records 为空
-    if not major_analysis and majors_dedup:
-        for major in majors_dedup:
+    # admission_2026 有数据但 admission_records 完全缺失的情况：保留条目但 records 为空
+    if not major_analysis and majors_by_name:
+        for major_name, mi in majors_by_name.items():
             bsy = detect_big_small_year([])
-            gem_b = hidden_gem_type_b(major.major_name)
-            emp = get_major_employment(major.major_name, db)
+            gem_b = hidden_gem_type_b(major_name)
+            emp = get_major_employment(major_name, db)
             major_analysis.append(
                 {
-                    "major_name": major.major_name,
-                    "major_remark": "",
-                    "subject_req": major.subject_req,
-                    "plan_count": major.plan_count,
-                    "tuition": major.tuition,
-                    "duration": major.duration,
+                    "major_name": major_name,
+                    "major_full": mi.get("major_full", major_name),
+                    "major_remark": mi.get("major_remark", ""),
+                    "subject_req": mi.get("subject_req", ""),
+                    "plan_count": mi.get("plan_count"),
+                    "tuition": mi.get("tuition"),
+                    "duration": mi.get("duration"),
+                    "major_code": mi.get("major_code", ""),
+                    "group_name": mi.get("group_name", ""),
+                    "group_code": mi.get("group_code", ""),
+                    "discipline": mi.get("discipline", ""),
+                    "major_class": mi.get("major_class", ""),
+                    "major_level": mi.get("major_level", ""),
+                    "ruanke_grade": mi.get("ruanke_grade", ""),
+                    "ruanke_rank": mi.get("ruanke_rank", ""),
+                    "discipline_eval": mi.get("discipline_eval", ""),
+                    "major_level_tag": mi.get("major_level_tag", ""),
+                    "est_rank_26": mi.get("est_rank_26"),  # 2026预估位次（前端高亮展示）
                     "records": [],
                     "big_small_year": bsy,
                     "cognitive_gem": gem_b,
@@ -1632,6 +1711,46 @@ def major_search(q: str = Query(..., min_length=1), db: Session = Depends(get_db
         .all()
     )
     return {"suggestions": [r.major_name for r in results]}
+
+
+# 本科学科门类的习惯排序（不在表内的按字典序兜底排在最后）
+_BENKE_ORDER = [
+    "哲学", "经济学", "法学", "教育学", "文学", "历史学", "理学", "工学",
+    "农学", "医学", "管理学", "艺术学", "军事学", "交叉学科",
+]
+
+
+@app.get("/api/major/catalog")
+def major_catalog(province: str = Query(...), db: Session = Depends(get_db)):
+    """返回某省录取数据中的「门类→专业类」层级目录（供前端层级筛选器使用）。
+    数据来自 admission_records 的 discipline(门类/大类) / major_class(专业类/小类) 列。
+    discipline 混了两套并行分类：本科学科门类 与 专科「…大类」，按 level 分组返回。
+    规则：discipline 以「大类」结尾 → 专科；否则 → 本科。"""
+    from sqlalchemy import text as _text
+    rows = db.execute(_text(
+        "SELECT DISTINCT discipline, major_class FROM admission_records "
+        "WHERE province=:p AND COALESCE(discipline,'') != '' "
+        "AND COALESCE(major_class,'') != ''"
+    ), {"p": province}).fetchall()
+    grouped: dict = defaultdict(set)
+    for disc, mc in rows:
+        grouped[disc].add(mc)
+
+    def _level(d: str) -> str:
+        return "专科" if d.endswith("大类") else "本科"
+
+    def _benke_key(d: str):
+        return (_BENKE_ORDER.index(d) if d in _BENKE_ORDER else len(_BENKE_ORDER), d)
+
+    entries = [
+        {"discipline": d, "level": _level(d), "major_classes": sorted(mcs)}
+        for d, mcs in grouped.items()
+    ]
+    benke = sorted([e for e in entries if e["level"] == "本科"],
+                   key=lambda x: _benke_key(x["discipline"]))
+    zhuanke = sorted([e for e in entries if e["level"] == "专科"],
+                     key=lambda x: -len(x["major_classes"]))
+    return {"province": province, "catalog": benke + zhuanke}
 
 
 # ── 用户反馈 ──────────────────────────────────────────────────

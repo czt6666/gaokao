@@ -702,7 +702,7 @@ function MiniTrendChart({ data }: { data: { year: number; min_score?: number; mi
           <ResponsiveContainer width="100%" height={90}>
             <LineChart data={rankData}>
               <XAxis dataKey="year" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis domain={rankDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={(v: any) => (v !== null ? v.toLocaleString() : "")} />
+              <YAxis reversed domain={rankDomain} tick={{ fontSize: 10 }} axisLine={false} tickLine={false} width={44} tickFormatter={(v: any) => (v !== null ? v.toLocaleString() : "")} />
               <Tooltip
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: "1px solid #E5E7EB", padding: "6px 10px" }}
                 formatter={(value: any) => (value !== null ? [`${value.toLocaleString()}位`, "位次"] : ["无数据", "位次"])}
@@ -883,6 +883,16 @@ function ResultsContent() {
   const cCity = searchParams.get("c_city") || "";
   const cNature = searchParams.get("c_nature") || "";
   const cTier = searchParams.get("c_tier") || "";
+  const disciplineFilter = searchParams.get("discipline_filter") || "";
+  // 解析门类+专业类，供约束提示展示
+  const parsedDisciplines = disciplineFilter
+    ? disciplineFilter.split("|").map((s) => s.trim()).filter(Boolean).map((item) => {
+        const idx = item.indexOf(":");
+        return idx === -1
+          ? { discipline: item, major_class: "" }
+          : { discipline: item.slice(0, idx), major_class: item.slice(idx + 1) };
+      })
+    : [];
   // 特殊限制（默认排除所有特殊计划 = URL 中无该参数；空字符串 = 不排除任何限制）
   const DEFAULT_SPECIAL_PLANS = [
     "special:experiment", "special:national_special", "special:local_special",
@@ -983,6 +993,7 @@ function ResultsContent() {
         cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
         cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
         cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
+        disciplineFilter ? `discipline_filter=${encodeURIComponent(disciplineFilter)}` : "",
         batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
         hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
         score ? `score=${encodeURIComponent(score)}` : "",
@@ -1023,6 +1034,7 @@ function ResultsContent() {
         cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
         cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
         cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
+        disciplineFilter ? `discipline_filter=${encodeURIComponent(disciplineFilter)}` : "",
         batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
         hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
         score ? `score=${encodeURIComponent(score)}` : "",
@@ -1141,6 +1153,7 @@ function ResultsContent() {
       if (cCity) parts.push(`c_city=${encodeURIComponent(cCity)}`);
       if (cNature) parts.push(`c_nature=${encodeURIComponent(cNature)}`);
       if (cTier) parts.push(`c_tier=${encodeURIComponent(cTier)}`);
+      if (disciplineFilter) parts.push(`discipline_filter=${encodeURIComponent(disciplineFilter)}`);
       if (batchFilterParam) {
         parts.push(`batch_filter=${encodeURIComponent(batchFilterParam)}`);
       }
@@ -1208,7 +1221,7 @@ function ResultsContent() {
       controller.abort();
       clearTimeout(timeout);
     };
-  }, [rank, province, subject, refreshTrigger, cMajor, cCity, cNature, cTier, batchFilterParam, excludeRestrictionsParam]);
+  }, [rank, province, subject, refreshTrigger, cMajor, cCity, cNature, cTier, disciplineFilter, batchFilterParam, excludeRestrictionsParam]);
 
   if (loading) {
     return <LoadingScreen />;
@@ -1456,11 +1469,16 @@ function ResultsContent() {
       </div>
 
       {/* 已应用约束提示 */}
-      {(cMajor || cCity || cNature || cTier || hasBatchConstraint || selectedExcludeRestrictions.length > 0) && (
+      {(cMajor || cCity || cNature || cTier || parsedDisciplines.length > 0 || hasBatchConstraint || selectedExcludeRestrictions.length > 0) && (
         <div style={{ background: "#EEF2FF", borderBottom: "1px solid #C7D2FE", padding: "10px 20px" }}>
           <div style={{ maxWidth: 980, margin: "0 auto", display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap", fontSize: 13, color: "#1E3A8A" }}>
             <span style={{ fontWeight: 600 }}>已应用偏好约束：</span>
             {cMajor && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>专业含「{cMajor}」</span>}
+            {parsedDisciplines.map((d, i) => (
+              <span key={`disc-${i}`} style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>
+                {d.major_class ? `${d.discipline} · ${d.major_class}` : `${d.discipline}（全部）`}
+              </span>
+            ))}
             {cCity && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>城市：{cCity}</span>}
             {cNature && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>性质：{cNature}</span>}
             {cTier && <span style={{ background: "#fff", padding: "2px 8px", borderRadius: 6, fontSize: 12 }}>档次：{cTier}</span>}

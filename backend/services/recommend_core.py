@@ -882,6 +882,7 @@ def _build_recommend_data(
         ("subject_any_of", "VARCHAR(200) DEFAULT ''"),
         ("batch_type", "VARCHAR(50) DEFAULT ''"),
         ("major_restrictions", "VARCHAR(200) DEFAULT ''"),
+        ("derived_category", "VARCHAR DEFAULT ''"),  # 真实科类（见 scripts/backfill_derived_category.py）
     ]:
         if col_name not in existing_cols:
             _missing_cols.append((col_name, col_def))
@@ -936,6 +937,24 @@ def _build_recommend_data(
         # 3. 加入 SQL 条件（空值=无要求，始终通过）
         _sql_extra += f" AND (COALESCE(subject_must,'') IN ({','.join(_must_values)}))"
         _sql_extra += f" AND (COALESCE(subject_any_of,'') IN ({','.join(_matching_any_ofs)}))"
+
+        # 4. 首选科目（物理/历史）按派生科类硬过滤 —— 修复 3+1+2 省份跨科类串档。
+        #    subject_must/any_of 只管再选，'不限'首选记录会无差别通过，导致历史考生
+        #    被推物理学校（位次同号但科类不同）。derived_category 已把'不限'还原成真实科类。
+        #    历史考生只看历史血统(历史类/历史/文科)，物理只看物理血统(物理类/物理/理科)。
+        #    仅对「分科类省份(3+1+2/旧文理)」且已回填 derived_category 时生效；综合(3+3)省不过滤。
+        _prov_cats = {r[0] for r in db.execute(_sqla_text(
+            "SELECT DISTINCT category FROM rank_tables WHERE province=:prov"), {"prov": province}).fetchall()}
+        _is_split = bool(_prov_cats) and "综合" not in _prov_cats
+        _first = "物理" if "物理" in _user_subjects_set else ("历史" if "历史" in _user_subjects_set else None)
+        _has_derived = db.execute(_sqla_text(
+            "SELECT 1 FROM admission_records WHERE province=:prov "
+            "AND COALESCE(derived_category,'')!='' LIMIT 1"), {"prov": province}).fetchone()
+        if _is_split and _first and _has_derived:
+            _lineage = ("物理类", "物理", "理科") if _first == "物理" else ("历史类", "历史", "文科")
+            _lineage_sql = ",".join("'" + c + "'" for c in _lineage)
+            # 空 derived_category（无法判定科类的少量记录）也放行，依赖 subject_must 做二次过滤
+            _sql_extra += f" AND (COALESCE(derived_category,'') IN ({_lineage_sql}) OR COALESCE(derived_category,'') = '')"
 
     _sql = (
         "SELECT school_name, major_name, year, min_rank, min_score, "
@@ -1336,6 +1355,68 @@ def _build_recommend_data(
     }
 
 
+# subject → 一分一段 category（与 main._simulate_inner 保持一致）
+_SUBJECT_TO_RANK_CAT = {
+    "物理": ["物理类", "理科"], "物理类": ["物理类", "理科"],
+    "历史": ["历史类", "文科"], "历史类": ["历史类", "文科"],
+}
+
+
+def _rank_wall_window(db: Session, province: str, subject: str, rank: int, points: int = 25):
+    """把分数桶壁 ±points 分通过该省「一分一段表」换算成位次桶壁。
+
+    返回 (rank_low, rank_high)：
+      rank_low  = 分数高 points 分对应的位次（更靠前/更难，冲的边界）
+      rank_high = 分数低 points 分对应的位次（更靠后/更易，保的边界）
+    与分数模式 ±25 分硬过滤同语义，且按省份、分段自适应（密集段窄按位次会自动变宽）。
+    一分一段缺失/位次未覆盖时返回 None，调用方回退到比例墙。
+    """
+    if not rank or rank <= 0:
+        return None
+    cats = {r[0] for r in db.execute(_sqla_text(
+        "SELECT DISTINCT category FROM rank_tables WHERE province=:p AND year>=2024"),
+        {"p": province}).fetchall()}
+    if not cats:
+        return None
+    cat = None
+    if len(cats) > 1 or "综合" not in cats:
+        s = (subject or "").split("+")[0].strip()
+        for cand in _SUBJECT_TO_RANK_CAT.get(s, []):
+            if cand in cats:
+                cat = cand
+                break
+    _cat_sql = " AND category=:c" if cat else ""
+    p = {"p": province}
+    if cat:
+        p["c"] = cat
+    yr = db.execute(_sqla_text(
+        f"SELECT MAX(year) FROM rank_tables WHERE province=:p{_cat_sql}"), p).scalar()
+    if not yr:
+        return None
+    p["y"] = yr
+    row = db.execute(_sqla_text(
+        f"SELECT score FROM rank_tables WHERE province=:p AND year=:y{_cat_sql} "
+        f"AND rank_min<=:r AND rank_max>=:r LIMIT 1"), {**p, "r": rank}).fetchone()
+    if not row:
+        return None
+    score = row[0]
+
+    def _rank_at(sc):
+        r = db.execute(_sqla_text(
+            f"SELECT count_cum FROM rank_tables WHERE province=:p AND year=:y{_cat_sql} "
+            f"AND score>=:s ORDER BY score ASC LIMIT 1"), {**p, "s": sc}).fetchone()
+        return r[0] if r else None
+
+    rank_low = _rank_at(score + points) or 1
+    rank_high = _rank_at(score - points)
+    if rank_high is None:                       # 低于最低分段 → 用省内最大累计位次兜底
+        r = db.execute(_sqla_text(
+            f"SELECT MAX(count_cum) FROM rank_tables WHERE province=:p AND year=:y{_cat_sql}"), p).fetchone()
+        rank_high = (r[0] if r and r[0] else rank * 2)
+    if rank_high <= rank_low:
+        return None
+    return (rank_low, rank_high)
+
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
 def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, user_score: int | None = None) -> dict:
@@ -1480,6 +1561,9 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 5. 遍历所有专业组合，计算推荐结果
     results = []
     _scan = {"skip_subject": 0, "skip_avg_rank_0": 0, "skip_rank_window": 0, "skip_last_year_too_easy": 0, "skip_no_2025_data": 0, "kept": 0}
+    # 位次桶壁：把 ±25 分换算成位次区间（与分数桶壁同语义，按省份/分段自适应）。
+    # 仅在位次模式（未提供 user_score）下用；一分一段缺失时回退比例墙。
+    _rank_wall = None if user_score else _rank_wall_window(db, province, subject, rank)
     for (school_name, major_name, batch), records in grouped.items():
 
         # 选科过滤（使用预加载缓存，O(1) 查询）
@@ -1643,13 +1727,19 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 _scan["skip_rank_window"] += 1
                 continue
         else:
-            # 位次模式：用去年实际位次做硬过滤，去掉极端不匹配的学校
+            # 位次模式：优先用「±25分换算的位次桶壁」硬过滤（与分数桶壁同语义）；
+            # 一分一段缺失时回退到比例墙（0.30×~2.5×）。
             if _last_year_min_rank > 0 and rank > 0:
-                _rank_ratio = _last_year_min_rank / rank
-                # 学校位次比考生好 3 倍以上（太难）或差 2.5 倍以上（太水）→ 跳过
-                if _rank_ratio < 0.30 or _rank_ratio > 2.5:
-                    _scan["skip_rank_window"] += 1
-                    continue
+                if _rank_wall:
+                    if _last_year_min_rank < _rank_wall[0] or _last_year_min_rank > _rank_wall[1]:
+                        _scan["skip_rank_window"] += 1
+                        continue
+                else:
+                    _rank_ratio = _last_year_min_rank / rank
+                    # 学校位次比考生好 3 倍以上（太难）或差 2.5 倍以上（太水）→ 跳过
+                    if _rank_ratio < 0.30 or _rank_ratio > 2.5:
+                        _scan["skip_rank_window"] += 1
+                        continue
 
         # 删除旧的安全网（已被上面的 last_year_min_rank 过滤覆盖）
         # 原逻辑：基于 avg_rank 的 gap_rate 做二次过滤，已废弃

@@ -280,6 +280,30 @@ def _check_rate_limit(request: Request):
     return True
 
 
+# 分科类省份(3+1+2/旧文理)必须先选首选科目；缺失时返回 428 让前端弹出科目选择。
+# 不能静默默认物理——否则历史考生分数被按物理换算，跨科类串档（见 derived_category 修复）。
+def _require_first_choice(province: str, subject: str, db: Session):
+    cats = {
+        c[0]
+        for c in db.query(RankTable.category)
+        .filter(RankTable.province == province)
+        .distinct()
+        .all()
+    }
+    is_split = bool(cats) and "综合" not in cats
+    if not is_split:
+        return
+    if not any(k in (subject or "") for k in ("物理", "历史", "理科", "文科")):
+        raise HTTPException(
+            status_code=428,
+            detail={
+                "error_code": "FIRST_CHOICE_REQUIRED",
+                "message": "该省份为新高考3+1+2，请先选择首选科目（物理类 / 历史类）再查询。",
+                "province": province,
+            },
+        )
+
+
 @app.get("/api/recommend")
 def recommend(
     request: Request,
@@ -320,6 +344,8 @@ def recommend(
         )
     if len(province) > 20 or not province.strip():
         raise HTTPException(status_code=422, detail="省份格式不正确")
+
+    _require_first_choice(province, subject, db)
 
     # ━━━ 付费验证（多层链路，勿误判为缺失） ━━━━━━━━━━━━━━━━━━━━━━
     # 本层（Layer 1/3）：订单级匹配 — order_no + province + rank_bucket + subject
@@ -851,6 +877,7 @@ def simulate(
     db: Session = Depends(get_db),
 ):
     """考前模拟：将高考分数转换为预估位次区间"""
+    _require_first_choice(province, subject, db)
     try:
         return _simulate_inner(
             mock_score=mock_score, province=province, subject=subject, db=db

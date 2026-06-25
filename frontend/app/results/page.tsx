@@ -917,6 +917,7 @@ function ResultsContent() {
   const [activeTab, setActiveTab] = useState<"gems" | "surge" | "stable" | "safe">("stable");
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [fetchErrorCode, setFetchErrorCode] = useState<string>("");
   const [toast, setToast] = useState<string | null>(null);
   const [filterTier, setFilterTier] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -1127,6 +1128,7 @@ function ResultsContent() {
     if (!rank) return;
     track("page_view", { page: "/results", province, rankInput: Number(rank) });
     setFetchError(null);
+    setFetchErrorCode("");
     setLoading(true);
 
     let stale = false;
@@ -1156,15 +1158,26 @@ function ResultsContent() {
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},
       }
     )
-      .then((r) => {
+      .then(async (r) => {
         if (stale) return null;
-        if (!r.ok) throw new Error(`服务器错误 ${r.status}`);
+        if (!r.ok) {
+          // 428: 分科类省份缺首选科目 → 需要用户回首页选择
+          if (r.status === 428) {
+            try {
+              const body = await r.json();
+              const detail = (typeof body.detail === "object" && body.detail) ? body.detail : { message: String(body.detail || "请先选择首选科目") };
+              throw Object.assign(new Error("FIRST_CHOICE_REQUIRED"), { errorCode: "FIRST_CHOICE_REQUIRED", message: detail.message });
+            } catch (e: any) { if (e.errorCode) throw e; }
+          }
+          throw new Error(`服务器错误 ${r.status}`);
+        }
         return r.json();
       })
       .then((d) => {
         if (stale || d == null) return;
         setData(d);
         setFetchError(null);
+        setFetchErrorCode("");
         setLoading(false);
         // Save to query history (max 5 entries)
         try {
@@ -1176,11 +1189,16 @@ function ResultsContent() {
       })
       .catch((e: any) => {
         if (stale) return;
-        const msg =
-          e?.name === "AbortError"
-            ? "分析超时（30秒），服务器可能繁忙，请稍后重试"
-            : "加载失败，请检查网络连接后重试";
-        setFetchError(msg);
+        if (e?.errorCode === "FIRST_CHOICE_REQUIRED") {
+          setFetchErrorCode("FIRST_CHOICE_REQUIRED");
+          setFetchError(e.message || "该省份为新高考3+1+2，请先选择首选科目（物理类 / 历史类）再查询。");
+        } else if (e?.name === "AbortError") {
+          setFetchErrorCode("");
+          setFetchError("分析超时（30秒），服务器可能繁忙，请稍后重试");
+        } else {
+          setFetchErrorCode("");
+          setFetchError("加载失败，请检查网络连接后重试");
+        }
         setLoading(false);
       })
       .finally(() => clearTimeout(timeout));
@@ -1197,15 +1215,24 @@ function ResultsContent() {
   }
 
   if (fetchError) {
+    const isFirstChoiceMissing = fetchErrorCode === "FIRST_CHOICE_REQUIRED";
     return (
       <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{ textAlign: "center", maxWidth: 320, padding: "0 20px" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 8 }}>分析失败</div>
+        <div style={{ textAlign: "center", maxWidth: 360, padding: "0 20px" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>{isFirstChoiceMissing ? "⚠️" : "⚠️"}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 8 }}>
+            {isFirstChoiceMissing ? "请选择首选科目" : "分析失败"}
+          </div>
           <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.6, marginBottom: 24 }}>{fetchError}</div>
-          <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
-            <button className="btn-primary" onClick={() => { setFetchError(null); setLoading(true); setRefreshTrigger(v => v + 1); }}>重试</button>
-            <button className="btn-secondary" onClick={() => router.push("/")}>返回首页</button>
+          <div style={{ display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" }}>
+            {isFirstChoiceMissing ? (
+              <button className="btn-primary" onClick={() => router.push("/")}>返回首页，选择科目</button>
+            ) : (
+              <>
+                <button className="btn-primary" onClick={() => { setFetchError(null); setFetchErrorCode(""); setLoading(true); setRefreshTrigger(v => v + 1); }}>重试</button>
+                <button className="btn-secondary" onClick={() => router.push("/")}>返回首页</button>
+              </>
+            )}
           </div>
         </div>
       </div>

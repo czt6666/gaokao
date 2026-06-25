@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>平行志愿死亡陷阱</title>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: #e9edf5;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 28px; padding: 40px 0;
+  }
+  .card {
+    width: 900px; height: 1350px;
+    background: #fff; position: relative; overflow: hidden;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.14);
+    display: flex; flex-direction: column;
+  }
+
+  /* 通用页头 */
+  .head {
+    background: #0D2B6B; color: #fff;
+    padding: 60px 56px 50px;
+    position: relative; flex-shrink: 0;
+  }
+  .head::before {
+    content: ''; position: absolute; top: -60px; right: -60px;
+    width: 240px; height: 240px; border-radius: 50%;
+    background: rgba(245,166,35,0.16);
+  }
+  .head .kicker {
+    display: inline-block; background: #F5A623; color: #4A2D00;
+    font-size: 26px; font-weight: 800; padding: 10px 26px;
+    border-radius: 30px; letter-spacing: 2px; margin-bottom: 26px;
+    position: relative; z-index: 1;
+  }
+  .head .h-title {
+    font-size: 64px; font-weight: 900; line-height: 1.2;
+    position: relative; z-index: 1;
+  }
+  .head .h-title .y { color: #F5A623; }
+  .head .h-sub {
+    font-size: 28px; color: rgba(255,255,255,0.72);
+    margin-top: 20px; font-weight: 600; position: relative; z-index: 1;
+  }
+  .body { flex: 1; padding: 50px 56px; display: flex; flex-direction: column; }
+  .page-no {
+    position: absolute; bottom: 30px; right: 44px;
+    font-size: 22px; font-weight: 800; color: #c2cbdc;
+  }
+
+  /* ========== 封面 ========== */
+  .cover {
+    background: #0D2B6B; color: #fff;
+    justify-content: space-between; padding: 0;
+  }
+  .cover::before {
+    content: ''; position: absolute; top: -80px; right: -80px;
+    width: 360px; height: 360px; border-radius: 50%;
+    background: rgba(245,166,35,0.14);
+  }
+  .cover::after {
+    content: ''; position: absolute; bottom: -120px; left: -100px;
+    width: 320px; height: 320px; border-radius: 50%;
+    background: rgba(245,166,35,0.08);
+  }
+  .cover-top { padding: 100px 70px 0; position: relative; z-index: 1; }
+  .cover-badge {
+    display: inline-block; background: #F5A623; color: #4A2D00;
+    font-size: 28px; font-weight: 800; padding: 12px 30px;
+    border-radius: 30px; letter-spacing: 2px; margin-bottom: 50px;
+  }
+  .cover-title { font-size: 96px; font-weight: 900; line-height: 1.18; }
+  .cover-title .danger {
+    color: #F5A623;
+    text-decoration: underline; text-decoration-color: rgba(245,166,35,0.35);
+    text-decoration-thickness: 14px; text-underline-offset: -6px;
+  }
+  .cover-punch {
+    margin-top: 44px; font-size: 56px; font-weight: 900; line-height: 1.25;
+  }
+  .cover-punch .red { color: #FF6B5E; }
+  .cover-warn {
+    display: flex; align-items: center; gap: 16px;
+    margin: 48px 70px 0; position: relative; z-index: 1;
+    background: rgba(255,107,94,0.15); border: 2px solid rgba(255,107,94,0.5);
+    border-radius: 20px; padding: 26px 30px;
+  }
+  .cover-warn .ic { font-size: 46px; }
+  .cover-warn p { font-size: 28px; font-weight: 700; line-height: 1.4; color: #ffd9d4; }
+  .cover-bot {
+    background: rgba(0,0,0,0.22); padding: 44px 70px 56px;
+    position: relative; z-index: 1; margin-top: 50px;
+  }
+  .cover-bot .nav {
+    display: flex; flex-wrap: wrap; gap: 16px;
+  }
+  .cover-bot .chip {
+    font-size: 26px; font-weight: 800; color: #0D2B6B;
+    background: #F5A623; padding: 12px 24px; border-radius: 14px;
+  }
+  .cover-bot .chip.b { background: #fff; }
+
+  /* ========== 机制 ========== */
+  .mech-box {
+    background: linear-gradient(160deg,#123577,#0D2B6B);
+    border-radius: 28px; padding: 56px 50px; color: #fff;
+    margin-bottom: 40px;
+  }
+  .mech-box p { font-size: 40px; line-height: 1.7; font-weight: 600; }
+  .mech-box .hl {
+    color: #F5A623; font-weight: 900;
+    text-decoration: underline; text-decoration-color: rgba(245,166,35,0.4);
+    text-decoration-thickness: 8px; text-underline-offset: -2px;
+  }
+  .mech-flow { display: flex; flex-direction: column; gap: 22px; margin-top: auto; }
+  .flow-step {
+    display: flex; align-items: center; gap: 24px;
+    background: #f3f6fc; border: 2px solid #d4ddf0;
+    border-radius: 20px; padding: 28px 32px;
+  }
+  .flow-step .n {
+    width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+    background: #0D2B6B; color: #fff; font-size: 32px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .flow-step p { font-size: 30px; font-weight: 700; color: #1a2b4a; line-height: 1.4; }
+  .flow-step p b { color: #D9601A; }
+  .flow-step.danger { background: #FCEBEB; border-color: #F09595; }
+  .flow-step.danger .n { background: #A32D2D; }
+  .flow-step.danger p { color: #791F1F; }
+
+  /* ========== 规则卡 ========== */
+  .rule-card {
+    display: flex; gap: 30px; align-items: flex-start;
+    background: #f3f6fc; border: 2px solid #d4ddf0; border-left: 10px solid #0D2B6B;
+    border-radius: 20px; padding: 38px 40px; margin-bottom: 28px;
+  }
+  .rule-num {
+    flex-shrink: 0; width: 76px; height: 76px; border-radius: 50%;
+    background: #0D2B6B; color: #fff; font-size: 40px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .rule-content h3 { font-size: 40px; font-weight: 900; color: #0D2B6B; margin-bottom: 12px; }
+  .rule-content p { font-size: 30px; color: #444; line-height: 1.5; font-weight: 500; }
+  .rule-content p .hl {
+    color: #1a2b4a; font-weight: 900;
+    text-decoration: underline; text-decoration-color: #F5A623;
+    text-decoration-thickness: 9px; text-underline-offset: -3px;
+  }
+  .rule-eg {
+    font-size: 26px; color: #993C1D; background: #FAEEDA;
+    padding: 14px 22px; border-radius: 12px; margin-top: 18px;
+    display: inline-block; font-weight: 700;
+  }
+
+  /* ========== 陷阱网格 ========== */
+  .trap-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 26px; flex: 1; }
+  .trap-card {
+    background: #FCEBEB; border: 2px solid #F2A6A6; border-radius: 22px;
+    padding: 36px 34px; display: flex; flex-direction: column;
+  }
+  .trap-icon { font-size: 56px; margin-bottom: 14px; }
+  .trap-card h3 { font-size: 36px; font-weight: 900; color: #A32D2D; margin-bottom: 16px; line-height: 1.2; }
+  .trap-card p { font-size: 27px; color: #5a3636; line-height: 1.5; font-weight: 500; flex: 1; }
+  .trap-fix {
+    font-size: 25px; color: #0F6E56; margin-top: 20px;
+    padding: 16px 20px; border-left: 6px solid #1D9E75;
+    background: #E1F5EE; border-radius: 0 12px 12px 0; font-weight: 700; line-height: 1.4;
+  }
+
+  /* ========== 冲稳保垫 ========== */
+  .tier-row { display: flex; gap: 20px; margin-bottom: 34px; }
+  .tier-box { flex: 1; border-radius: 22px; padding: 40px 18px; text-align: center; }
+  .tier-box.chong { background: #E6F1FB; border: 3px solid #85B7EB; }
+  .tier-box.wen   { background: #E1F5EE; border: 3px solid #5DCAA5; }
+  .tier-box.bao   { background: #FAEEDA; border: 3px solid #EF9F27; }
+  .tier-box.dian  { background: #FAECE7; border: 3px solid #F0997B; }
+  .tier-box .tag { font-size: 50px; font-weight: 900; margin-bottom: 12px; }
+  .tier-box.chong .tag { color: #185FA5; }
+  .tier-box.wen   .tag { color: #0F6E56; }
+  .tier-box.bao   .tag { color: #854F0B; }
+  .tier-box.dian  .tag { color: #993C1D; }
+  .tier-box .num { font-size: 46px; font-weight: 900; line-height: 1; }
+  .tier-box.chong .num { color: #0C447C; }
+  .tier-box.wen   .num { color: #085041; }
+  .tier-box.bao   .num { color: #633806; }
+  .tier-box.dian  .num { color: #712B13; }
+  .tier-box .desc { font-size: 22px; color: #555; margin-top: 14px; line-height: 1.4; font-weight: 600; }
+  .tier-order {
+    display: flex; align-items: center; justify-content: center; gap: 14px;
+    font-size: 32px; font-weight: 900; color: #0D2B6B; margin-bottom: 34px;
+  }
+  .tier-order .arr { color: #F5A623; }
+  .alert-box {
+    background: #FFF6E5; border: 2px solid #F0C36B; border-radius: 22px;
+    padding: 36px 40px; display: flex; gap: 22px; align-items: flex-start; margin-top: auto;
+  }
+  .alert-box .ic { font-size: 48px; flex-shrink: 0; }
+  .alert-box p { font-size: 30px; color: #6b4e12; line-height: 1.6; font-weight: 600; }
+  .alert-box p .hl { color: #C0392B; font-weight: 900; }
+
+  /* ========== 检查清单 ========== */
+  .checklist { display: flex; flex-direction: column; gap: 0; flex: 1; }
+  .check-item {
+    display: flex; align-items: flex-start; gap: 24px;
+    padding: 36px 0; border-bottom: 2px dashed #d4ddf0;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item .box {
+    width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+    background: #1D9E75; color: #fff; font-size: 34px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .check-item .txt { font-size: 32px; color: #1a2b4a; line-height: 1.45; font-weight: 600; }
+  .check-item .txt b {
+    color: #0D2B6B;
+    text-decoration: underline; text-decoration-color: #F5A623;
+    text-decoration-thickness: 9px; text-underline-offset: -3px;
+  }
+  .check-item .txt em { font-style: normal; color: #888; font-size: 27px; }
+  .end-note {
+    background: #0D2B6B; color: #fff; border-radius: 22px;
+    padding: 36px 40px; text-align: center; margin-top: 30px;
+  }
+  .end-note .big { font-size: 38px; font-weight: 900; }
+  .end-note .big .y { color: #F5A623; }
+  .end-note .small { font-size: 26px; opacity: 0.8; margin-top: 12px; font-weight: 600; }
+
+  #exportBtn {
+    position: fixed; right: 30px; bottom: 30px; z-index: 999;
+    background: #F5A623; color: #4A2D00; border: none;
+    padding: 18px 32px; border-radius: 40px; font-size: 20px; font-weight: 900;
+    cursor: pointer; box-shadow: 0 6px 24px rgba(245,166,35,0.5);
+  }
+  #exportBtn:active { transform: scale(0.96); }
+</style>
+</head>
+<body>
+
+<!-- ===== 第1页 封面 ===== -->
+<div class="card cover" id="card-1">
+  <div class="cover-top">
+    <div class="cover-badge">2026 高考志愿填报</div>
+    <div class="cover-title">平行志愿<br><span class="danger">「死亡陷阱」</span></div>
+    <div class="cover-punch">这<span class="red">4</span>点没注意<br><span class="red">600分</span>也能滑到专科</div>
+  </div>
+  <div class="cover-warn">
+    <div class="ic">⚠️</div>
+    <p>一步填错，本批次直接结束，<br>只能等征集志愿捡漏</p>
+  </div>
+  <div class="cover-bot">
+    <div class="nav">
+      <span class="chip">核心机制</span>
+      <span class="chip b">三大规则</span>
+      <span class="chip">四大雷区</span>
+      <span class="chip b">冲稳保垫</span>
+      <span class="chip">检查清单</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 第2页 核心机制 ===== -->
+<div class="card" id="card-2">
+  <div class="head">
+    <div class="kicker">核心机制 · 一句话</div>
+    <div class="h-title">平行志愿<span class="y">怎么投档</span>？</div>
+  </div>
+  <div class="body">
+    <div class="mech-box">
+      <p>全省考生<span class="hl">从高到低排队</span>，轮到你时，系统按你填的<span class="hl">志愿顺序</span>一个个问学校还有没有位置——有位置就投进去，没有就问下一个。</p>
+    </div>
+    <div class="mech-flow">
+      <div class="flow-step"><div class="n">1</div><p>按分数排队，<b>轮到你</b></p></div>
+      <div class="flow-step"><div class="n">2</div><p>从志愿1→2→3 <b>挨个问</b>有没有位置</p></div>
+      <div class="flow-step danger"><div class="n">!</div><p>一旦投进去，<b>本批次结束，后面志愿全作废</b></p></div>
+    </div>
+    <div class="page-no">02 / 06</div>
+  </div>
+</div>
+
+<!-- ===== 第3页 三大规则 ===== -->
+<div class="card" id="card-3">
+  <div class="head">
+    <div class="kicker">三大核心规则</div>
+    <div class="h-title">先搞懂<span class="y">这3条</span></div>
+  </div>
+  <div class="body">
+    <div class="rule-card">
+      <div class="rule-num">1</div>
+      <div class="rule-content">
+        <h3>分数优先</h3>
+        <p>分越高越早被处理，你<span class="hl">600分就比599分</span>的人早挑学校。</p>
+      </div>
+    </div>
+    <div class="rule-card">
+      <div class="rule-num">2</div>
+      <div class="rule-content">
+        <h3>遵循志愿顺序</h3>
+        <p>系统按你填的 1→2→3 顺序检索，<span class="hl">最想去的必须放前面</span>。</p>
+        <div class="rule-eg">⚠️ 最低分学校放第1位 = 浪费冲好学校的机会</div>
+      </div>
+    </div>
+    <div class="rule-card">
+      <div class="rule-num">3</div>
+      <div class="rule-content">
+        <h3>只有一次投档机会</h3>
+        <p>投进A校又退档了，<span class="hl">不会再投B校</span>——本批次直接结束，只能等征集志愿。</p>
+      </div>
+    </div>
+    <div class="page-no">03 / 06</div>
+  </div>
+</div>
+
+<!-- ===== 第4页 四大死亡陷阱 ===== -->
+<div class="card" id="card-4">
+  <div class="head">
+    <div class="kicker">四大死亡陷阱</div>
+    <div class="h-title">最容易<span class="y">踩的4个雷</span></div>
+  </div>
+  <div class="body">
+    <div class="trap-grid">
+      <div class="trap-card">
+        <div class="trap-icon">🚨</div>
+        <h3>投档 ≠ 录取</h3>
+        <p>档案进门只是第一步，学校还要看专业、身体条件、单科成绩。</p>
+        <div class="trap-fix">提前核对招生章程</div>
+      </div>
+      <div class="trap-card">
+        <div class="trap-icon">🚨</div>
+        <h3>忘勾服从调剂</h3>
+        <p>不勾 → 专业录不上 → 直接退档 → 本批次结束！</p>
+        <div class="trap-fix">除提前批，全部勾上</div>
+      </div>
+      <div class="trap-card">
+        <div class="trap-icon">🚨</div>
+        <h3>没有保底院校</h3>
+        <p>每人只有一次投档机会，被退档不会补投。</p>
+        <div class="trap-fix">必填1-2所稳进保底校</div>
+      </div>
+      <div class="trap-card">
+        <div class="trap-icon">🚨</div>
+        <h3>志愿顺序填反</h3>
+        <p>最低分学校填第一个，直接被截走，冲好学校的机会白费。</p>
+        <div class="trap-fix">按冲→稳→保→垫排</div>
+      </div>
+    </div>
+    <div class="page-no">04 / 06</div>
+  </div>
+</div>
+
+<!-- ===== 第5页 冲稳保垫 ===== -->
+<div class="card" id="card-5">
+  <div class="head">
+    <div class="kicker">冲稳保垫 · 怎么分配</div>
+    <div class="h-title">9个志愿<span class="y">这样排</span></div>
+  </div>
+  <div class="body">
+    <div class="tier-row">
+      <div class="tier-box chong"><div class="tag">冲</div><div class="num">2所</div><div class="desc">位次高<br>10-15%</div></div>
+      <div class="tier-box wen"><div class="tag">稳</div><div class="num">4所</div><div class="desc">位次相当<br>大概率进</div></div>
+      <div class="tier-box bao"><div class="tag">保</div><div class="num">2所</div><div class="desc">位次低20%+<br>基本稳录</div></div>
+      <div class="tier-box dian"><div class="tag">垫</div><div class="num">1所</div><div class="desc">位次更低<br>100%兜底</div></div>
+    </div>
+    <div class="tier-order">
+      <span>冲</span><span class="arr">→</span><span>稳</span><span class="arr">→</span><span>保</span><span class="arr">→</span><span>垫</span>
+      <span style="font-size:24px;color:#888;font-weight:600;margin-left:10px;">（前 → 后）</span>
+    </div>
+    <div class="alert-box">
+      <div class="ic">💡</div>
+      <p>「冲」放最前，「垫」放最后——系统按顺序帮你试。<span class="hl">位次比分数重要</span>，同一分数不同省份意义完全不同。</p>
+    </div>
+    <div class="page-no">05 / 06</div>
+  </div>
+</div>
+
+<!-- ===== 第6页 检查清单 ===== -->
+<div class="card" id="card-6">
+  <div class="head">
+    <div class="kicker">提交前 · 最后检查</div>
+    <div class="h-title">点提交前<span class="y">逐项打勾</span></div>
+  </div>
+  <div class="body">
+    <div class="checklist">
+      <div class="check-item"><div class="box">✓</div><div class="txt">查清楚全省<b>位次</b>，不是只看分数 <em>（同分不同位次，年年变）</em></div></div>
+      <div class="check-item"><div class="box">✓</div><div class="txt">志愿按<b>冲→稳→保→垫</b>排，最想去的放最前</div></div>
+      <div class="check-item"><div class="box">✓</div><div class="txt">除提前批外，每所学校都勾<b>服从专业调剂</b></div></div>
+      <div class="check-item"><div class="box">✓</div><div class="txt">上「阳光高考」查<b>招生章程</b> <em>（专业限制、体检要求）</em></div></div>
+      <div class="check-item"><div class="box">✓</div><div class="txt">在省考试院系统<b>模拟填报</b>一次，确认没操作失误</div></div>
+    </div>
+    <div class="end-note">
+      <div class="big">一次投档机会，<span class="y">填错没有重来</span></div>
+      <div class="small">转发给正在报志愿的同学和家长 📌</div>
+    </div>
+    <div class="page-no">06 / 06</div>
+  </div>
+</div>
+
+<button id="exportBtn" onclick="exportCards()">📥 一键导出6张图</button>
+
+<script>
+async function exportCards() {
+  const btn = document.getElementById('exportBtn');
+  btn.textContent = '导出中...';
+  const names = ['1-封面','2-核心机制','3-三大规则','4-四大陷阱','5-冲稳保垫','6-检查清单'];
+  const zip = new JSZip();
+  for (let i = 1; i <= 6; i++) {
+    const el = document.getElementById('card-' + i);
+    const canvas = await html2canvas(el, { scale: 2, useCORS: true, width: 900, height: 1350, backgroundColor: '#ffffff' });
+    const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+    zip.file(names[i-1] + '.png', blob);
+  }
+  const zipBlob = await zip.generateAsync({ type: 'blob' });
+  saveAs(zipBlob, '平行志愿死亡陷阱_6图.zip');
+  btn.textContent = '📥 一键导出6张图';
+}
+</script>
+</body>
+</html>

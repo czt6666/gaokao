@@ -333,7 +333,7 @@ export default function Home() {
           setLoading(false);
           return;
         }
-        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}&from_mock=1&mock_score=${mockScore}${constraintQs}${refQs}`);
+        router.push(`/results?rank=${data.estimated_rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}&from_mock=1&mock_score=${mockScore}&rank_year=${encodeURIComponent(data.based_on_year ?? "")}${constraintQs}${refQs}`);
       } else {
         router.push(`/results?rank=${rank}&province=${encodeURIComponent(province)}&subject=${encodeURIComponent(subjectStr)}&exam_mode=${encodeURIComponent(examMode)}${constraintQs}${refQs}`);
       }

@@ -65,33 +65,55 @@ def _canon_cat(s: str) -> str:
 
 
 # ── 图片 OCR ──────────────────────────────────────────────────
-def _img_dataurl(path: str) -> str:
-    """小图放大 2x 提升小字识别；已很大的图（如云南整表长条）不放大，避免超模型上限。"""
-    im = Image.open(path).convert("RGB")
+_TILE_H = 3600        # 超过此高度的长条图竖向切片，逐片 OCR（如云南 900x8615）
+_TILE_OVERLAP = 220   # 切片重叠像素，避免切断行；按分数去重在缝合处对齐
+
+
+def _encode(im: Image.Image) -> str:
+    """编码为 JPEG dataurl（比 PNG 小得多，避免大图压垮中转代理）。小图放大 2x。"""
     if max(im.size) < 2200:
         im = im.resize((im.width * 2, im.height * 2), Image.LANCZOS)
-    buf = io.BytesIO(); im.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
+    buf = io.BytesIO(); im.convert("RGB").save(buf, format="JPEG", quality=90)
+    return "data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
-def ocr_image(path: str, model: str, retries: int = 3) -> dict:
-    """返回 {category, bonus, rows:[(score:int, cnt:int, cum:int)], raw_meta, raw}。"""
-    dataurl = _img_dataurl(path)
+def _ocr_call(dataurl: str, model: str, retries: int = 3) -> dict:
     payload = {"model": model, "temperature": 0, "max_tokens": 4000,
                "messages": [{"role": "user", "content": [
                    {"type": "text", "text": _OCR_PROMPT},
                    {"type": "image_url", "image_url": {"url": dataurl}}]}]}
     last = None
-    for attempt in range(retries):
+    for _ in range(retries):
         try:
             r = httpx.post(_BASE, headers={"Authorization": f"Bearer {_API_KEY}"},
                            json=payload, timeout=180)
             if r.status_code != 200:
-                last = f"[{r.status_code}] {r.text[:160]}"; time.sleep(2); continue
+                last = f"[{r.status_code}] {r.text[:160]}"; time.sleep(3); continue
             return _parse_ocr(r.json()["choices"][0]["message"]["content"])
         except Exception as e:
-            last = repr(e); time.sleep(2)
+            last = repr(e); time.sleep(3)
     raise RuntimeError(f"OCR 失败({retries}次): {last}")
+
+
+def ocr_image(path: str, model: str) -> dict:
+    """返回 {category, bonus, rows:[(score,cnt,cum)], raw_meta}。
+    长条图竖切多片逐片 OCR，按分数去重缝合（保留先出现/高分片的值）。"""
+    im = Image.open(path).convert("RGB")
+    if im.height <= _TILE_H:
+        return _ocr_call(_encode(im), model)
+    category, bonus, raw_meta = "综合", "未标注", ""
+    best: dict[int, tuple] = {}
+    y = 0
+    while y < im.height:
+        tile = im.crop((0, y, im.width, min(y + _TILE_H, im.height)))
+        res = _ocr_call(_encode(tile), model)
+        if res["raw_meta"] and not raw_meta:
+            category, bonus, raw_meta = res["category"], res["bonus"], res["raw_meta"]
+        for sc, cnt, cum in res["rows"]:
+            best.setdefault(sc, (sc, cnt, cum))  # 高分片先到，缝合处优先保留
+        y += _TILE_H - _TILE_OVERLAP
+    rows = [best[s] for s in sorted(best, reverse=True)]
+    return {"category": category, "bonus": bonus, "raw_meta": raw_meta, "rows": rows}
 
 
 def _internal_violations(rows: list) -> int:
@@ -208,9 +230,10 @@ def validate(rows: list[tuple[int, int, int]]) -> tuple[list[str], list[str]]:
             hard.append(f"分数非降序/重复 {rows[i-1][0]}→{rows[i][0]}")
         elif gap > 1:
             soft.append(f"分数缺号 {rows[i-1][0]}→{rows[i][0]}（缺 {gap-1} 个分数, 多为 0 人）")
-    # 累计自洽（硬校验）
-    if rows[0][2] != rows[0][1]:
-        hard.append(f"首行累计({rows[0][2]})≠人数({rows[0][1]})")
+    # 累计自洽（硬校验）。首行小幅 cum>cnt 是「X分及以上」聚合桶，正常；
+    # 仅当首行累计很大（>1500）才是缺上半段的残表 → 硬错。
+    if rows[0][2] != rows[0][1] and rows[0][2] > 1500:
+        hard.append(f"首行累计({rows[0][2]})过大≠人数({rows[0][1]})，疑缺上半段")
     for i in range(1, len(rows)):
         exp = rows[i - 1][2] + rows[i][1]
         if exp != rows[i][2]:
@@ -221,7 +244,9 @@ def validate(rows: list[tuple[int, int, int]]) -> tuple[list[str], list[str]]:
 def save_staging(province: str, category: str, rows, sources: list[str], bonus: str):
     safe = re.sub(r"[^\w]", "_", f"{province}_{category}")
     path = os.path.join(STAGING_DIR, f"{safe}.json")
-    json_rows = [{"score": s, "count": c, "cumulative": cum} for s, c, cum in rows]
+    # 行键与 HTML 流程 (import_rank_tables_2025.parse_eol_tables / upsert_rows) 对齐：
+    # {score, count_this, count_cum}，这样 import_rank_tables_2026 --import-db 可直接消费。
+    json_rows = [{"score": s, "count_this": c, "count_cum": cum} for s, c, cum in rows]
     with open(path, "w", encoding="utf-8") as f:
         json.dump({
             "province": province, "category": category, "year": YEAR,

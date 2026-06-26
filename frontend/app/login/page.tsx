@@ -55,7 +55,7 @@ export default function LoginPage() {
         if (saved) {
           const q = JSON.parse(saved);
           if (q.province && q.rank && q.subject) {
-            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
+            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
           }
         }
       } catch {}
@@ -125,7 +125,7 @@ export default function LoginPage() {
               if (saved) {
                 const q = JSON.parse(saved);
                 if (q.province && q.rank && q.subject) {
-                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
+                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
                 }
               }
             } catch {}
@@ -180,7 +180,7 @@ export default function LoginPage() {
           if (saved) {
             const q = JSON.parse(saved);
             if (q.province && q.rank && q.subject) {
-              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}` : ""}`;
+              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
             }
           }
         } catch {}

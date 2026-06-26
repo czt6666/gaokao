@@ -896,11 +896,19 @@ def school_outlook(school_name: str, db: Session = Depends(get_db)):
 @app.get("/api/rank-table")
 def rank_lookup(
     province: str = Query("北京"),
-    year: int = Query(2025),
+    year: int | None = Query(None, description="留空=自动取该省最新年份（有 2026 用 2026）"),
     score: int = Query(..., description="高考分数"),
     db: Session = Depends(get_db),
 ):
-    """根据分数查询对应的全省位次"""
+    """根据分数查询对应的全省位次。year 留空时自动取该省最新一分一段年份（有 2026 用 2026）。"""
+    if year is None:
+        year = (
+            db.query(RankTable.year)
+            .filter(RankTable.province == province)
+            .order_by(RankTable.year.desc())
+            .limit(1)
+            .scalar()
+        ) or 2025
     row = (
         db.query(RankTable)
         .filter(

@@ -34,6 +34,22 @@ interface UserRow {
 interface UserQueryRecord { id: number; province: string; rank_input: number; event_data: string; page: string; created_at: string; ip: string; }
 interface UserOrderRecord { order_no: string; amount: number; status: string; pay_method: string; product_type: string; province: string; rank_input: number; created_at: string; pay_time: string; transaction_id: string; }
 interface UserEventRecord { id: number; event_type: string; event_data: string; page: string; created_at: string; ip: string; }
+interface UsagePdfRow {
+  id: number; user_id: number | null; user_label: string; province: string; rank_input: number | null;
+  subject: string; exam_mode: string; c_major: string; c_city: string; c_nature: string; c_tier: string;
+  discipline_filter: string; score: number | null; part: number | null; source: string; created_at: string;
+}
+interface UsageAiRow {
+  id: number; user_id: number | null; user_label: string; question: string;
+  province: string; subject: string; rank: string; score: string; created_at: string;
+}
+interface UsageStats {
+  pdf: { total: number; today: number; week: number };
+  ai: { total: number; today: number; week: number };
+  pdf_provinces: { province: string; count: number }[];
+  recent_pdf: UsagePdfRow[];
+  recent_ai: UsageAiRow[];
+}
 interface UserDetail {
   user: UserRow;
   queries: UserQueryRecord[];
@@ -250,7 +266,8 @@ function DonutChart({ items, size = 140 }: { items: { label: string; value: numb
 export default function AdminPage() {
   const [tokenInput, setTokenInput] = useState("");
   const [authed, setAuthed] = useState(false);
-  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "events" | "viral" | "insights" | "referral" | "feedback" | "commission">("dashboard");
+  const [activeTab, setActiveTab] = useState<"dashboard" | "analysis" | "orders" | "users" | "events" | "viral" | "insights" | "referral" | "feedback" | "commission" | "usage">("dashboard");
+  const [usage, setUsage] = useState<UsageStats | null>(null);
   const [insights, setInsights] = useState<any>(null);
 
   const [stats, setStats] = useState<TodayStats | null>(null);
@@ -449,6 +466,15 @@ export default function AdminPage() {
     if (!authed || activeTab !== "viral") return;
     apiFetch("/api/admin/stats/viral")
       .then(d => setViral(d))
+      .catch(e => setError(e.message));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authed, activeTab]);
+
+  // Usage tab（使用埋点：PDF 下载 + AI 提问）
+  useEffect(() => {
+    if (!authed || activeTab !== "usage") return;
+    apiFetch("/api/admin/stats/usage")
+      .then(d => setUsage(d))
       .catch(e => setError(e.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authed, activeTab]);
@@ -909,6 +935,7 @@ export default function AdminPage() {
               <Tab id="orders" label="订单" />
               <Tab id="users" label="用户" />
               <Tab id="events" label="查询记录" />
+              <Tab id="usage" label="使用埋点" />
               <Tab id="viral" label="传播追踪" />
               <Tab id="referral" label="分销订阅" />
               <Tab id="commission" label="佣金管理" />
@@ -1597,6 +1624,8 @@ export default function AdminPage() {
                   <option value="pay_click">支付点击</option>
                   <option value="pay_success">支付成功</option>
                   <option value="unlock_click">解锁点击</option>
+                  <option value="pdf_download">PDF下载</option>
+                  <option value="ai_chat">AI提问</option>
                 </select>
                 <input placeholder="位次 ≥" value={eventFilters.rank_min} onChange={e => { setEventFilters(f => ({ ...f, rank_min: e.target.value })); setEventPage(1); }}
                   style={{ padding: "5px 10px", borderRadius: 6, border: "1px solid #E5E5EA", fontSize: 12, outline: "none" }} />
@@ -1697,6 +1726,95 @@ export default function AdminPage() {
                 </div>
               );
             })()}
+          </>
+        )}
+
+        {/* ── 使用埋点（PDF 下载 + AI 提问）── */}
+        {activeTab === "usage" && (
+          <>
+            <div style={{ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 16 }}>
+              <StatCard label="PDF下载 今日" value={usage?.pdf.today ?? "—"} sub="次" color="#0071E3" />
+              <StatCard label="PDF下载 近7日" value={usage?.pdf.week ?? "—"} sub="次" />
+              <StatCard label="PDF下载 累计" value={usage?.pdf.total ?? "—"} sub="次" />
+              <StatCard label="AI提问 今日" value={usage?.ai.today ?? "—"} sub="次" color="#34C759" />
+              <StatCard label="AI提问 近7日" value={usage?.ai.week ?? "—"} sub="次" />
+              <StatCard label="AI提问 累计" value={usage?.ai.total ?? "—"} sub="次" />
+            </div>
+
+            <Card title="PDF 下载 Top 省份" style={{ marginBottom: 16 }}>
+              {usage && usage.pdf_provinces.length > 0 ? (
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {usage.pdf_provinces.map(p => (
+                    <span key={p.province} style={{ padding: "6px 12px", borderRadius: 980, background: "#F5F5F7", fontSize: 13 }}>
+                      {p.province} <strong>{p.count}</strong>
+                    </span>
+                  ))}
+                </div>
+              ) : <div style={{ color: "#86868B", fontSize: 13 }}>暂无数据</div>}
+            </Card>
+
+            <Card title={`最近 PDF 下载（${usage?.recent_pdf.length ?? 0} 条）`} style={{ marginBottom: 16 }}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#F5F5F7" }}>
+                      {["用户", "省份", "位次", "分数", "选科", "模式", "专业筛选", "门类筛选", "城市", "性质", "档次", "分册", "来源", "时间"].map(h => (
+                        <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(usage?.recent_pdf ?? []).map(r => (
+                      <tr key={r.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{r.user_label || "游客"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.province || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.rank_input ?? "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.score ?? "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.subject || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.exam_mode || "—"}</td>
+                        <td style={{ padding: "8px 10px", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.c_major}>{r.c_major || "—"}</td>
+                        <td style={{ padding: "8px 10px", maxWidth: 180, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={r.discipline_filter}>{r.discipline_filter || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.c_city || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.c_nature || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.c_tier || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.part === 1 ? "上册" : r.part === 2 ? "下册" : "全部"}</td>
+                        <td style={{ padding: "8px 10px", color: "#86868B" }}>{r.source || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(r.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!usage || usage.recent_pdf.length === 0) && <div style={{ color: "#86868B", fontSize: 13, padding: "12px 0" }}>暂无数据</div>}
+              </div>
+            </Card>
+
+            <Card title={`最近 AI 提问（${usage?.recent_ai.length ?? 0} 条）`}>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "#F5F5F7" }}>
+                      {["用户", "提问内容", "省份", "选科", "位次", "分数", "时间"].map(h => (
+                        <th key={h} style={{ padding: "8px 10px", textAlign: "left", color: "#6E6E73", fontWeight: 600, borderBottom: "1px solid #E5E5EA", whiteSpace: "nowrap" }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(usage?.recent_ai ?? []).map(r => (
+                      <tr key={r.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
+                        <td style={{ padding: "8px 10px", whiteSpace: "nowrap" }}>{r.user_label || "游客"}</td>
+                        <td style={{ padding: "8px 10px", maxWidth: 460, lineHeight: 1.5 }}>{r.question || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.province || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.subject || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.rank || "—"}</td>
+                        <td style={{ padding: "8px 10px" }}>{r.score || "—"}</td>
+                        <td style={{ padding: "8px 10px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(r.created_at)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {(!usage || usage.recent_ai.length === 0) && <div style={{ color: "#86868B", fontSize: 13, padding: "12px 0" }}>暂无数据</div>}
+              </div>
+            </Card>
           </>
         )}
 

@@ -2,7 +2,7 @@
 缓存层：同一 (province, rank, subject) 生成一次 PDF 后缓存 30 分钟，
   重复请求直接返回，解决小程序 fetchBinary timeout 问题。
 """
-from fastapi import APIRouter, Depends, HTTPException, Query, Header
+from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request
 from fastapi.responses import Response, HTMLResponse
 from sqlalchemy.orm import Session
 from urllib.parse import quote
@@ -125,6 +125,7 @@ async def export_report(
     exclude_restrictions: str | None = Query(None, description="排除的专业限制标签，逗号分隔"),
     discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -205,6 +206,31 @@ async def export_report(
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"PDF生成失败：{str(e)}")
+
+    # ── 埋点：PDF 下载（订单流，记录用户 + 详细推荐参数）──────────
+    try:
+        from services.event_log import log_event
+        log_event(
+            db,
+            event_type="pdf_download",
+            user_id=order.user_id,
+            event_data={
+                "source": "export",
+                "report_id": report_id,
+                "score": score,
+                "discipline_filter": discipline_filter,
+                "batch_filter": batch_filter,
+                "exclude_restrictions": exclude_restrictions,
+                "order_no": order_no,
+            },
+            page="/api/report/export",
+            province=province, rank_input=rank, subject=subject, exam_mode=exam_mode,
+            c_major=c_major, c_city=c_city, c_nature=c_nature, c_tier=c_tier,
+            ip=(request.client.host if request and request.client else ""),
+            user_agent=(request.headers.get("user-agent", "") if request else ""),
+        )
+    except Exception:
+        pass
 
     filename = f"志愿报告_{province}_{rank}.pdf"
     filename_encoded = quote(filename, safe="")
@@ -313,6 +339,7 @@ async def generate_report_free(
     discipline_filter: str = Query("", description="门类+专业类筛选，竖线分隔"),
     score: int | None = Query(None, description="考生分数（用于分数分桶）"),
     authorization: Optional[str] = Header(None),
+    request: Request = None,
     db: Session = Depends(get_db),
 ):
     """
@@ -323,6 +350,7 @@ async def generate_report_free(
     # 验证付费状态：order_no 优先，fallback 到 JWT user.is_paid
     is_paid = False
     user = None
+    paid_order = None
 
     if order_no:
         paid_order = db.query(Order).filter(
@@ -433,6 +461,33 @@ async def generate_report_free(
             raise HTTPException(status_code=500, detail=f"PDF生成失败：{str(e)}")
 
         _pdf_cache_set(cache_key, pdf_bytes, report_id)
+
+    # ── 埋点：PDF 下载（记录用户 + 详细推荐参数）────────────────
+    try:
+        from services.event_log import log_event
+        _uid = user.id if user else (paid_order.user_id if paid_order else None)
+        log_event(
+            db,
+            event_type="pdf_download",
+            user_id=_uid,
+            event_data={
+                "source": "generate",
+                "report_id": report_id,
+                "part": part,
+                "score": score,
+                "discipline_filter": discipline_filter,
+                "batch_filter": batch_filter,
+                "exclude_restrictions": exclude_restrictions,
+                "order_no": order_no,
+            },
+            page="/api/report/generate",
+            province=province, rank_input=rank, subject=subject, exam_mode=exam_mode,
+            c_major=c_major, c_city=c_city, c_nature=c_nature, c_tier=c_tier,
+            ip=(request.client.host if request and request.client else ""),
+            user_agent=(request.headers.get("user-agent", "") if request else ""),
+        )
+    except Exception:
+        pass
 
     part_label = {1: "上册_冲稳", 2: "下册_保底"}.get(part, "")
     filename = f"水卢报告_{province}_{rank}{'_' + part_label if part_label else ''}.pdf"

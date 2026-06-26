@@ -84,6 +84,109 @@ def stats_today(db: Session = Depends(get_db)):
     }
 
 
+# ── 使用埋点统计：PDF 下载 + AI 提问 ──────────────────────────
+@router.get("/stats/usage", dependencies=[Depends(_verify_admin)])
+def stats_usage(db: Session = Depends(get_db)):
+    """PDF 下载 + AI 提问的概览统计 + 最近明细。"""
+    today_start = _bj_today_start()
+    week_start = _bj_now().replace(hour=0, minute=0, second=0, microsecond=0) - datetime.timedelta(days=7, hours=8)
+
+    def _count(event_type, since=None):
+        q = db.query(func.count(UserEvent.id)).filter(UserEvent.event_type == event_type)
+        if since is not None:
+            q = q.filter(UserEvent.created_at >= since)
+        return q.scalar() or 0
+
+    pdf_total = _count("pdf_download")
+    pdf_today = _count("pdf_download", today_start)
+    pdf_week = _count("pdf_download", week_start)
+    ai_total = _count("ai_chat")
+    ai_today = _count("ai_chat", today_start)
+    ai_week = _count("ai_chat", week_start)
+
+    # PDF 下载 Top 省份
+    pdf_provinces = (
+        db.query(UserEvent.province, func.count(UserEvent.id))
+        .filter(UserEvent.event_type == "pdf_download", UserEvent.province != "")
+        .group_by(UserEvent.province)
+        .order_by(func.count(UserEvent.id).desc())
+        .limit(10)
+        .all()
+    )
+
+    def _user_label(uid):
+        if not uid:
+            return ""
+        u = db.query(User).filter(User.id == uid).first()
+        if not u:
+            return f"#{uid}"
+        return u.phone or u.nickname or f"#{uid}"
+
+    recent_pdf = (
+        db.query(UserEvent)
+        .filter(UserEvent.event_type == "pdf_download")
+        .order_by(UserEvent.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    recent_ai = (
+        db.query(UserEvent)
+        .filter(UserEvent.event_type == "ai_chat")
+        .order_by(UserEvent.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    def _pdf_row(e):
+        try:
+            data = json.loads(e.event_data or "{}")
+        except Exception:
+            data = {}
+        return {
+            "id": e.id,
+            "user_id": e.user_id,
+            "user_label": _user_label(e.user_id),
+            "province": e.province or "",
+            "rank_input": e.rank_input,
+            "subject": e.subject or "",
+            "exam_mode": e.exam_mode or "",
+            "c_major": e.c_major or "",
+            "c_city": e.c_city or "",
+            "c_nature": e.c_nature or "",
+            "c_tier": e.c_tier or "",
+            "discipline_filter": data.get("discipline_filter", ""),
+            "score": data.get("score"),
+            "part": data.get("part"),
+            "source": data.get("source", ""),
+            "created_at": e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+        }
+
+    def _ai_row(e):
+        try:
+            data = json.loads(e.event_data or "{}")
+        except Exception:
+            data = {}
+        return {
+            "id": e.id,
+            "user_id": e.user_id,
+            "user_label": _user_label(e.user_id),
+            "question": data.get("question", ""),
+            "province": e.province or "",
+            "subject": e.subject or "",
+            "rank": data.get("rank", ""),
+            "score": data.get("score", ""),
+            "created_at": e.created_at.strftime("%Y-%m-%d %H:%M:%S") if e.created_at else "",
+        }
+
+    return {
+        "pdf": {"total": pdf_total, "today": pdf_today, "week": pdf_week},
+        "ai":  {"total": ai_total, "today": ai_today, "week": ai_week},
+        "pdf_provinces": [{"province": p or "未知", "count": c} for p, c in pdf_provinces],
+        "recent_pdf": [_pdf_row(e) for e in recent_pdf],
+        "recent_ai": [_ai_row(e) for e in recent_ai],
+    }
+
+
 # ── 近30天趋势折线 ─────────────────────────────────────────────
 @router.get("/stats/chart", dependencies=[Depends(_verify_admin)])
 def stats_chart(days_back: int = Query(30, ge=7, le=90), db: Session = Depends(get_db)):

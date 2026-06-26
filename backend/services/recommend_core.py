@@ -1391,6 +1391,64 @@ def _rank_bucket_walls(rank: int) -> tuple[int, int, int, int]:
     return tuple(int(round(rank * (1.0 + (base - 1.0) * s))) for base in _BUCKET_BASE)  # type: ignore[return-value]
 
 
+# 动态分数桶壁参数
+_SCORE_BASE  = (-25.0, -10.0, 10.0, 25.0)  # 基准分数差桶壁：保[-25,-10) 稳[-10,10] 冲(10,25]
+_SCORE_ALPHA = 0.5    # 按密度缩放的强度（sqrt 抑制极端）
+_SCORE_SMIN  = 0.6    # 缩放下限（热门密集分数段 → 区间收窄）
+_SCORE_SMAX  = 1.8    # 缩放上限（稀疏分数段 → 区间放宽）
+# 一分一段科类别名（首选科目 → rank_tables.category 候选）
+_FIRST_TO_RANK_CAT = {"物理": ("物理类", "理科"), "历史": ("历史类", "文科")}
+
+
+def _score_bucket_walls(db: Session, province: str, subject: str, score: int) -> tuple | None:
+    """动态分数差桶壁：返回 (保下界, 保/稳壁, 稳/冲壁, 冲上界)（分数差 = 学校去年最低分 − 考生分）。
+
+    保 [保下界, 保/稳壁)　稳 [保/稳壁, 稳/冲壁]　冲 (稳/冲壁, 冲上界]
+    需求：热门（密集）分数段区间调小、稀疏分数段区间调大。
+    用该省「一分一段表」的每分人数 count_this 度量密度：
+      局部密度 Dlocal（考生分 ±2 分均值）越高于参考密度 Dref（全表中位数）→ 区间越窄。
+      s = clamp((Dref/Dlocal)^α, SMIN, SMAX)，桶壁 = 基准 × s。
+    一分一段缺失时返回 None，调用方回退到固定基准。
+    """
+    if not score or score <= 0:
+        return None
+    cats = {r[0] for r in db.execute(_sqla_text(
+        "SELECT DISTINCT category FROM rank_tables WHERE province=:p AND year>=2024"),
+        {"p": province}).fetchall()}
+    if not cats:
+        return None
+    cat = None
+    if len(cats) > 1 or "综合" not in cats:
+        s0 = (subject or "").split("+")[0].strip()
+        for cand in _FIRST_TO_RANK_CAT.get(s0, ()):
+            if cand in cats:
+                cat = cand
+                break
+    _csql = " AND category=:c" if cat else ""
+    params = {"p": province}
+    if cat:
+        params["c"] = cat
+    year = db.execute(_sqla_text(
+        f"SELECT MAX(year) FROM rank_tables WHERE province=:p{_csql}"), params).scalar()
+    if not year:
+        return None
+    params["y"] = year
+    rows = db.execute(_sqla_text(
+        f"SELECT score, count_this FROM rank_tables "
+        f"WHERE province=:p AND year=:y{_csql} AND count_this>0"), params).fetchall()
+    if not rows:
+        return None
+    dens = {int(sc): int(ct) for sc, ct in rows}
+    vals = sorted(dens.values())
+    Dref = vals[len(vals) // 2]                       # 中位数密度
+    near = [dens[s] for s in range(int(score) - 2, int(score) + 3) if s in dens]
+    Dlocal = (sum(near) / len(near)) if near else Dref
+    if Dlocal <= 0:
+        Dlocal = Dref
+    s = max(_SCORE_SMIN, min(_SCORE_SMAX, (Dref / Dlocal) ** _SCORE_ALPHA))
+    return tuple(round(b * s, 1) for b in _SCORE_BASE)
+
+
 # ── 核心接口：智能推荐 ────────────────────────────────────────
 def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, discipline_filter: list[dict] | None = None, user_score: int | None = None) -> dict:
     """
@@ -1537,6 +1595,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 位次桶壁：以考生位次为基准、按位次量级动态缩放的比例桶壁（冲/稳/保 共用）。
     # 仅在位次模式（未提供 user_score）下用；其外界 [冲下界, 保上界] 同时作硬过滤窗。
     _rank_walls = None if user_score else _rank_bucket_walls(rank)
+    # 分数桶壁：按一分一段密度动态缩放（热门段窄、稀疏段宽）；缺一分一段时回退固定基准。
+    _score_walls = (_score_bucket_walls(db, province, subject, user_score) or _SCORE_BASE) if user_score else None
     for (school_name, major_name, batch), records in grouped.items():
 
         # 选科过滤（使用预加载缓存，O(1) 查询）
@@ -1695,8 +1755,8 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         if user_score and _last_year_min_score > 0:
             _score_diff = _last_year_min_score - user_score
             _use_score_bucket = True
-            # 硬过滤：只保留 ±25 分范围内的学校
-            if _score_diff < -25 or _score_diff > 25:
+            # 硬过滤：动态分数桶壁的外界 [保下界, 冲上界]（按密度自适应）
+            if _score_diff < _score_walls[0] or _score_diff > _score_walls[3]:
                 _scan["skip_rank_window"] += 1
                 continue
         else:
@@ -1864,10 +1924,11 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     #   冲：高 10~25 分      稳：±10 分          保：低 10~25 分
     # 否则按「最近一年实际位次 vs 考生位次」分桶。
     if user_score:
-        # 分数差分桶：每个 result 已在构建时注入 score_diff
-        surge  = [r for r in results if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25]
-        stable = [r for r in results if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10]
-        safe   = [r for r in results if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10]
+        # 分数差分桶：动态分数桶壁（按密度自适应）；每个 result 已注入 score_diff
+        _s0, _s1, _s2, _s3 = _score_walls
+        surge  = [r for r in results if r.get("score_diff") is not None and _s2 < r["score_diff"] <= _s3]
+        stable = [r for r in results if r.get("score_diff") is not None and _s1 <= r["score_diff"] <= _s2]
+        safe   = [r for r in results if r.get("score_diff") is not None and _s0 <= r["score_diff"] < _s1]
     else:
         # 位次分桶：动态比例桶壁（随位次量级缩放，见 _rank_bucket_walls）。
         #   冲 [w0, w1)　稳 [w1, w2]　保 (w2, w3]　（外界 [w0, w3] 已在硬过滤窗保证）
@@ -1980,14 +2041,16 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
 
     # 7d. 惩罚后重新分桶（按 user_score 或 last_year_min_rank 重排）
     if user_score:
+        # 与首次分桶同口径：动态分数桶壁（见 _score_bucket_walls）
+        _s0, _s1, _s2, _s3 = _score_walls
         surge_list  = _capped_pick(
-            sorted([r for r in display_list if r.get("score_diff") is not None and 10 < r["score_diff"] <= 25], key=_surge_sort),
+            sorted([r for r in display_list if r.get("score_diff") is not None and _s2 < r["score_diff"] <= _s3], key=_surge_sort),
             25, defaultdict(int))
         stable_list = _capped_pick(
-            sorted([r for r in display_list if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10], key=_stable_sort),
+            sorted([r for r in display_list if r.get("score_diff") is not None and _s1 <= r["score_diff"] <= _s2], key=_stable_sort),
             46, defaultdict(int))
         safe_list   = _capped_pick(
-            sorted([r for r in display_list if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10], key=_safe_sort),
+            sorted([r for r in display_list if r.get("score_diff") is not None and _s0 <= r["score_diff"] < _s1], key=_safe_sort),
             25, defaultdict(int))
     else:
         # 与首次分桶同口径：动态比例桶壁（见 _rank_bucket_walls）
@@ -2031,11 +2094,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             # 分数分桶模式下：把补齐的学校放入其本应归属的桶，而非全部塞入 safe
             if user_score and _ex.get("score_diff") is not None:
                 sd = _ex["score_diff"]
-                if 10 < sd <= 25:
+                _s0, _s1, _s2, _s3 = _score_walls
+                if _s2 < sd <= _s3:
                     surge_list.append(_ex)
-                elif -10 <= sd <= 10:
+                elif _s1 <= sd <= _s2:
                     stable_list.append(_ex)
-                elif -25 <= sd < -10:
+                elif _s0 <= sd < _s1:
                     safe_list.append(_ex)
                 combined_96.append(_ex)
             else:

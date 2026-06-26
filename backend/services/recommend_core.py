@@ -1457,75 +1457,6 @@ def _score_bucket_walls(db: Session, province: str, subject: str, score: int) ->
     return tuple(round(w, 1) for w in walls)
 
 
-def _resolve_rank_cat(db: Session, province: str, subject: str):
-    """解析该省一分一段应使用的 (科类, 最新年份)。3+3 省返回 cat=None(用综合)。
-    与 _simulate_inner / _score_bucket_walls 判据一致：仅当不含「综合」才按选科过滤。"""
-    cats = {r[0] for r in db.execute(_sqla_text(
-        "SELECT DISTINCT category FROM rank_tables WHERE province=:p AND year>=2024"),
-        {"p": province}).fetchall()}
-    if not cats:
-        return None, None
-    cat = None
-    if "综合" not in cats:
-        s0 = (subject or "").split("+")[0].strip()
-        for cand in _FIRST_TO_RANK_CAT.get(s0, ()):
-            if cand in cats:
-                cat = cand
-                break
-    params = {"p": province}
-    csql = ""
-    if cat:
-        csql = " AND category=:c"
-        params["c"] = cat
-    year = db.execute(_sqla_text(
-        f"SELECT MAX(year) FROM rank_tables WHERE province=:p{csql}"), params).scalar()
-    return cat, year
-
-
-def _rank_walls_via_score(db: Session, province: str, subject: str, rank: int):
-    """位次模式桶壁：把考生位次经一分一段换算成分数，套用与分数模式相同的分数差桶壁
-    （±10 稳 / ±25 冲保，按密度自适应、封顶 ±25），再换算回绝对位次边界。
-    返回 (冲下界, 冲/稳壁, 稳/保壁, 保上界)（升序位次）。
-
-    理由：纯比例位次桶壁（_rank_bucket_walls）在任何位次下「稳」区都只覆盖 3~8 分，
-    在高位次段尤其收得过紧。改为分数锚定后，两种模式（填位次 / 填分数）口径一致。
-    一分一段缺失时回退比例法。"""
-    if not rank or rank <= 0:
-        return _rank_bucket_walls(rank)
-    cat, year = _resolve_rank_cat(db, province, subject)
-    if not year:
-        return _rank_bucket_walls(rank)
-    params = {"p": province, "y": year}
-    csql = ""
-    if cat:
-        csql = " AND category=:c"
-        params["c"] = cat
-    # 考生位次 → 分数（count_cum >= rank 的最低分）
-    row = db.execute(_sqla_text(
-        f"SELECT score FROM rank_tables WHERE province=:p AND year=:y{csql} "
-        f"AND count_cum>=:r ORDER BY count_cum ASC LIMIT 1"),
-        {**params, "r": rank}).fetchone()
-    if not row:
-        return _rank_bucket_walls(rank)
-    cscore = int(row[0])
-    sw = _score_bucket_walls(db, province, subject, cscore) or _SCORE_BASE  # (保下界,保/稳,稳/冲,冲上界)
-
-    def _rank_at(sc: float):
-        rr = db.execute(_sqla_text(
-            f"SELECT count_cum FROM rank_tables WHERE province=:p AND year=:y{csql} "
-            f"AND score<=:s ORDER BY score DESC LIMIT 1"),
-            {**params, "s": sc}).fetchone()
-        return int(rr[0]) if rr else None
-
-    w0 = _rank_at(cscore + sw[3])   # 冲上界(+25) → 最优(最小)位次
-    w1 = _rank_at(cscore + sw[2])   # 冲/稳(+10)
-    w2 = _rank_at(cscore + sw[1])   # 稳/保(-10)
-    w3 = _rank_at(cscore + sw[0])   # 保下界(-25) → 最大位次
-    if None in (w0, w1, w2, w3):
-        return _rank_bucket_walls(rank)
-    return tuple(sorted((max(1, w0), w1, w2, w3)))
-
-
 # ── 核心接口：智能推荐 ────────────────────────────────────────
 def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: Session, is_paid: bool = False, constraints: dict | None = None, exam_mode: str = "", trial_limit: int | None = None, batch_filter: list[str] | None = None, exclude_restrictions: list[str] | None = None, discipline_filter: list[dict] | None = None, user_score: int | None = None) -> dict:
     """
@@ -1671,7 +1602,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     _scan = {"skip_subject": 0, "skip_avg_rank_0": 0, "skip_rank_window": 0, "skip_last_year_too_easy": 0, "skip_no_2025_data": 0, "kept": 0}
     # 位次桶壁：以考生位次为基准、按位次量级动态缩放的比例桶壁（冲/稳/保 共用）。
     # 仅在位次模式（未提供 user_score）下用；其外界 [冲下界, 保上界] 同时作硬过滤窗。
-    _rank_walls = None if user_score else _rank_walls_via_score(db, province, subject, rank)
+    _rank_walls = None if user_score else _rank_bucket_walls(rank)
     # 分数桶壁：按一分一段密度动态缩放（热门段窄、稀疏段宽）；缺一分一段时回退固定基准。
     _score_walls = (_score_bucket_walls(db, province, subject, user_score) or _SCORE_BASE) if user_score else None
     for (school_name, major_name, batch), records in grouped.items():

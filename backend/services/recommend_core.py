@@ -1449,7 +1449,12 @@ def _score_bucket_walls(db: Session, province: str, subject: str, score: int) ->
     if Dlocal <= 0:
         Dlocal = Dref
     s = max(_SCORE_SMIN, min(_SCORE_SMAX, (Dref / Dlocal) ** _SCORE_ALPHA))
-    return tuple(round(b * s, 1) for b in _SCORE_BASE)
+    walls = [b * s for b in _SCORE_BASE]
+    # 硬上限：冲上界 / 保下界 两端的分数差不超过 ±25 分。
+    # 稀疏分段 s 可达 1.8，会把基准 ±25 放大到 ±45，导致推荐到 30+ 分外的学校；此处封顶。
+    walls[0] = max(-25.0, walls[0])   # 保下界 ≥ -25
+    walls[3] = min(25.0, walls[3])    # 冲上界 ≤ +25
+    return tuple(round(w, 1) for w in walls)
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────

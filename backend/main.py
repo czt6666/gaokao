@@ -54,6 +54,7 @@ from routers.auth import _verify_token as _auth_verify_token
 
 from services.recommend_core import (
     _run_recommend_core, _load_2026_recruit, _norm_major, aggregate_plan_2026, _PLAN_COLS,
+    _filter_stopped_2026, parse_user_subjects, subject_match_struct,
 )
 from services._prewarm_cache import start_prewarm_daemon
 
@@ -1260,6 +1261,9 @@ def search_by_major(
                 "min_rank": r.min_rank,
                 "min_score": r.min_score,
                 "subject_req": r.subject_req or "",
+                "subject_must": r.subject_must or "",
+                "subject_any_of": r.subject_any_of or "",
+                "derived_category": r.derived_category or "",
             }
         )
 
@@ -1288,40 +1292,32 @@ def search_by_major(
             }
         )
 
-    # 3. 选科过滤 + 概率计算
-    _alias = {"理科": "物理", "文科": "历史", "物理类": "物理", "历史类": "历史"}
-    user_subjects = (
-        set(_alias.get(s.strip(), s.strip()) for s in subject.split("+") if s.strip())
-        if subject
-        else set()
-    )
-    _has_wuli = "物理" in user_subjects
-    _has_lishi = "历史" in user_subjects
-    _OPEN = {"不限", "nan", "-", "", "综合", "不限选科"}
-
-    def _subj_ok(req: str) -> bool:
-        if not subject:
-            return True
-        req = req.strip()
-        if not req or req in _OPEN:
-            return True
-        if "物理" in req and "历史" not in req:
-            return _has_wuli
-        if "历史" in req and "物理" not in req:
-            return _has_lishi
-        return True
+    # 3. 选科过滤（结构化 subject_must/any_of，与主推荐引擎同口径）+ 概率计算
+    from sqlalchemy import text as _sqla_text
+    user_subjects = parse_user_subjects(subject)
+    # 首选科目（物理/历史）— 3+1+2 省份按派生科类硬过滤，防跨科类串档
+    _prov_cats = {r[0] for r in db.execute(_sqla_text(
+        "SELECT DISTINCT category FROM rank_tables WHERE province=:prov"), {"prov": province}).fetchall()}
+    _is_split = bool(_prov_cats) and "综合" not in _prov_cats
+    _first = "物理" if "物理" in user_subjects else ("历史" if "历史" in user_subjects else None)
+    _lineage = None
+    if _is_split and _first:
+        _lineage = {"物理类", "物理", "理科"} if _first == "物理" else {"历史类", "历史", "文科"}
 
     school_cache = {s.name: s for s in db.query(School).all()}
     results = []
     _rank_buf = max(3000, rank * 0.4)
 
     for (school_name, major_name), recs in grouped.items():
-        # 选科过滤
-        latest_req = sorted(recs, key=lambda x: x["year"], reverse=True)[0][
-            "subject_req"
-        ]
-        if not _subj_ok(latest_req):
-            continue
+        # 选科过滤（取最近一年记录的结构化选科字段）
+        latest = sorted(recs, key=lambda x: x["year"], reverse=True)[0]
+        latest_req = latest["subject_req"]
+        if subject:
+            if not subject_match_struct(user_subjects, latest["subject_must"], latest["subject_any_of"]):
+                continue
+            # 首选科类硬过滤（仅 3+1+2 省份）
+            if _lineage is not None and latest["derived_category"] not in _lineage:
+                continue
 
         # 简单位次预测
         from algorithms.rank_method import predict_admission
@@ -1370,6 +1366,9 @@ def search_by_major(
                 ),
             }
         )
+
+    # 隐藏 2026 停招专业 + 给保留项挂上 2026 招生计划摘要（与主推荐引擎同口径）
+    results = _filter_stopped_2026(db, province, results)
 
     # 按综合排序：概率×0.4 + 学校质量×0.4 + 学科评估×0.2
     _grade_score = {

@@ -109,6 +109,7 @@ class AdmissionRecord(Base):
     subject_req      = Column(String, default="")           # 选科要求（原始文本）
     subject_must     = Column(String, default="")           # 必选科目（首选+必选）
     subject_any_of   = Column(String, default="")           # OR 组（分号分隔多组，组内斜杠分隔）
+    derived_category = Column(String, default="")           # 派生科类（物理类/历史类/综合，用于首选科目过滤）
     batch_type       = Column(String, default="")           # 批次分类
     major_restrictions = Column(String, default="")         # 专业限制标签
     major_remark     = Column(String, default="")           # 专业备注（院校端维护的备注文本）

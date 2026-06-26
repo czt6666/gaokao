@@ -53,6 +53,9 @@ interface MajorResult {
 
 type TabType = "school" | "major";
 
+// 按专业搜索结果持久化（返回时不丢失，无需重新搜索）
+const MAJOR_RESTORE_KEY = "gaokao_search_major";
+
 function SearchPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,6 +107,22 @@ function SearchPageInner() {
 
   useEffect(() => { search("", "", ""); }, [search]);
 
+  // 从专业搜索详情页返回时，恢复上次的搜索条件与结果
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(MAJOR_RESTORE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s.tab === "major") setTab("major");
+      if (typeof s.majorQ === "string") setMajorQ(s.majorQ);
+      if (s.majorProvince) setMajorProvince(s.majorProvince);
+      if (typeof s.majorRank === "string") setMajorRank(s.majorRank);
+      if (typeof s.majorSubject === "string") setMajorSubject(s.majorSubject);
+      if (Array.isArray(s.majorResults)) setMajorResults(s.majorResults);
+      if (typeof s.majorTotal === "number") setMajorTotal(s.majorTotal);
+    } catch {}
+  }, []);
+
   // ── Major search logic ──
   const searchByMajor = useCallback(async () => {
     if (!majorQ.trim()) { setMajorError("请输入专业关键词"); return; }
@@ -122,6 +141,14 @@ function SearchPageInner() {
       const data = await res.json();
       setMajorResults(data.schools || []);
       setMajorTotal(data.total || 0);
+      // 持久化，返回页面时恢复
+      try {
+        sessionStorage.setItem(MAJOR_RESTORE_KEY, JSON.stringify({
+          tab: "major",
+          majorQ: majorQ.trim(), majorProvince, majorRank, majorSubject,
+          majorResults: data.schools || [], majorTotal: data.total || 0,
+        }));
+      } catch {}
     } catch (e) {
       setMajorError("搜索失败，请稍后重试");
       setMajorResults([]);

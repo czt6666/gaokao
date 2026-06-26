@@ -2,6 +2,7 @@
 import datetime
 import hashlib
 import json
+import math
 import os
 import random
 import re
@@ -25,6 +26,47 @@ from database import (
 from algorithms.rank_method import predict_admission
 from algorithms.hidden_gem import score_overall_gem, school_quality_score, value_index
 from algorithms.population_data import get_province_total as _pop_province_total
+
+
+# ── 选科匹配（共享：主推荐引擎 + 按专业搜索同口径）──────────────
+_SUBJECT_ALIAS = {
+    "生物学": "生物", "思政": "政治",
+    "理科": "物理", "物理类": "物理",
+    "文科": "历史", "历史类": "历史",
+}
+
+
+def parse_user_subjects(subject: str) -> set:
+    """把用户选科文本（如 '物理+化学'）拆成归一化科目集合。"""
+    out: set = set()
+    for s in (subject.split("+") if subject else []):
+        s = s.strip()
+        if s:
+            out.add(_SUBJECT_ALIAS.get(s, s))
+    return out
+
+
+def subject_match_struct(user_subjects: set, must: str, any_of: str) -> bool:
+    """选科匹配 v7：纯结构化字段 subject_must / subject_any_of。
+    must（逗号分隔）所有科目必须被用户选中；
+    any_of（分号分隔多组、组内斜杠分隔）至少一组命中即可。
+    空集（未传选科）一律放行。"""
+    if not user_subjects:
+        return True
+    if must:
+        for p in (s.strip() for s in must.split(",") if s.strip()):
+            if _SUBJECT_ALIAS.get(p, p) not in user_subjects:
+                return False
+    if any_of:
+        matched = False
+        for group in any_of.split(";"):
+            parts = {_SUBJECT_ALIAS.get(s.strip(), s.strip()) for s in group.split("/") if s.strip()}
+            if any(p in user_subjects for p in parts):
+                matched = True
+                break
+        if not matched:
+            return False
+    return True
 
 
 def _get_province_total(province: str, year: int = 2025) -> int:
@@ -1170,15 +1212,7 @@ def _build_recommend_data(
             })
 
     # ── 13. _subject_match 闭包（精细选科匹配）──────────────────
-    _alias = {
-        "生物学": "生物", "思政": "政治",
-        "理科": "物理", "物理类": "物理",
-        "文科": "历史", "历史类": "历史",
-    }
-    user_subjects: set = set()
-    for s in (subject.split("+") if subject else []):
-        s = s.strip()
-        user_subjects.add(_alias.get(s, s))
+    user_subjects: set = parse_user_subjects(subject)
 
     def _subject_match(school_nm: str, major_nm: str) -> bool:
         """选科匹配 v7：纯结构化字段 subject_must / subject_any_of"""
@@ -1187,31 +1221,7 @@ def _build_recommend_data(
         info = major_subject_cache.get((school_nm, major_nm))
         if not info:
             return True
-
-        must = info.get("must", "")
-        any_of = info.get("any_of", "")
-
-        # must：逗号分隔，所有科目必须在用户选科中
-        if must:
-            must_parts = [s.strip() for s in must.split(",") if s.strip()]
-            for p in must_parts:
-                p_norm = _alias.get(p, p)
-                if p_norm not in user_subjects:
-                    return False
-
-        # any_of：分号分隔多组，组内斜杠分隔多科，至少一组满足即可
-        if any_of:
-            _matched = False
-            for group in any_of.split(";"):
-                parts = [s.strip() for s in group.split("/") if s.strip()]
-                parts_norm = {_alias.get(p, p) for p in parts}
-                if any(p in user_subjects for p in parts_norm):
-                    _matched = True
-                    break
-            if not _matched:
-                return False
-
-        return True
+        return subject_match_struct(user_subjects, info.get("must", ""), info.get("any_of", ""))
 
     # ── 14. 学校先验位次（贝叶斯平滑用）──────────────────────────
     _school_rank_sums: dict = defaultdict(lambda: [0.0, 0])
@@ -1355,67 +1365,30 @@ def _build_recommend_data(
     }
 
 
-# subject → 一分一段 category（与 main._simulate_inner 保持一致）
-_SUBJECT_TO_RANK_CAT = {
-    "物理": ["物理类", "理科"], "物理类": ["物理类", "理科"],
-    "历史": ["历史类", "文科"], "历史类": ["历史类", "文科"],
-}
+# 动态位次桶壁参数
+_BUCKET_REF_RANK = 10000      # 缩放因子 s=1 的基准位次
+_BUCKET_ALPHA    = 0.33       # 随位次量级缩放的强度（log10）
+_BUCKET_SMIN     = 0.55       # 缩放因子下限（低位次/分段密集 → 系数收紧）
+_BUCKET_SMAX     = 1.80       # 缩放因子上限（高位次/分段稀疏 → 系数放大）
+# 基准桶壁（位次≈_BUCKET_REF_RANK 时）：冲 0.8~0.9×、稳 0.9~1.1×、保 1.1~1.3×（×考生位次）
+_BUCKET_BASE = (0.8, 0.9, 1.1, 1.3)
 
 
-def _rank_wall_window(db: Session, province: str, subject: str, rank: int, points: int = 25):
-    """把分数桶壁 ±points 分通过该省「一分一段表」换算成位次桶壁。
+def _rank_bucket_walls(rank: int) -> tuple[int, int, int, int]:
+    """动态位次分桶桶壁：返回 (冲下界, 冲/稳壁, 稳/保壁, 保上界) 的绝对位次。
 
-    返回 (rank_low, rank_high)：
-      rank_low  = 分数高 points 分对应的位次（更靠前/更难，冲的边界）
-      rank_high = 分数低 points 分对应的位次（更靠后/更易，保的边界）
-    与分数模式 ±25 分硬过滤同语义，且按省份、分段自适应（密集段窄按位次会自动变宽）。
-    一分一段缺失/位次未覆盖时返回 None，调用方回退到比例墙。
+    冲 [冲下界, 冲/稳壁)　稳 [冲/稳壁, 稳/保壁]　保 (稳/保壁, 保上界]
+    （学校去年最低位次越小越难录取；冲=更难、保=更易）
+
+    比例跨度随位次绝对值动态缩放：高位次（如 800，分段稀疏、同段学校少）放大系数，
+    低位次（如 12 万，分段密集）收紧系数，使各档覆盖的学校数量与分数跨度都更合理。
+    缩放因子 s = clamp(1 + α·log10(REF/rank), SMIN, SMAX)，桶壁 = 1 + (基准-1)·s。
     """
     if not rank or rank <= 0:
-        return None
-    cats = {r[0] for r in db.execute(_sqla_text(
-        "SELECT DISTINCT category FROM rank_tables WHERE province=:p AND year>=2024"),
-        {"p": province}).fetchall()}
-    if not cats:
-        return None
-    cat = None
-    if len(cats) > 1 or "综合" not in cats:
-        s = (subject or "").split("+")[0].strip()
-        for cand in _SUBJECT_TO_RANK_CAT.get(s, []):
-            if cand in cats:
-                cat = cand
-                break
-    _cat_sql = " AND category=:c" if cat else ""
-    p = {"p": province}
-    if cat:
-        p["c"] = cat
-    yr = db.execute(_sqla_text(
-        f"SELECT MAX(year) FROM rank_tables WHERE province=:p{_cat_sql}"), p).scalar()
-    if not yr:
-        return None
-    p["y"] = yr
-    row = db.execute(_sqla_text(
-        f"SELECT score FROM rank_tables WHERE province=:p AND year=:y{_cat_sql} "
-        f"AND rank_min<=:r AND rank_max>=:r LIMIT 1"), {**p, "r": rank}).fetchone()
-    if not row:
-        return None
-    score = row[0]
-
-    def _rank_at(sc):
-        r = db.execute(_sqla_text(
-            f"SELECT count_cum FROM rank_tables WHERE province=:p AND year=:y{_cat_sql} "
-            f"AND score>=:s ORDER BY score ASC LIMIT 1"), {**p, "s": sc}).fetchone()
-        return r[0] if r else None
-
-    rank_low = _rank_at(score + points) or 1
-    rank_high = _rank_at(score - points)
-    if rank_high is None:                       # 低于最低分段 → 用省内最大累计位次兜底
-        r = db.execute(_sqla_text(
-            f"SELECT MAX(count_cum) FROM rank_tables WHERE province=:p AND year=:y{_cat_sql}"), p).fetchone()
-        rank_high = (r[0] if r and r[0] else rank * 2)
-    if rank_high <= rank_low:
-        return None
-    return (rank_low, rank_high)
+        return (0, 0, 0, 0)
+    s = max(_BUCKET_SMIN, min(_BUCKET_SMAX,
+                              1.0 + _BUCKET_ALPHA * math.log10(_BUCKET_REF_RANK / rank)))
+    return tuple(int(round(rank * (1.0 + (base - 1.0) * s))) for base in _BUCKET_BASE)  # type: ignore[return-value]
 
 
 # ── 核心接口：智能推荐 ────────────────────────────────────────
@@ -1561,13 +1534,9 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     # 5. 遍历所有专业组合，计算推荐结果
     results = []
     _scan = {"skip_subject": 0, "skip_avg_rank_0": 0, "skip_rank_window": 0, "skip_last_year_too_easy": 0, "skip_no_2025_data": 0, "kept": 0}
-    # 位次桶壁：把 ±25 分换算成位次区间（与分数桶壁同语义，按省份/分段自适应）。
-    # 仅在位次模式（未提供 user_score）下用；一分一段缺失时回退比例墙。
-    _rank_wall = None if user_score else _rank_wall_window(db, province, subject, rank)
-    # 稳区桶壁：把 ±10 分换算成位次区间（与分数模式「±10分=稳」同语义）。
-    # 高位次（低 rank 数）时分段稀疏，固定 ±15% 位次窗会过窄、几乎无稳区，
-    # 故用一分一段把「±10分」翻译成自适应位次窗；缺失时回退 ±15%。
-    _stab_wall = None if user_score else _rank_wall_window(db, province, subject, rank, points=10)
+    # 位次桶壁：以考生位次为基准、按位次量级动态缩放的比例桶壁（冲/稳/保 共用）。
+    # 仅在位次模式（未提供 user_score）下用；其外界 [冲下界, 保上界] 同时作硬过滤窗。
+    _rank_walls = None if user_score else _rank_bucket_walls(rank)
     for (school_name, major_name, batch), records in grouped.items():
 
         # 选科过滤（使用预加载缓存，O(1) 查询）
@@ -1731,19 +1700,11 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 _scan["skip_rank_window"] += 1
                 continue
         else:
-            # 位次模式：优先用「±25分换算的位次桶壁」硬过滤（与分数桶壁同语义）；
-            # 一分一段缺失时回退到比例墙（0.30×~2.5×）。
-            if _last_year_min_rank > 0 and rank > 0:
-                if _rank_wall:
-                    if _last_year_min_rank < _rank_wall[0] or _last_year_min_rank > _rank_wall[1]:
-                        _scan["skip_rank_window"] += 1
-                        continue
-                else:
-                    _rank_ratio = _last_year_min_rank / rank
-                    # 学校位次比考生好 3 倍以上（太难）或差 2.5 倍以上（太水）→ 跳过
-                    if _rank_ratio < 0.30 or _rank_ratio > 2.5:
-                        _scan["skip_rank_window"] += 1
-                        continue
+            # 位次模式：用动态比例桶壁的外界 [冲下界, 保上界] 作硬过滤窗。
+            if _last_year_min_rank > 0 and _rank_walls:
+                if _last_year_min_rank < _rank_walls[0] or _last_year_min_rank > _rank_walls[3]:
+                    _scan["skip_rank_window"] += 1
+                    continue
 
         # 删除旧的安全网（已被上面的 last_year_min_rank 过滤覆盖）
         # 原逻辑：基于 avg_rank 的 gap_rate 做二次过滤，已废弃
@@ -1908,15 +1869,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
         stable = [r for r in results if r.get("score_diff") is not None and -10 <= r["score_diff"] <= 10]
         safe   = [r for r in results if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10]
     else:
-        # 位次分桶：稳区桶壁优先用「±10分换算位次」(_stab_wall)，与硬过滤(±25分)
-        # 及分数模式(±10分=稳)同语义、按分段自适应；一分一段缺失时回退 ±15% 位次窗。
-        # 学校位次 < 稳区下壁 → 学校更难 → 冲
-        # 稳区下壁 ≤ 学校位次 ≤ 稳区上壁 → 稳
-        # 学校位次 > 稳区上壁 → 保
-        _stab_lo, _stab_hi = _stab_wall if _stab_wall else (rank * 0.85, rank * 1.15)
-        surge  = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < _stab_lo]
-        stable = [r for r in results if r["last_year_min_rank"] > 0 and _stab_lo <= r["last_year_min_rank"] <= _stab_hi]
-        safe   = [r for r in results if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > _stab_hi]
+        # 位次分桶：动态比例桶壁（随位次量级缩放，见 _rank_bucket_walls）。
+        #   冲 [w0, w1)　稳 [w1, w2]　保 (w2, w3]　（外界 [w0, w3] 已在硬过滤窗保证）
+        _w0, _w1, _w2, _w3 = _rank_walls
+        surge  = [r for r in results if r["last_year_min_rank"] > 0 and _w0 <= r["last_year_min_rank"] < _w1]
+        stable = [r for r in results if r["last_year_min_rank"] > 0 and _w1 <= r["last_year_min_rank"] <= _w2]
+        safe   = [r for r in results if r["last_year_min_rank"] > 0 and _w2 < r["last_year_min_rank"] <= _w3]
 
     # 每所学校各桶独立计数（原来跨桶共享导致某桶学校不足）
     _SCHOOL_CAP = 5
@@ -2032,15 +1990,16 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             sorted([r for r in display_list if r.get("score_diff") is not None and -25 <= r["score_diff"] < -10], key=_safe_sort),
             25, defaultdict(int))
     else:
-        _stab_lo, _stab_hi = _stab_wall if _stab_wall else (rank * 0.85, rank * 1.15)
+        # 与首次分桶同口径：动态比例桶壁（见 _rank_bucket_walls）
+        _w0, _w1, _w2, _w3 = _rank_walls
         surge_list  = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] < _stab_lo], key=_surge_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and _w0 <= r["last_year_min_rank"] < _w1], key=_surge_sort),
             25, defaultdict(int))
         stable_list = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and _stab_lo <= r["last_year_min_rank"] <= _stab_hi],  key=_stable_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and _w1 <= r["last_year_min_rank"] <= _w2],  key=_stable_sort),
             46, defaultdict(int))
         safe_list   = _capped_pick(
-            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and r["last_year_min_rank"] > _stab_hi],  key=_safe_sort),
+            sorted([r for r in display_list if r["last_year_min_rank"] > 0 and _w2 < r["last_year_min_rank"] <= _w3],  key=_safe_sort),
             25, defaultdict(int))
     combined_96 = surge_list + stable_list + safe_list
 

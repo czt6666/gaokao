@@ -42,6 +42,7 @@ type SchoolResult = {
   probability_tier?: string;
   suggested_action: string | null;
   avg_min_rank_3yr: number;
+  last_year_min_rank?: number;
   last_year_min_score?: number;
   rank_diff: number;
   confidence: string;
@@ -327,17 +328,16 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             {item.last_year_min_score ? (
               <div style={{ width: 1, background: "var(--color-border)", alignSelf: "stretch", margin: "2px 0" }} />
             ) : null}
-            {/* 均位次 */}
+            {/* 去年最低位次 */}
             <div style={{ textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
-                近年均位次
-                <span className="rank-hint-icon" title="近年均位次 = 2022–2025 年间有录取数据的各年「最低分位次」的平均值，缺数据的年份不计入" onClick={() => showToast("近年均位次 = 2022–2025 年间有录取数据的各年「最低分位次」的平均值，缺数据的年份不计入。")}>?</span>
+              <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2 }}>
+                去年最低位次
               </div>
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
-                {item.avg_min_rank_3yr?.toLocaleString()}
+                {item.last_year_min_rank?.toLocaleString()}
               </div>
               {(() => {
-                const diff = (item.avg_min_rank_3yr ?? 0) - Number(rank);
+                const diff = (item.last_year_min_rank ?? 0) - Number(rank);
                 if (diff === 0) {
                   return (
                     <div style={{ fontSize: 11, marginTop: 1, fontWeight: 600, color: "#8E8E93" }}>

@@ -1075,8 +1075,11 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
             .distinct()
             .all()
         }
-        # 如果省份有多个科类（非纯综合），按传入的选科映射
-        if len(cats) > 1 or (cats and "综合" not in cats):
+        # 只要该省一分一段含「综合」即视为 3+3（按综合排名），不按选科过滤。
+        # 注意：山东 2024 年附带了分科目补充表(物理类/化学类…)，但 2025/2026 仅有综合，
+        # 故判定依据「是否存在综合」而非「科类数量>1」，否则会被旧年份补充表误导，
+        # 把选科过滤锁到只有 2024 才有的物理类，导致取到 2024 而非最新年份。
+        if cats and "综合" not in cats:
             for candidate in _subject_to_category.get(s, []):
                 if candidate in cats:
                     rank_category_filter = candidate
@@ -1108,20 +1111,41 @@ def _simulate_inner(mock_score: int, province: str, subject: str, db):
                 or _pop_total(province, 2025)
                 or 500_000
             )
-            _range_margin = max(2000, int(_prov_total * 0.008))
+            # 不确定区间用「分数带」表示更符合直觉：模考与真实分差大致是固定的分数浮动，
+            # 而非固定位次浮动。固定位次余量在高分稀疏段会对应几十分、在密集段只对应一两分。
+            # 做法：用位次余量(0.8%省总量)÷本段人数(局部密度)得到分数带，夹到 ±[3,25] 分，
+            # 再经一分一段换算回位次（稀疏段触 25 分上限、密集段触 3 分下限）。
+            _rank_margin = max(2000, int(_prov_total * 0.008))
+            _density = rank_row.count_this or 0
+            _band = (_rank_margin / _density) if _density else 10
+            _band = int(round(max(3, min(25, _band))))
+
+            def _cum_at_score(sc: int):
+                qy = db.query(RankTable.count_cum).filter(
+                    RankTable.province == province,
+                    RankTable.year == latest_year,
+                    RankTable.score <= sc,
+                )
+                if rank_category_filter:
+                    qy = qy.filter(RankTable.category == rank_category_filter)
+                row = qy.order_by(RankTable.score.desc()).first()
+                return row[0] if row else None
+
+            _rank_best = _cum_at_score(target_score + _band)   # 高分端 → 更优位次
+            _rank_worst = _cum_at_score(target_score - _band)  # 低分端 → 更差位次
             return {
                 "mock_score": mock_score,
                 "estimated_real_score": target_score,
                 "estimated_rank": estimated_rank,
                 "estimated_rank_range": [
-                    max(100, estimated_rank - _range_margin),
-                    min(_prov_total, estimated_rank + _range_margin),
+                    max(100, _rank_best or estimated_rank),
+                    min(_prov_total, _rank_worst or estimated_rank),
                 ],
                 "based_on_year": latest_year,
                 "reliability": "high",
                 "note": (
                     f"基于{latest_year}年{province}一分一段表估算。"
-                    f"实际位次可能偏差±{_range_margin:,}名，"
+                    f"实际成绩约浮动±{_band}分，对应上方位次区间，"
                     f"出分后请用真实位次重查以获得精确推荐。"
                 ),
             }

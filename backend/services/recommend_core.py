@@ -522,6 +522,8 @@ def _build_reason(result: dict, rank: int) -> str:
     school_sal  = emp.get("avg_salary") or 0
     emp_rate    = emp.get("school_employment_rate") or 0
     postgrad    = emp.get("school_postgrad_rate") or 0
+    overseas    = emp.get("school_overseas_rate") or 0
+    deepen      = min(1.0, postgrad + overseas)  # 总深造率 = 国内读研 + 出国
     emp_tier    = emp.get("school_employer_tier") or ""
     top_ind     = emp.get("top_industry") or ""
     top_city_e  = emp.get("top_city") or ""
@@ -535,11 +537,11 @@ def _build_reason(result: dict, rank: int) -> str:
         m4_lines.append(
             f"{school_name}毕业生平均月薪约 {sal_k:.1f}k 元"
             + (f"，就业率 {emp_rate*100:.0f}%" if emp_rate > 0 else "")
-            + (f"，深造率 {postgrad*100:.0f}%（含保研、考研、出国）" if postgrad > 0.1 else "")
+            + (f"，深造率 {deepen*100:.0f}%（含保研、考研、出国）" if deepen > 0.1 else "")
             + "。"
         )
-        if postgrad > 0.25:
-            m4_lines.append(f"深造率高达 {postgrad*100:.0f}%，意味着超过四分之一的毕业生选择继续读研，学术资源和考研成功率较高。")
+        if deepen > 0.25:
+            m4_lines.append(f"深造率高达 {deepen*100:.0f}%，意味着超过四分之一的毕业生选择继续深造（读研或出国留学），学术资源和升学氛围较强。")
         if emp_tier == "头部":
             m4_lines.append("该校毕业生以头部企业（华为、腾讯、阿里、国央企一类等）为主要就业去向，校企合作资源强。")
         elif emp_tier == "中等":
@@ -1665,6 +1667,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             emp = {**emp, "avg_salary": school_emp["avg_salary"],
                    "school_employment_rate": school_emp.get("employment_rate", 0),
                    "school_postgrad_rate": school_emp.get("postgrad_rate", 0),
+                   "school_overseas_rate": school_emp.get("overseas_rate", 0),
                    "school_employer_tier": school_emp.get("top_employer_tier", ""),
                    "data_reliability": _emp_reliability,
                    "reliability_note": _emp_reliability_note}
@@ -1672,6 +1675,7 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
             emp = {"avg_salary": school_emp["avg_salary"],
                    "school_employment_rate": school_emp.get("employment_rate", 0),
                    "school_postgrad_rate": school_emp.get("postgrad_rate", 0),
+                   "school_overseas_rate": school_emp.get("overseas_rate", 0),
                    "school_employer_tier": school_emp.get("top_employer_tier", ""),
                    "data_reliability": _emp_reliability,
                    "reliability_note": _emp_reliability_note}

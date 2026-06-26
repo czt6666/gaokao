@@ -878,6 +878,9 @@ function ResultsContent() {
   const examMode = searchParams.get("exam_mode") || "";
   const fromMock = searchParams.get("from_mock") === "1";
   const mockScore = searchParams.get("mock_score") || "";
+  /** 位次换算所依据的一分一段年份；为「2026」时是当年官方数据，不再标「估算」 */
+  const rankYear = searchParams.get("rank_year") || "";
+  const isCurrentYearRank = rankYear === "2026";
   /** 与卡片「去年最低分」对比用：显式 ?score= 或 mock_score */
   const score = searchParams.get("score") || searchParams.get("mock_score") || "";
   // 约束条件（从首页带过来）
@@ -941,6 +944,17 @@ function ResultsContent() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [lockedExpanded, setLockedExpanded] = useState(false);
+  const [showGuidePrompt, setShowGuidePrompt] = useState(false);
+
+  // 首次进入结果页：弹出「使用教程」提示（点「不再显示」后永久关闭）
+  useEffect(() => {
+    try {
+      if (!localStorage.getItem("gaokao_guide_dismissed")) {
+        const t = setTimeout(() => setShowGuidePrompt(true), 800);
+        return () => clearTimeout(t);
+      }
+    } catch { }
+  }, []);
 
   // 批次类型筛选（从 URL 读取，默认全选 = URL 中无该参数）
   const BATCH_OPTIONS = [
@@ -959,10 +973,10 @@ function ResultsContent() {
   // 登录前把查询条件持久化，供登录后恢复（避免依赖 URL redirect）
   useEffect(() => {
     try {
-      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode, fromMock, mockScore }));
+      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode, fromMock, mockScore, rankYear }));
     } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [province, rank, subject, examMode, fromMock, mockScore]);
+  }, [province, rank, subject, examMode, fromMock, mockScore, rankYear]);
 
   // H5 支付跳回时 URL 可能带 ?paid=<order_no>，用于自动查单后刷新数据
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -1287,10 +1301,10 @@ function ResultsContent() {
           <div style={{ textAlign: "center", flex: 1, padding: "0 12px" }}>
             <div style={{ fontSize: 14, fontWeight: 600, color: "var(--color-text-primary)" }}>
               {mockScore
-                ? `高考 ${mockScore}分 · 估算 ${Number(rank).toLocaleString()}`
+                ? `高考 ${mockScore}分 · ${isCurrentYearRank ? "位次" : "估算"} ${Number(rank).toLocaleString()}`
                 : `位次 ${Number(rank).toLocaleString()} · ${province}`}
             </div>
-            {mockScore && (
+            {mockScore && !isCurrentYearRank && (
               <div style={{ fontSize: 11, color: "#ff9500" }}>此为估算位次，出分后请用真实位次重查</div>
             )}
           </div>
@@ -1992,6 +2006,48 @@ function ResultsContent() {
           </div>
         )}
       </div>
+
+      {/* 使用教程提示弹窗 */}
+      {showGuidePrompt && (
+        <div
+          onClick={() => setShowGuidePrompt(false)}
+          style={{ position: "fixed", inset: 0, zIndex: 10001, background: "rgba(0,0,0,0.45)", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ background: "var(--color-bg)", borderRadius: 16, width: "min(380px, 92vw)", padding: "24px 22px", boxShadow: "0 12px 40px rgba(0,0,0,0.25)", textAlign: "center" }}
+          >
+            <div style={{ fontSize: 32, marginBottom: 10 }}>📖</div>
+            <div style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 8 }}>
+              第一次使用？看个教程
+            </div>
+            <div style={{ fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 20 }}>
+              花 2 分钟看懂怎么读结果、冷门原理、怎么付费和分销赚佣金，填报不踩坑。
+            </div>
+            <button
+              onClick={() => { setShowGuidePrompt(false); router.push("/guide"); }}
+              style={{ width: "100%", padding: "11px", borderRadius: 10, background: "var(--color-navy)", color: "#fff", border: "none", fontSize: 14, fontWeight: 700, cursor: "pointer", marginBottom: 10 }}
+            >
+              去看教程 →
+            </button>
+            <div style={{ display: "flex", gap: 12, justifyContent: "center" }}>
+              <button
+                onClick={() => setShowGuidePrompt(false)}
+                style={{ background: "none", border: "none", fontSize: 13, color: "var(--color-text-secondary)", cursor: "pointer" }}
+              >
+                关闭
+              </button>
+              <span style={{ color: "var(--color-border-light)" }}>·</span>
+              <button
+                onClick={() => { try { localStorage.setItem("gaokao_guide_dismissed", "1"); } catch { } setShowGuidePrompt(false); }}
+                style={{ background: "none", border: "none", fontSize: 13, color: "var(--color-text-tertiary)", cursor: "pointer" }}
+              >
+                不再显示
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pay Modal */}
       {showPayModal && (

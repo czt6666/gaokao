@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<title>水卢冷门高报引擎 · 完整使用说明</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 20mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    color: #1a1a2e;
+    line-height: 1.65;
+    font-size: 10.5pt;
+    margin: 0;
+    padding: 0;
+  }
+  .cover {
+    page-break-after: always;
+    min-height: 250mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    background: linear-gradient(160deg, #0f172a 0%, #1e3a5f 55%, #c9922a 160%);
+    color: #fff;
+    padding: 40px;
+  }
+  .cover h1 { font-size: 32pt; margin: 0 0 12px; }
+  .cover .sub { font-size: 14pt; opacity: 0.9; margin-bottom: 36px; }
+  .cover .tag { background: rgba(255,255,255,0.15); padding: 8px 20px; border-radius: 99px; font-size: 11pt; }
+  .cover .url { margin-top: 48px; font-size: 16pt; font-weight: 700; }
+  h2 {
+    font-size: 17pt;
+    color: #0f172a;
+    border-left: 5px solid #c9922a;
+    padding-left: 12px;
+    margin: 24px 0 12px;
+    page-break-after: avoid;
+  }
+  h3 { font-size: 12.5pt; color: #1e3a5f; margin: 16px 0 6px; page-break-after: avoid; }
+  h4 { font-size: 11pt; margin: 12px 0 4px; color: #334155; }
+  p { margin: 6px 0; }
+  .toc { page-break-after: always; padding-top: 16px; }
+  .toc li { margin: 5px 0; }
+  .step {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 8px 0;
+    page-break-inside: avoid;
+    font-size: 10pt;
+  }
+  .step-num {
+    display: inline-block;
+    background: #c9922a;
+    color: #fff;
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-weight: 700;
+    font-size: 11pt;
+    margin-right: 6px;
+  }
+  .tip {
+    background: #ecfdf5;
+    border-left: 4px solid #059669;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  .tip::before { content: "💡 "; font-weight: 700; color: #059669; }
+  .warn {
+    background: #fff7ed;
+    border-left: 4px solid #ea580c;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  .warn::before { content: "⚠️ "; font-weight: 700; color: #ea580c; }
+  .important {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 0 6px 6px 0;
+    font-size: 10pt;
+    page-break-inside: avoid;
+  }
+  .screenshot {
+    text-align: center;
+    margin: 12px 0;
+    page-break-inside: avoid;
+  }
+  .screenshot img {
+    max-width: 46%;
+    max-height: 280px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  }
+  .screenshot.pair img { max-width: 42%; max-height: 260px; margin: 0 1%; }
+  .screenshot .cap {
+    font-size: 9pt;
+    color: #64748b;
+    margin-top: 6px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0;
+    font-size: 10pt;
+  }
+  th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 700; }
+  ul, ol { padding-left: 20px; margin: 6px 0; }
+  li { margin: 3px 0; }
+  .page-break { page-break-before: always; }
+  .footer-note {
+    font-size: 9pt;
+    color: #94a3b8;
+    text-align: center;
+    margin-top: 24px;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+  }
+  .flow {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 9.5pt;
+    line-height: 1.8;
+    white-space: pre-wrap;
+    page-break-inside: avoid;
+  }
+  .badge {
+    display: inline-block;
+    background: #c9922a;
+    color: #fff;
+    font-size: 8.5pt;
+    padding: 2px 7px;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="tag">完整版 · 使用说明</div>
+  <h1>水卢冷门高报引擎</h1>
+  <div class="sub">高考志愿智能决策系统</div>
+  <p style="max-width: 400px; font-size: 11pt; line-height: 1.7; opacity: 0.85;">
+    输入位次，查录取概率，发现冷门好校。<br/>跟着截图操作即可。
+  </p>
+  <div class="url">www.theyuanxi.cn</div>
+  <p style="font-size: 9pt; opacity: 0.6; margin-top: 20px;">版本 2026.06</p>
+</div>
+
+<div class="toc">
+  <h2>目录</h2>
+  <ol>
+    <li>产品简介</li>
+    <li>3 步上手（含截图）</li>
+    <li>看懂结果页</li>
+    <li>冷门原理</li>
+    <li>数据来源</li>
+    <li>定价方案</li>
+    <li>付费流程</li>
+    <li>分销与提现</li>
+    <li>其他功能 &amp; FAQ</li>
+  </ol>
+</div>
+
+<!-- 第一章 精简 -->
+<h2>一、产品简介</h2>
+
+<p><strong>一句话：</strong>输入高考位次 + 省份 + 选科，系统给出能报的学校、录取概率，以及同分段里被低估的「冷门宝藏」。</p>
+
+<p>传统工具按分数线「排队」；水卢在同一分数段里帮你找<strong>就业更好、学科更强、但分数线还没涨</strong>的选项。</p>
+
+<p>打开 <strong>www.theyuanxi.cn</strong> 即可使用，支持 31 省、三种高考模式，手机微信内也能用。</p>
+
+<!-- 第二章 精简 + 用户截图 -->
+<h2 class="page-break">二、3 步上手</h2>
+
+<h3>第 1 步：填位次、选省份和选科</h3>
+<p>打开首页，选省份，填<strong>全省位次</strong>（出分前可用分数估算），选满选考科目，点「查询」。</p>
+
+<div class="screenshot">
+  <img src="使用截图/首页.png" alt="首页" />
+  <div class="cap">图 1：首页 — 填省份、位次、选科</div>
+</div>
+
+<div class="screenshot">
+  <img src="使用截图/基础使用-1.png" alt="基础使用" />
+  <div class="cap">图 2：填写位次与选科（务必填位次，比分数更准）</div>
+</div>
+
+<div class="warn">省份、选科任一项填错，推荐结果都会偏差。位次在一分一段表或成绩单上查。</div>
+
+<h3>第 2 步（可选）：专业 / 偏好筛选</h3>
+<p>点「专业筛选」或「展开偏好约束」，可限定专业方向、城市、层次、批次等。不填则推荐全部。</p>
+
+<div class="screenshot pair">
+  <img src="使用截图/进阶筛选-1.png" alt="进阶筛选1" />
+  <img src="使用截图/进阶筛选-2.png" alt="进阶筛选2" />
+  <div class="cap">图 3–4：专业筛选与偏好约束</div>
+</div>
+
+<h3>第 3 步：查看结果</h3>
+<p>等几秒跳转结果页，学校按<strong>冲 / 稳 / 保 / 冷门宝藏</strong>分类展示。</p>
+
+<div class="screenshot pair">
+  <img src="使用截图/结果页-1.png" alt="结果页1" />
+  <img src="使用截图/结果页-2.png" alt="结果页2" />
+  <div class="cap">图 5–6：结果列表与学校卡片详情</div>
+</div>
+
+<div class="tip">志愿表建议：冲放前面搏一下，稳放中间作主力，保放后面防滑档。</div>
+
+<!-- 第三章 精简 -->
+<h2 class="page-break">三、看懂结果页</h2>
+
+<table>
+  <tr><th>标签</th><th>概率</th><th>含义</th></tr>
+  <tr><td><span class="badge">冲</span></td><td>25%～55%</td><td>有难度，值得一搏</td></tr>
+  <tr><td><span class="badge">稳</span></td><td>55%～82%</td><td>主力志愿区间</td></tr>
+  <tr><td><span class="badge">保</span></td><td>≥ 82%</td><td>兜底防滑档</td></tr>
+  <tr><td><span class="badge" style="background:#7c3aed">冷门宝藏</span></td><td>—</td><td>同分段性价比最高的隐藏选项</td></tr>
+</table>
+
+<p>卡片上的<strong>录取概率</strong>、<strong>去年最低分/位次</strong>、<strong>趋势箭头</strong>（↑变难 ↓变容易）可直接对比。点「查看推荐理由」可看完整分析。</p>
+
+<h3>免费 vs 付费</h3>
+<table>
+  <tr><th>内容</th><th>未付费</th><th>付费后</th></tr>
+  <tr><td>学校列表</td><td>✅ 可见</td><td>✅</td></tr>
+  <tr><td>第 1 所「稳」档</td><td>完整数据</td><td>完整数据</td></tr>
+  <tr><td>其余学校详情</td><td>打码 / 锁定</td><td>全部解锁</td></tr>
+  <tr><td>PDF 报告</td><td>❌</td><td>✅</td></tr>
+</table>
+
+<!-- 第四章 -->
+<h2 class="page-break">四、冷门原理</h2>
+
+<p>热门城市 + 热门专业把分数线炒高；有些学校专业<strong>实力不差、名字朴素或位置偏</strong>，报的人少、分数偏低——这就是「捡漏」机会。</p>
+
+<p>系统从 7 个角度交叉验证：城市折扣、名字矫正、小年窗口、学科溢价、口碑滞后、产业趋势、委培定向。命中多种信号 → 标为「冷门宝藏」。</p>
+
+<table>
+  <tr><th>维度</th><th>说明</th></tr>
+  <tr><td>认知差距</td><td>薪资/实力强，但报考热度低</td></tr>
+  <tr><td>薪资错配</td><td>录取分不高，毕业薪资偏高</td></tr>
+  <tr><td>产业动能</td><td>所在行业未来 4～5 年上升</td></tr>
+  <tr><td>供需稀缺</td><td>全国招生少，毕业生供给稀缺</td></tr>
+</table>
+
+<div class="warn">冷门 ≠ 差学校。任何预测均有不确定性，请以官方招生简章为准。</div>
+
+<!-- 第五章 -->
+<h2>五、数据来源</h2>
+
+<ul>
+  <li><strong>2017–2025 全国录取数据</strong>：数百万条逐专业位次，覆盖 3,217 校、31 省</li>
+  <li><strong>2026 招生计划</strong>：计划人数、学费、选科要求</li>
+  <li><strong>一分一段表</strong>、教育部学科评估、软科排名</li>
+  <li><strong>A 股上市公司招聘数据</strong>：校准专业薪资与行业前景</li>
+  <li><strong>10 万+ 在校生口碑</strong>：满意度、就业评价</li>
+</ul>
+
+<div class="important">数据基于公开来源整合，预测仅供参考，最终以各省考试院和高校招生简章为准。</div>
+
+<!-- 第六章 定价 -->
+<h2 class="page-break">六、定价方案</h2>
+
+<table>
+  <tr><th>档位</th><th>价格</th><th>内容</th></tr>
+  <tr><td>试看报告</td><td>¥9.9</td><td>每类解锁前 3 所完整分析</td></tr>
+  <tr><td>单次完整报告</td><td>¥39</td><td>本次查询全部学校 + PDF 下载</td></tr>
+  <tr><td>2026 填报季会员</td><td>¥99</td><td>至 2026.9.1，无限次查询 + 全部功能</td></tr>
+</table>
+
+<p><strong>怎么选：</strong>位次定了、只查一次 → ¥39；模考阶段要反复调志愿 → ¥99 季卡（查 3 次以上更划算）。</p>
+
+<ul>
+  <li>虚拟商品，支付即交付，<strong>不支持退款</strong></li>
+  <li>24 小时内相同条件重复查询，不重复扣费</li>
+  <li><strong>已购档位不支持补差价升级</strong>，需重新购买对应方案</li>
+  <li>客服微信：<strong>czt_1227</strong></li>
+</ul>
+
+<!-- 第七章 付费 -->
+<h2>七、付费流程</h2>
+
+<div class="step"><span class="step-num">1</span>结果页点「解锁完整报告」或锁定内容</div>
+<div class="step"><span class="step-num">2</span>先登录（手机号验证码，首次自动注册）</div>
+
+<div class="screenshot">
+  <img src="使用截图/登陆-1.png" alt="登录" />
+  <div class="cap">图 7：登录页面</div>
+</div>
+
+<div class="step"><span class="step-num">3</span>选择方案 → 微信支付</div>
+
+<div class="screenshot pair">
+  <img src="使用截图/付费-1.png" alt="付费" />
+  <img src="使用截图/支付-2.png" alt="支付" />
+  <div class="cap">图 8–9：选择方案与微信支付</div>
+</div>
+
+<div class="flow">付完自动刷新解锁。若未解锁：等 10 秒 → 点「我已支付，刷新状态」→ 仍不行则截图订单联系客服微信 czt_1227。
+
+支付方式（自动识别）：
+· 电脑 → 微信扫码
+· 手机浏览器 → H5 跳转微信
+· 微信内打开 → 直接唤起支付</div>
+
+<!-- 第八章 分销 -->
+<h2 class="page-break">八、分销与提现</h2>
+
+<h3>8.1 邀请奖励</h3>
+<p>登录 → 个人中心 →「复制专属邀请链接」→ 发给朋友。朋友通过链接付费后：</p>
+<ul>
+  <li>你获得 <strong>3 天免费会员</strong>（可叠加）</li>
+  <li>累计邀请 <strong>4 人付费</strong> → 额外 <strong>+30 天</strong>会员</li>
+</ul>
+
+<h3>8.2 现金佣金</h3>
+<table>
+  <tr><th>规则</th><th>说明</th></tr>
+  <tr><td>比例</td><td>好友实付金额的 <strong>30%</strong></td></tr>
+  <tr><td>冻结</td><td>15 天后转入可提现余额</td></tr>
+  <tr><td>提现</td><td>满 <strong>¥100</strong> 在个人中心申请，联系客服 <strong>czt_1227</strong> 打款</td></tr>
+</table>
+
+<div class="screenshot">
+  <img src="使用截图/个人中心-1.png" alt="个人中心" />
+  <div class="cap">图 10：个人中心 — 会员状态、邀请链接、佣金提现</div>
+</div>
+
+<div class="flow">链接格式：www.theyuanxi.cn/?ref=你的邀请码
+例：邀 10 人各买 ¥39 → 佣金约 ¥117，可提现一次。</div>
+
+<!-- 第九章 -->
+<h2>九、其他功能 &amp; FAQ</h2>
+
+<p><strong>志愿表</strong>：收藏学校、拖拽排序，自动标冲/稳/保。<strong>对比</strong>：最多 3 校并排。<strong>AI 助手</strong>：问学校/专业/城市选择。<strong>专业风向标</strong>：看专业近 5 年趋势。</p>
+
+<h4>Q：只有模考成绩能用吗？</h4>
+<p>可以，但出分后请用真实位次重查。</p>
+
+<h4>Q：结果和预期差很多？</h4>
+<p>检查省份、选科、位次是否填对。</p>
+
+<h4>Q：能退款吗？</h4>
+<p>不能，虚拟商品支付即交付。</p>
+
+<h4>Q：佣金何时到账？</h4>
+<p>好友付费后冻结 15 天，满 ¥100 可申请提现。</p>
+
+<div class="footer-note">
+  水卢冷门高报引擎 · www.theyuanxi.cn<br/>
+  客服微信：czt_1227 · 文档版本 2026.06
+</div>
+
+</body>
+</html>

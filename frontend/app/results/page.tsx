@@ -331,7 +331,7 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
             <div style={{ textAlign: "center" }}>
               <div style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginBottom: 2, display: "flex", alignItems: "center", justifyContent: "center", gap: 4 }}>
                 近年均位次
-                <span className="rank-hint-icon" title="是22-25年有数据的年份的平均位次" onClick={() => showToast("是22-25年有数据的年份的平均位次")}>?</span>
+                <span className="rank-hint-icon" title="近年均位次 = 2022–2025 年间有录取数据的各年「最低分位次」的平均值，缺数据的年份不计入" onClick={() => showToast("近年均位次 = 2022–2025 年间有录取数据的各年「最低分位次」的平均值，缺数据的年份不计入。")}>?</span>
               </div>
               <div className="rank-val" style={{ fontSize: 17, fontWeight: 700, color: "var(--color-navy)", fontVariantNumeric: "tabular-nums" }}>
                 {item.avg_min_rank_3yr?.toLocaleString()}
@@ -463,8 +463,8 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
               {plan2026.discipline_eval && (
                 <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>学科评估 {plan2026.discipline_eval}</span>
               )}
-              {plan2026.ruanke_grade && (
-                <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>软科 {plan2026.ruanke_grade}{plan2026.ruanke_rank ? ` · #${plan2026.ruanke_rank}` : ""}</span>
+              {plan2026.ruanke_grade && plan2026.ruanke_grade !== "0" && (
+                <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>软科 {plan2026.ruanke_grade}{plan2026.ruanke_rank && Number(plan2026.ruanke_rank) > 0 ? ` · #${plan2026.ruanke_rank}` : ""}</span>
               )}
               {plan2026.major_level_tag && (
                 <span style={{ fontSize: 12, color: "var(--color-text-secondary)", border: "1px solid var(--color-separator)", borderRadius: 6, padding: "3px 9px" }}>{plan2026.major_level_tag.length > 16 ? plan2026.major_level_tag.slice(0, 16) + "…" : plan2026.major_level_tag}</span>
@@ -631,10 +631,12 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
       )}
       {toast && (
         <div style={{
-          position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)",
-          background: "rgba(29,29,31,0.9)", color: "#fff", padding: "8px 16px",
-          borderRadius: 99, fontSize: 12, fontWeight: 500, whiteSpace: "nowrap",
-          zIndex: 10, pointerEvents: "auto",
+          position: "fixed", top: 60, left: "50%", transform: "translateX(-50%)",
+          background: "rgba(29,29,31,0.92)", color: "#fff", padding: "10px 20px",
+          borderRadius: 16, fontSize: 13, fontWeight: 500,
+          maxWidth: "min(90vw, 360px)", lineHeight: 1.5, textAlign: "center",
+          zIndex: 9999, pointerEvents: "none",
+          boxShadow: "0 4px 16px rgba(0,0,0,0.2)",
         }}>{toast}</div>
       )}
     </div>
@@ -652,7 +654,7 @@ function calcDomain(values: number[], minRange: number) {
 }
 
 function MiniTrendChart({ data }: { data: { year: number; min_score?: number; min_rank?: number }[] }) {
-  const ALL_YEARS = ["2022", "2023", "2024", "2025"];
+  const ALL_YEARS = ["2023", "2024", "2025"];
 
   // 只保留有数据的行（用于判断是否需要显示图表）
   const rows = data.filter((x) => x.min_score || x.min_rank);
@@ -1704,14 +1706,18 @@ function ResultsContent() {
             <div style={{ fontSize: 18, fontWeight: 600, color: "var(--color-text-primary)", marginBottom: 8 }}>
               {cMajor
                 ? "未找到匹配的结果，请输入正确的专业名称"
-                : cCity || cNature || cTier
-                  ? "未找到匹配的结果，请扩大筛选范围"
-                  : `${province}数据建设中`}
+                : (parsedDisciplines.length > 0 || selectedExcludeRestrictions.length > 0 || hasBatchConstraint)
+                  ? "当前专业筛选下没有找到符合的学校"
+                  : cCity || cNature || cTier
+                    ? "未找到匹配的结果，请扩大筛选范围"
+                    : `${province}数据建设中`}
             </div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
-              {cMajor || cCity || cNature || cTier
-                ? "您可以返回首页重新查询，或清除筛选条件后重试。"
-                : "当前已覆盖北京、广东、河南、山东、江苏、浙江录取数据（2017–2025）。建议先切换以上省份体验完整功能。"}
+              {(parsedDisciplines.length > 0 || selectedExcludeRestrictions.length > 0 || hasBatchConstraint)
+                ? "可放宽或清除上方的专业筛选条件后重试，或返回首页重新查询。"
+                : cMajor || cCity || cNature || cTier
+                  ? "您可以返回首页重新查询，或清除筛选条件后重试。"
+                  : "当前已覆盖北京、广东、河南、山东、江苏、浙江录取数据（2017–2025）。建议先切换以上省份体验完整功能。"}
             </div>
             <button onClick={() => router.push("/")} className="btn-primary">返回首页</button>
           </div>

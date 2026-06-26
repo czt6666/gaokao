@@ -109,7 +109,7 @@ function addToCompareLocal(name: string) {
 
 function MajorCard({ major }: { major: MajorAnalysis }) {
   const [open, setOpen] = useState(false);
-  const sorted = [...major.records].sort((a, b) => b.year - a.year);
+  const sorted = [...major.records].filter((r) => r.year >= 2023).sort((a, b) => b.year - a.year);
 
   return (
     <div style={{
@@ -203,7 +203,7 @@ function MajorCard({ major }: { major: MajorAnalysis }) {
                 趋势预测（{major.big_small_year.trend_analysis.years_used}年数据 · {major.big_small_year.trend_analysis.confidence}置信度）
               </div>
               <div style={{ fontSize: 12, color: "var(--color-text-secondary)" }}>
-                {major.big_small_year.trend_analysis.trend_label} · 预估2025年位次
+                {major.big_small_year.trend_analysis.trend_label} · 预估2026年位次
                 <strong style={{ color: "var(--color-text-primary)", marginLeft: 4 }}>
                   {major.big_small_year.trend_analysis.next_year_estimate.toLocaleString()}
                 </strong>
@@ -593,7 +593,7 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
             </select>
           </div>
           <div style={{ fontSize: 13, color: "var(--color-text-tertiary)", marginBottom: 16 }}>
-            {province}省 · {majors.length} 个专业
+            以下为该校在 <strong style={{ color: "var(--color-text-secondary)" }}>{province}</strong> 的录取数据（共 {majors.length} 个专业），切换右上方省份可查看其他地区
           </div>
 
           {majors.length === 0 ? (

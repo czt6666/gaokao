@@ -33,7 +33,7 @@ echo ""
 echo "→ [1/4] 同步后端代码..."
 rsync -av --no-owner --no-group \
   --exclude='__pycache__' --exclude='*.pyc' \
-  --exclude='*.db' --exclude='*.db-shm' --exclude='*.db-wal' \
+  --exclude='*.db*' --exclude='*.sql.gz' --exclude='*.bak-*' \
   --exclude='.venv' --exclude='venv/' \
   --exclude='db-backup/' \
   --exclude='data/' \

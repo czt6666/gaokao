@@ -62,7 +62,8 @@ def aggregate_plan_2026(rows: list) -> dict:
         })
         for k, v in (("ruanke_grade", rg), ("ruanke_rank", rr), ("discipline_eval", de),
                      ("major_level_tag", mlt), ("major_master", mm), ("major_phd", mp)):
-            if v and not prof.get(k):
+            # "0"/"0.0" 是「无该项数据」的占位值，按空处理，避免前端出现「软科 #0」
+            if v and str(v).strip() not in ("", "0", "0.0") and not prof.get(k):
                 prof[k] = v
     return {
         "plan_count_total": total,

@@ -112,7 +112,8 @@ for tbl in ('admission_records', 'admission_2026'):
 # 科类分布
 print('  derived_category 分布:')
 for cat, cnt in c.execute("SELECT derived_category, COUNT(*) FROM admission_records GROUP BY derived_category ORDER BY COUNT(*) DESC"):
-    print(f'    {cat or \"(空)\":8s} {cnt:>10,}')
+    label = cat if cat else '(空)'
+    print(f'    {label:8s} {cnt:>10,}')
 
 # subject_must 覆盖（分科类省份应 100%）
 filled = c.execute("SELECT COUNT(*) FROM admission_records WHERE derived_category IN ('物理类','历史类') AND subject_must != ''").fetchone()[0]

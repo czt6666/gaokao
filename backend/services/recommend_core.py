@@ -787,6 +787,7 @@ def _paywall_strip(r: dict) -> dict:
         "is_985":       r.get("is_985", ""),
         "is_211":       r.get("is_211", ""),
         "tier":         r.get("tier", ""),
+        "bucket_tier":  r.get("bucket_tier", ""),
         "is_hidden_gem": r.get("is_hidden_gem", False),
         "city_level":   r.get("city_level", ""),
         "flagship_majors": r.get("flagship_majors", ""),
@@ -2106,6 +2107,12 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 safe_list.append(_ex)
                 combined_96.append(_ex)
         _p8_note = f"不足30条→补齐{_need}条标「参考」"
+
+    # 统一冲/稳/保口径：以最终所属桶为唯一来源，供前端卡片标签/志愿表直接使用，
+    # 避免卡片再按概率另算一套与分桶矛盾的冲稳保。
+    for _bt, _bt_list in (("冲", surge_list), ("稳", stable_list), ("保", safe_list)):
+        for _bt_r in _bt_list:
+            _bt_r["bucket_tier"] = _bt
 
     gems_list = sorted(
         [r for r in combined_96 if r["is_hidden_gem"] and r["last_year_min_rank"] > 0 and r["last_year_min_rank"] <= rank * 1.15],

@@ -40,6 +40,7 @@ type SchoolResult = {
   prob_low?: number | null;
   prob_high?: number | null;
   probability_tier?: string;
+  bucket_tier?: string;
   suggested_action: string | null;
   avg_min_rank_3yr: number;
   last_year_min_rank?: number;
@@ -130,7 +131,8 @@ function addToForm(item: SchoolResult, showToast?: (msg: string) => void) {
       major: item.major_name,
       probability: prob,
       action: item.suggested_action,
-      category: prob >= 75 ? "保" : prob >= 45 ? "稳" : "冲",
+      // 冲/稳/保 以推荐分桶为准（与卡片/Tab 一致），缺失时回退按概率
+      category: item.bucket_tier || (prob >= 75 ? "保" : prob >= 45 ? "稳" : "冲"),
     };
     localStorage.setItem(FORM_KEY, JSON.stringify([...saved, newItem]));
     track("add_to_form", { eventData: { school: item.school_name, major: item.major_name } });
@@ -168,8 +170,10 @@ function SchoolCard({ item, province, rank, score, subject, isPaid, onUnlock }: 
   const isGem = item.is_hidden_gem && item.top_gem;
   const isSwarm = item.swarm_discovery && !isGem;
 
-  const probLabel = prob >= 80 ? "保底" : prob >= 55 ? "稳妥" : "冲刺";
-  const probLabelColor = prob >= 80 ? "#059669" : prob >= 55 ? "#1A2744" : "#D97706";
+  // 冲/稳/保 标签以推荐分桶为唯一来源（与所在 Tab 一致）；缺失时回退按概率推断
+  const _bt = item.bucket_tier || (prob >= 80 ? "保" : prob >= 55 ? "稳" : "冲");
+  const probLabel = _bt === "保" ? "保底" : _bt === "稳" ? "稳妥" : "冲刺";
+  const probLabelColor = _bt === "保" ? "#059669" : _bt === "稳" ? "#1A2744" : "#D97706";
 
   return (
     <div
@@ -720,8 +724,10 @@ function MiniTrendChart({ data }: { data: { year: number; min_score?: number; mi
 }
 
 function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult; onUnlock: () => void; unlockLabel?: string }) {
-  const tierColor = item.tier === "冲" ? "#DC2626" : item.tier === "稳" ? "#1A2744" : "#059669";
-  const tierBg = item.tier === "冲" ? "#FEF2F2" : item.tier === "稳" ? "#EFF6FF" : "#F0FDF4";
+  // 冲/稳/保 以推荐分桶为准；缺失时回退展示院校档次
+  const tierWord = item.bucket_tier === "冲" ? "冲刺" : item.bucket_tier === "稳" ? "稳妥" : item.bucket_tier === "保" ? "保底" : item.tier;
+  const tierColor = item.bucket_tier === "冲" ? "#D97706" : item.bucket_tier === "稳" ? "#1A2744" : "#059669";
+  const tierBg = item.bucket_tier === "冲" ? "#FEF2F2" : item.bucket_tier === "稳" ? "#EFF6FF" : "#F0FDF4";
   return (
     <div style={{
       position: "relative", borderRadius: 14, marginBottom: 12,
@@ -739,7 +745,7 @@ function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult;
             <span style={{
               fontSize: 11, fontWeight: 600, padding: "1px 7px", borderRadius: 4,
               background: tierBg, color: tierColor,
-            }}>{item.tier}</span>
+            }}>{tierWord}</span>
             {item.is_985 === "985" && (
               <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "rgba(201,146,42,0.1)", color: "var(--color-accent)", fontWeight: 600 }}>985</span>
             )}

@@ -46,18 +46,6 @@ const OLD_OPTIONS = [
   { label: "理科", value: "理科" },
 ];
 
-const PROVINCE_STATUS: Record<string, "full"|"partial"|"soon"> = {
-  "北京": "full",
-  "河北": "full", "四川": "full", "贵州": "full", "安徽": "full",
-  "广西": "full", "江西": "full", "云南": "full", "山西": "full",
-  "重庆": "full", "内蒙古": "full", "陕西": "full", "吉林": "full",
-  "新疆": "full", "天津": "full", "青海": "full",
-  "河南": "full", "广东": "full", "湖南": "full",
-  "黑龙江": "full", "辽宁": "full", "上海": "full",
-  "福建": "full", "江苏": "full", "山东": "full",
-  "浙江": "full", "湖北": "full", "甘肃": "full", "宁夏": "full",
-  "海南": "partial", "西藏": "partial",
-};
 const HISTORY_KEY = "gaokao_query_history";
 
 function HistoryQuickAccess() {
@@ -186,7 +174,22 @@ export default function Home() {
       if (savedCons) {
         const c = JSON.parse(savedCons);
         if (Array.isArray(c.cDisciplines)) setCDisciplines(c.cDisciplines);
-        if (Array.isArray(c.cCities)) setCCities(c.cCities);
+        if (Array.isArray(c.cCities) && c.cCities.length > 0) {
+          setCCities(c.cCities);
+        } else if (Array.isArray(c.cCityLevels) && c.cCityLevels.length > 0) {
+          // 兼容旧版：将线级（一线/二线/三线）转换为具体城市名
+          fetch(`${API}/api/cities`)
+            .then((r) => (r.ok ? r.json() : { groups: [] }))
+            .then((d) => {
+              const tierSet = new Set(c.cCityLevels as string[]);
+              const cities: string[] = [];
+              for (const g of (d.groups || [])) {
+                if (tierSet.has(g.tier)) cities.push(...g.cities);
+              }
+              if (cities.length) setCCities(cities);
+            })
+            .catch(() => {});
+        }
         if (c.cNature !== undefined) setCNature(c.cNature);
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
         if (c.cBatchTypes !== undefined) {
@@ -368,8 +371,6 @@ export default function Home() {
   const scrollToQuery = () => {
     queryRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
-
-  const status = PROVINCE_STATUS[province];
 
   return (
     <main style={{ minHeight: "100vh", background: "var(--color-bg)", color: "var(--color-text-primary)" }}>
@@ -561,10 +562,6 @@ export default function Home() {
               <select className="apple-select" value={province} onChange={e => setProvince(e.target.value)}>
                 {PROVINCES.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
-              {status === "full" && <p style={{ fontSize: 11, color: "var(--color-success)", marginTop: 5 }}>数据完整（2023–2025，含2025）✓</p>}
-              {status === "partial" && <p style={{ fontSize: 11, color: "var(--color-accent)", marginTop: 5 }}>2023–2025 院校录取数据（含2025）</p>}
-              {status === "soon" && <p style={{ fontSize: 11, color: "var(--color-warning)", marginTop: 5 }}>即将支持</p>}
-              {!status && <p style={{ fontSize: 11, color: "var(--color-text-tertiary)", marginTop: 5 }}>数据建设中</p>}
             </div>
             <div>
               {/* 高考模式标签 */}

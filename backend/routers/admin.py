@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, text
+from sqlalchemy import func, text, distinct
 from sqlalchemy.exc import OperationalError
 from typing import List, Optional
 import datetime, os, json, csv, io
@@ -49,6 +49,37 @@ def stats_today(db: Session = Depends(get_db)):
     revenue_fen  = db.query(func.sum(Order.amount)).filter(Order.status == "paid", Order.pay_time >= today_start).scalar() or 0
     new_users    = db.query(func.count(User.id)).filter(User.created_at >= today_start).scalar() or 0
 
+    # ── 匿名访客（按浏览器 session_id，不要求注册）──
+    # 新访问 = 「首次出现」落在今天的 session（首次访问本站的浏览器）
+    new_visitor_sessions = (
+        db.query(UserEvent.session_id)
+        .filter(UserEvent.session_id != "")
+        .group_by(UserEvent.session_id)
+        .having(func.min(UserEvent.created_at) >= today_start)
+        .subquery()
+    )
+    new_visitors = db.query(func.count()).select_from(new_visitor_sessions).scalar() or 0
+    # 新访问中点击查询的：今天首访 且 提交过查询 的 session
+    new_visitor_queries = (
+        db.query(func.count(distinct(UserEvent.session_id)))
+        .filter(
+            UserEvent.event_type == "query_submit",
+            UserEvent.created_at >= today_start,
+            UserEvent.session_id.in_(db.query(new_visitor_sessions.c.session_id)),
+        )
+        .scalar() or 0
+    )
+    # 今日活跃访客 UV / 访问量 PV / 加入志愿表
+    active_visitors = db.query(func.count(distinct(UserEvent.session_id))).filter(
+        UserEvent.created_at >= today_start, UserEvent.session_id != ""
+    ).scalar() or 0
+    page_views = db.query(func.count(UserEvent.id)).filter(
+        UserEvent.event_type == "page_view", UserEvent.created_at >= today_start
+    ).scalar() or 0
+    add_form = db.query(func.count(UserEvent.id)).filter(
+        UserEvent.event_type == "add_to_form", UserEvent.created_at >= today_start
+    ).scalar() or 0
+
     total_users         = db.query(func.count(User.id)).scalar() or 0
     total_paid          = db.query(func.count(Order.id)).filter(Order.status == "paid").scalar() or 0
     total_revenue_fen   = db.query(func.sum(Order.amount)).filter(Order.status == "paid").scalar() or 0
@@ -57,6 +88,10 @@ def stats_today(db: Session = Depends(get_db)):
 
     # 付费转化率（今日点击解锁 vs 今日付费）
     conv_rate = round(paid_orders / export_clicks * 100, 1) if export_clicks > 0 else 0
+    # 平均单价（今日收入 / 今日付费笔数，元）
+    avg_price = round((revenue_fen or 0) / 100 / paid_orders, 2) if paid_orders > 0 else 0
+    # 新访客 → 查询 转化率
+    nv_query_rate = round(new_visitor_queries / new_visitors * 100, 1) if new_visitors > 0 else 0
 
     # 兼容历史库：部分环境 users 表尚未迁移 wechat_mini_openid 字段
     # 优先按小程序 openid 统计，缺列时回退到 wechat_openid，避免后台接口 500
@@ -74,6 +109,14 @@ def stats_today(db: Session = Depends(get_db)):
         "today_new_users":  new_users,
         "today_export_clicks": export_clicks,
         "today_conv_rate":  conv_rate,
+        # 匿名访客（不要求注册）
+        "today_new_visitors":         new_visitors,
+        "today_new_visitor_queries":  new_visitor_queries,
+        "today_nv_query_rate":        nv_query_rate,
+        "today_active_visitors":      active_visitors,
+        "today_page_views":           page_views,
+        "today_add_form":             add_form,
+        "today_avg_price":            avg_price,
         "total_users":      total_users,
         "total_paid":       total_paid,
         "total_revenue":    round((total_revenue_fen or 0) / 100, 2),

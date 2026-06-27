@@ -16,6 +16,8 @@ function toBJ(utcStr: string): string {
 interface TodayStats {
   today_queries: number; today_paid: number; today_revenue: number;
   today_new_users: number; today_export_clicks: number; today_conv_rate: number;
+  today_new_visitors: number; today_new_visitor_queries: number; today_nv_query_rate: number;
+  today_active_visitors: number; today_page_views: number; today_add_form: number; today_avg_price: number;
   total_users: number; total_paid: number; total_revenue: number; total_queries: number;
   users_mini: number; users_web: number;
 }
@@ -924,7 +926,7 @@ export default function AdminPage() {
 
       {/* ── Top nav ── */}
       <div style={{ background: "rgba(255,255,255,0.9)", backdropFilter: "blur(12px)", borderBottom: "1px solid #E5E5EA", position: "sticky", top: 0, zIndex: 100 }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: "0 24px", height: 52, display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             <a href="/" style={{ fontSize: 15, fontWeight: 700, color: "#000", textDecoration: "none" }}>水卢冷门高报引擎</a>
             <div style={{ width: 1, height: 16, background: "#E5E5EA" }} />
@@ -951,7 +953,7 @@ export default function AdminPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "28px 24px" }}>
+      <div style={{ maxWidth: 1440, margin: "0 auto", padding: "28px 24px" }}>
         {error && (
           <div style={{ background: "#FFF0EF", border: "1px solid #FFB0AD", borderRadius: 8, padding: "12px 16px", color: "#FF3B30", fontSize: 13, marginBottom: 20 }}>
             {error} <button onClick={() => setError("")} style={{ marginLeft: 8, background: "none", border: "none", cursor: "pointer", color: "#FF3B30" }}>✕</button>
@@ -967,13 +969,22 @@ export default function AdminPage() {
         {activeTab === "dashboard" && (
           <>
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", letterSpacing: 1, marginBottom: 12, textTransform: "uppercase" }}>今日实时</div>
-            <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
-              <StatCard label="今日查询" value={stats?.today_queries ?? "—"} sub="次" />
+            <div style={{ display: "flex", gap: 10, marginBottom: 12, flexWrap: "wrap" }}>
+              <StatCard label="新访问" value={stats?.today_new_visitors ?? "—"} sub="首次访问的访客" color="#5856D6" />
+              <StatCard label="新访问点击查询" value={stats?.today_new_visitor_queries ?? "—"} sub={stats ? `占新访问 ${stats.today_nv_query_rate}%` : "次"} color="#5856D6" />
+              <StatCard label="新注册" value={stats?.today_new_users ?? "—"} sub="人" />
               <StatCard label="点击解锁" value={stats?.today_export_clicks ?? "—"} sub="次" />
-              <StatCard label="今日付费" value={stats?.today_paid ?? "—"} sub="笔" color="#0071E3" />
+              <StatCard label="付费" value={stats?.today_paid ?? "—"} sub="笔" color="#0071E3" />
               <StatCard label="转化率" value={stats ? `${stats.today_conv_rate}%` : "—"} sub="点击→付费" color={stats && stats.today_conv_rate > 5 ? "#34C759" : "#FF9500"} />
               <StatCard label="今日收入" value={stats ? `¥${stats.today_revenue}` : "—"} sub="元" color="#34C759" />
-              <StatCard label="今日新用户" value={stats?.today_new_users ?? "—"} sub="人" />
+              <StatCard label="平均单价" value={stats ? `¥${stats.today_avg_price}` : "—"} sub="元/笔" color="#34C759" />
+            </div>
+            <div style={{ display: "flex", gap: 10, marginBottom: 24, flexWrap: "wrap" }}>
+              <StatCard label="今日查询" value={stats?.today_queries ?? "—"} sub="次" />
+              <StatCard label="访问量 PV" value={stats?.today_page_views ?? "—"} sub="页面浏览次数" />
+              <StatCard label="活跃访客 UV" value={stats?.today_active_visitors ?? "—"} sub="今日来过的访客" />
+              <StatCard label="老访客" value={stats ? Math.max(stats.today_active_visitors - stats.today_new_visitors, 0) : "—"} sub="非首次访问" />
+              <StatCard label="加入志愿表" value={stats?.today_add_form ?? "—"} sub="次" />
             </div>
 
             <div style={{ fontSize: 12, fontWeight: 600, color: "#6E6E73", letterSpacing: 1, marginBottom: 12, textTransform: "uppercase" }}>累计数据</div>

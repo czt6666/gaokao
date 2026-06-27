@@ -1567,38 +1567,6 @@ function ResultsContent() {
 
       <div style={{ maxWidth: 680, margin: "0 auto", padding: "0 12px 80px" }}>
 
-        {/* Summary Banner */}
-        {(data?.total_matched ?? 0) > 0 && (
-          <div style={{
-            margin: "16px 0 0",
-            padding: "14px 18px",
-            background: "linear-gradient(135deg, rgba(26,39,68,0.04) 0%, rgba(201,146,42,0.06) 100%)",
-            borderRadius: 12,
-            border: "1px solid var(--color-border-light)",
-          }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-              <div>
-                <span style={{ fontSize: 15, fontWeight: 700, color: "var(--color-navy)", fontFamily: "var(--font-serif)" }}>
-                  为你精选 {totalSchools} 所学校
-                </span>
-                {gemCount > 0 && (
-                  <span style={{ marginLeft: 8, fontSize: 13, color: "var(--color-accent)", fontWeight: 600 }}>
-                    · 含 {gemCount} 所冷门宝藏
-                  </span>
-                )}
-              </div>
-              <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", textAlign: "right", flexShrink: 0 }}>
-                冲 {data?.surge.length} · 稳 {data?.stable.length} · 保 {data?.safe.length}
-              </div>
-            </div>
-            {!data?.is_paid && lockedCount > 0 && (
-              <div style={{ marginTop: 10, fontSize: 13, color: "#7F1D1D", lineHeight: 1.6 }}>
-                每类可免费查看前 2 所，还有 <strong>{lockedCount} 所</strong>被锁定——解锁后查看完整概率分析、历年趋势、在读生口碑。
-              </div>
-            )}
-          </div>
-        )}
-
         {/* AI 预测入口 —— 已隐藏（2026-04-26）
           原因：ai-predict 页面依赖外部 MiroFish 服务，当前未部署，用户反馈入口混乱。
           Result 页已具备本地群体智能（swarm_predictor.py，<30ms），功能重叠。
@@ -1619,39 +1587,6 @@ function ResultsContent() {
           <Link ... > ... </Link>
         )}
         */}
-
-        {/* Contextual rank note */}
-        {(data?.total_matched ?? 0) > 0 && (() => {
-          const r = Number(rank);
-          const n = totalSchools;
-          let label = "";
-          let note = "";
-          if (r <= 3000) {
-            label = "顶尖位次段";
-            note = `你的位次位于全省前 3,000 名，全国仅有极少数顶级院校能精准匹配。共筛选出 ${n} 所，数量少但含金量高，建议认真研读每一所的专业细节。`;
-          } else if (r <= 15000) {
-            label = "高分位次段";
-            note = `你的位次属于高分段，推荐院校以 985 / 211 重点高校为主，共匹配 ${n} 所。建议重点关注专业排名与冷门宝藏院校中的强势学科。`;
-          } else if (r > 80000) {
-            label = "普通位次段";
-            note = `你的位次对应大量双一流 / 211 院校，共匹配 ${n} 所。建议优先关注专业就业前景与城市机会，而非单纯追求院校综合排名。`;
-          } else if (n < 60) {
-            label = "中等位次段";
-            note = `当前位次匹配到 ${n} 所院校。重点关注其中标注「冷门宝藏」的院校——相同分数，往往能进入更强的学科平台。`;
-          }
-          if (!note) return null;
-          return (
-            <div style={{
-              margin: "8px 0 0", padding: "10px 14px",
-              background: "rgba(14,165,233,0.05)",
-              borderLeft: "3px solid #0EA5E9",
-              borderRadius: "0 8px 8px 0",
-              fontSize: 12, color: "#0C4A6E", lineHeight: 1.7,
-            }}>
-              <strong style={{ fontWeight: 600 }}>{label}：</strong>{note}
-            </div>
-          );
-        })()}
 
         {/* 季卡推广 — 未付费或 trial 用户可见 */}
         {data && (!data.is_paid || data.is_trial) && data.total_matched > 0 && (
@@ -1679,46 +1614,6 @@ function ResultsContent() {
           ))}
         </div>
 
-        {/* Tier filter */}
-        <div style={{ display: "flex", gap: 6, margin: "16px 0", flexWrap: "wrap", alignItems: "center" }}>
-          {["", "985", "211", "双一流", "普通"].map((t) => (
-            <button
-              key={t}
-              onClick={() => setFilterTier(t)}
-              style={{
-                fontSize: 12, padding: "4px 12px", borderRadius: 99,
-                border: `1px solid ${filterTier === t ? "var(--color-accent)" : "var(--color-border-light)"}`,
-                background: filterTier === t ? "rgba(201,146,42,0.08)" : "transparent",
-                color: filterTier === t ? "var(--color-accent)" : "var(--color-text-secondary)",
-                cursor: "pointer", transition: "all 0.15s",
-              }}
-            >
-              {t || "全部层次"}
-            </button>
-          ))}
-          <Link
-            href={`/search?tab=major&province=${encodeURIComponent(province)}&rank=${encodeURIComponent(rank)}&subject=${encodeURIComponent(subject)}`}
-            style={{
-              fontSize: 12, padding: "4px 12px", borderRadius: 99, marginLeft: "auto",
-              border: "1px solid var(--color-separator)", textDecoration: "none",
-              background: "transparent", color: "var(--color-text-secondary)",
-              display: "flex", alignItems: "center", gap: 4,
-            }}
-          >
-            ≡ 按专业找
-          </Link>
-        </div>
-
-        {/* P4: 新高考省份数据不足警告 */}
-        {data && data.total_matched > 0 && ["广东", "湖南", "湖北", "重庆", "福建", "江苏", "河北", "辽宁"].includes(province) && (
-          <div style={{
-            background: "#FFFBEB", border: "1px solid #FDE68A", borderRadius: 8,
-            padding: "10px 14px", marginBottom: 12, fontSize: 12, color: "#92400E", lineHeight: 1.7,
-          }}>
-            <strong>提示：</strong>{province}于2021年实施新高考改革，现有参考数据仅4年（2021–2025）。样本量较少，冲/稳/保分类可能存在偏差，建议结合目标院校招生简章综合判断。
-          </div>
-        )}
-
         {/* No data */}
         {data && data.total_matched === 0 && (
           <div style={{ textAlign: "center", padding: "64px 0" }}>
@@ -1730,14 +1625,14 @@ function ResultsContent() {
                   ? "当前专业筛选下没有找到符合的学校"
                   : cCity || cNature || cTier
                     ? "未找到匹配的结果，请扩大筛选范围"
-                    : `${province}数据建设中`}
+                    : `${province}暂无匹配学校`}
             </div>
             <div style={{ fontSize: 14, color: "var(--color-text-secondary)", maxWidth: 280, margin: "0 auto 24px", lineHeight: 1.6 }}>
               {(parsedDisciplines.length > 0 || selectedExcludeRestrictions.length > 0 || hasBatchConstraint)
                 ? "可放宽或清除上方的专业筛选条件后重试，或返回首页重新查询。"
                 : cMajor || cCity || cNature || cTier
                   ? "您可以返回首页重新查询，或清除筛选条件后重试。"
-                  : "当前已覆盖北京、广东、河南、山东、江苏、浙江录取数据（2017–2025）。建议先切换以上省份体验完整功能。"}
+                  : "目前没有找到匹配您条件的学校，建议调整位次范围、切换省份或放宽筛选条件后重试。"}
             </div>
             <button onClick={() => router.push("/")} className="btn-primary">返回首页</button>
           </div>
@@ -1793,7 +1688,28 @@ function ResultsContent() {
 
             {currentList.length === 0 ? (
               <div style={{ textAlign: "center", padding: "48px 0", color: "var(--color-text-tertiary)", fontSize: 14 }}>
-                {activeTab === "gems" ? "该位次区间暂无冷门推荐" : "暂无匹配数据"}
+                {(() => {
+                  const conds: string[] = [];
+                  if (province) conds.push(`省份「${province}」`);
+                  if (subject) conds.push(`选科「${subject}」`);
+                  if (rank) conds.push(`位次 ${Number(rank).toLocaleString()}`);
+                  if (score) conds.push(`分数 ${score} 分`);
+                  if (cCity) conds.push(`城市「${cCity}」`);
+                  if (cNature) conds.push(`性质「${cNature}」`);
+                  if (cTier) conds.push(`层次「${cTier}」`);
+                  if (cMajor) conds.push(`专业关键词「${cMajor}」`);
+                  if (parsedDisciplines.length) conds.push(`学科门类（${parsedDisciplines.map(d => d.discipline + (d.major_class ? `:${d.major_class}` : "")).join("、")}）`);
+                  if (batchFilterParam) conds.push(`批次「${batchFilterParam}」`);
+                  if (selectedGender) conds.push(`性别「${selectedGender === "male" ? "男生" : "女生"}」`);
+                  if (effectiveSpecialPlans.length) conds.push(`已排除 ${effectiveSpecialPlans.length} 类特殊计划`);
+                  const summary = conds.length ? conds.join("，") : "";
+                  return (
+                    <div>
+                      <p style={{ marginBottom: 8, fontWeight: 600, color: "var(--color-text-secondary)" }}>{activeTab === "gems" ? "该位次区间暂无冷门推荐" : "暂无匹配数据"}</p>
+                      {summary && <p style={{ fontSize: 12, opacity: 0.75, maxWidth: 460, margin: "0 auto", lineHeight: 1.6 }}>当前查询条件：{summary}。请放宽筛选条件后重试。</p>}
+                    </div>
+                  );
+                })()}
               </div>
             ) : (() => {
               const doUnlock = (productType?: string) => { track("unlock_click", { province, rankInput: Number(rank) }); openPayModal(productType); };

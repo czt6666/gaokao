@@ -1492,9 +1492,19 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
     if constraints:
         _pre = len(grouped)
         _major_kw = [k.lower() for k in constraints.get("major_keywords", []) if k]
-        _city_lv = set(constraints.get("city_levels", []))
+        _cities = set(constraints.get("cities", []))
         _natures = set(constraints.get("natures", []))
         _tiers = set(constraints.get("tiers", []))
+
+        # 城市筛选：建「学校名→市本级」映射（直辖市的区按 school_province 归并为市本级）。
+        # 仅在启用城市筛选时构建，避免无谓查询。
+        _school_city: dict = {}
+        if _cities:
+            _MUNI = ("北京", "上海", "天津", "重庆")
+            for _sn, _cty, _sp in db.execute(_sqla_text(
+                "SELECT DISTINCT school_name, COALESCE(city,''), COALESCE(school_province,'') "
+                "FROM admission_2026 WHERE province=:p"), {"p": province}).fetchall():
+                _school_city[_sn] = _sp if _sp in _MUNI else _cty
 
         def _pass_constraint(school_name: str, major_name: str) -> bool:
             sch = school_cache.get(school_name)
@@ -1505,11 +1515,9 @@ def _run_recommend_core(province: str, rank: int, subject: str, mode: str, db: S
                 _text = major_name.lower()
                 if not any(kw in _text for kw in _major_kw):
                     return False
-            # 城市等级
-            if _city_lv:
-                _cl = (sch.city_level if sch else "") or ""
-                # 兼容 "一线城市" vs "一线" 的写法
-                if not any(_cl.startswith(c) or c.startswith(_cl) for c in _city_lv if c):
+            # 城市（具体城市名；直辖市已按市本级归并）
+            if _cities:
+                if _school_city.get(school_name, "") not in _cities:
                     return False
             # 办学性质
             if _natures:

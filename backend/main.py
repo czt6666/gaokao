@@ -315,7 +315,7 @@ def recommend(
     mode: str = Query("all", description="模式：all/gem(只看冷门)/safe(保守)"),
     order_no: str = Query("", description="付费订单号，有效则解锁完整分析"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
-    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_city: str = Query("", description="目标城市名，逗号分隔（城市筛选弹窗按一二三线分组多选）"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query(
@@ -449,7 +449,8 @@ def recommend(
             k.strip() for k in c_major.strip().split() if k.strip()
         ]
     if c_city.strip():
-        constraints["city_levels"] = [
+        # c_city 现为具体城市名列表（城市筛选弹窗，按一二三线分组多选）
+        constraints["cities"] = [
             x.strip() for x in c_city.strip().split(",") if x.strip()
         ]
     if c_nature.strip():
@@ -1749,6 +1750,43 @@ _BENKE_ORDER = [
     "哲学", "经济学", "法学", "教育学", "文学", "历史学", "理学", "工学",
     "农学", "医学", "管理学", "艺术学", "军事学", "交叉学科",
 ]
+
+
+_CITY_TIERS = ["一线", "新一线", "二线", "三线", "四线", "五线"]
+_MUNICIPALITIES = ("北京", "上海", "天津", "重庆")
+
+
+def _norm_city_tier(city_level: str) -> str:
+    """城市层级归一：取首段、去「城市」后缀 → 一线/新一线/二线/三线/四线/五线，其余归「其他」。"""
+    s = (city_level or "").split("/")[0].strip().replace("城市", "")
+    return s if s in _CITY_TIERS else "其他"
+
+
+@app.get("/api/cities")
+def list_cities(db: Session = Depends(get_db)):
+    """全国城市按一二三线分组（供城市筛选弹窗用）。
+    数据来自 admission_2026：直辖市的「区」按 school_province 归并为市本级；
+    同城多个 city_level 写法时取众数。"""
+    from sqlalchemy import text as _text
+    from collections import Counter
+    rows = db.execute(_text(
+        "SELECT DISTINCT "
+        "CASE WHEN school_province IN ('北京','上海','天津','重庆') THEN school_province ELSE city END AS disp_city, "
+        "city_level FROM admission_2026 WHERE COALESCE(city,'') != ''"
+    )).fetchall()
+    votes: dict = defaultdict(Counter)
+    for disp_city, lv in rows:
+        if disp_city:
+            votes[disp_city][_norm_city_tier(lv)] += 1
+    tier_cities: dict = defaultdict(list)
+    for city, c in votes.items():
+        tier_cities[c.most_common(1)[0][0]].append(city)
+    out = []
+    for t in _CITY_TIERS + ["其他"]:
+        cities = sorted(tier_cities.get(t, []))
+        if cities:
+            out.append({"tier": t, "cities": cities})
+    return {"groups": out}
 
 
 @app.get("/api/major/catalog")

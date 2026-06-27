@@ -6,6 +6,7 @@ import { track } from "@/lib/track";
 import AuthNav from "@/components/AuthNav";
 import FeedbackModal from "@/components/FeedbackModal";
 import DisciplineFilter, { encodeDisciplineFilter, type DisciplineSelection } from "@/components/DisciplineFilter";
+import CityFilter from "@/components/CityFilter";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
@@ -137,7 +138,6 @@ export default function Home() {
   const provinceInitRef = useRef(false);
 
   // ── 偏好约束 ──
-  const CITY_LEVEL_OPTIONS = ["一线城市", "新一线", "二线", "三线"];
   const NATURE_OPTIONS = ["公办", "民办"];
   const TIER_OPTIONS = ["985", "211", "双一流", "普通"];
   const BATCH_OPTIONS = [
@@ -156,7 +156,7 @@ export default function Home() {
   ];
   const [showConstraints, setShowConstraints] = useState(false);
   const [cDisciplines, setCDisciplines] = useState<DisciplineSelection[]>([]);
-  const [cCityLevels, setCCityLevels] = useState<string[]>([]);
+  const [cCities, setCCities] = useState<string[]>([]);
   const [cNature, setCNature] = useState<string[]>([]);
   const [cTiers, setCTiers] = useState<string[]>([]);
   const [cBatchTypes, setCBatchTypes] = useState<string[]>([]);
@@ -186,7 +186,7 @@ export default function Home() {
       if (savedCons) {
         const c = JSON.parse(savedCons);
         if (Array.isArray(c.cDisciplines)) setCDisciplines(c.cDisciplines);
-        if (c.cCityLevels !== undefined) setCCityLevels(c.cCityLevels);
+        if (Array.isArray(c.cCities)) setCCities(c.cCities);
         if (c.cNature !== undefined) setCNature(c.cNature);
         if (c.cTiers !== undefined) setCTiers(c.cTiers);
         if (c.cBatchTypes !== undefined) {
@@ -236,10 +236,10 @@ export default function Home() {
     if (!constraintInitRef.current) { constraintInitRef.current = true; return; }
     try {
       localStorage.setItem("gaokao_constraints", JSON.stringify({
-        cDisciplines, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints
+        cDisciplines, cCities, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints
       }));
     } catch {}
-  }, [cDisciplines, cCityLevels, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints]);
+  }, [cDisciplines, cCities, cNature, cTiers, cBatchTypes, cGender, cSpecialPlans, showConstraints]);
 
   // 省份变化自动缓存（跳过首次挂载）
   useEffect(() => {
@@ -293,7 +293,7 @@ export default function Home() {
       eventData: { mode, subject: subjectStr, exam_mode: examMode, mock_score: mode === "score" ? mockScore : undefined },
       subject: subjectStr,
       examMode,
-      cCity: cCityLevels.join(","),
+      cCity: cCities.join(","),
       cNature: cNature.join(","),
       cTier: cTiers.join(","),
     });
@@ -306,7 +306,7 @@ export default function Home() {
         const parts: string[] = [];
         const disciplineEncoded = encodeDisciplineFilter(cDisciplines);
         if (disciplineEncoded) parts.push(`discipline_filter=${encodeURIComponent(disciplineEncoded)}`);
-        if (cCityLevels.length) parts.push(`c_city=${encodeURIComponent(cCityLevels.join(","))}`);
+        if (cCities.length) parts.push(`c_city=${encodeURIComponent(cCities.join(","))}`);
         if (cNature.length) parts.push(`c_nature=${encodeURIComponent(cNature.join(","))}`);
         if (cTiers.length) parts.push(`c_tier=${encodeURIComponent(cTiers.join(","))}`);
         if (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) {
@@ -696,7 +696,7 @@ export default function Home() {
                 fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
               }}>{showConstraints ? "−" : "+"}</span>
               添加偏好约束
-              {(cDisciplines.length || cCityLevels.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
+              {(cDisciplines.length || cCities.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
                 <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
               ) : null}
             </button>
@@ -731,9 +731,9 @@ export default function Home() {
                   >
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 600, color: "var(--color-text-primary)" }}>院校偏好</span>
-                      {(cCityLevels.length || cNature.length || cTiers.length) ? (
+                      {(cCities.length || cNature.length || cTiers.length) ? (
                         <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>
-                          {cCityLevels.length + cNature.length + cTiers.length}项
+                          {cCities.length + cNature.length + cTiers.length}项
                         </span>
                       ) : null}
                     </div>
@@ -741,22 +741,9 @@ export default function Home() {
                   </button>
                   {showSchoolPrefs && (
                     <div style={{ marginTop: 12 }}>
-                      {/* 城市等级 */}
+                      {/* 城市筛选（全国城市，按一二三线分组弹窗） */}
                       <div style={{ marginBottom: 12 }}>
-                        <label style={{ fontSize: 11, fontWeight: 600, color: "var(--color-text-tertiary)", display: "block", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".5px" }}>城市等级</label>
-                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                          {CITY_LEVEL_OPTIONS.map(lv => {
-                            const active = cCityLevels.includes(lv);
-                            return (
-                              <button key={lv} onClick={() => setCCityLevels(prev => active ? prev.filter(x => x !== lv) : [...prev, lv])} style={{
-                                padding: "6px 14px", borderRadius: 980, fontSize: 13, cursor: "pointer",
-                                border: active ? "none" : "1px solid var(--color-separator)",
-                                background: active ? "var(--color-navy)" : "var(--color-bg)",
-                                color: active ? "#fff" : "var(--color-text-secondary)", transition: "all .15s",
-                              }}>{lv}</button>
-                            );
-                          })}
-                        </div>
+                        <CityFilter selected={cCities} onChange={setCCities} />
                       </div>
                       {/* 办学性质 + 院校档次 */}
                       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

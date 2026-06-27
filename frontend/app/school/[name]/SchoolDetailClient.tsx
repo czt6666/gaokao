@@ -15,6 +15,7 @@ type Employment = {
 
 type MajorAnalysis = {
   major_name: string;
+  major_full: string;
   major_remark: string;
   subject_req: string;
   plan_count: number;
@@ -603,7 +604,7 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
           ) : (
             <div>
               {majors.map((major) => (
-                <MajorCard key={`${major.major_name}|${major.major_remark}`} major={major} />
+                <MajorCard key={major.major_full || major.major_name} major={major} />
               ))}
             </div>
           )}

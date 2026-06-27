@@ -122,8 +122,26 @@ def version():
 def on_startup():
     init_db()
     _start_scheduler()
-    # 推荐缓存预热：需要时取消下一行注释
+    # 预热城市线级缓存（避免首个 /api/cities 请求阻塞） + 推荐缓存
+    _prewarm_caches()
     # start_prewarm_daemon()
+
+
+def _prewarm_caches():
+    """启动时预热缓存：城市线级映射。不阻塞启动。"""
+    import threading
+    def _warm():
+        try:
+            from database import SessionLocal
+            db = SessionLocal()
+            try:
+                _get_tier_cities_map(db)
+                logger.info("[prewarm] 城市线级缓存已预热")
+            finally:
+                db.close()
+        except Exception as e:
+            logger.warning(f"[prewarm] 城市缓存预热失败: {e}")
+    threading.Thread(target=_warm, daemon=True).start()
 
 
 def _start_scheduler():
@@ -316,6 +334,9 @@ def recommend(
     order_no: str = Query("", description="付费订单号，有效则解锁完整分析"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
     c_city: str = Query("", description="目标城市名，逗号分隔（城市筛选弹窗按一二三线分组多选）"),
+    c_city_level: str = Query(
+        "", description="[兼容旧版] 目标城市线级，逗号分隔（如 一线,二线），自动展开为对应城市名"
+    ),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query(
@@ -448,11 +469,18 @@ def recommend(
         constraints["major_keywords"] = [
             k.strip() for k in c_major.strip().split() if k.strip()
         ]
+    # 收集目标城市：新版 c_city（具体城市名）+ 旧版 c_city_level（线级展开）
+    _city_names: list[str] = []
     if c_city.strip():
-        # c_city 现为具体城市名列表（城市筛选弹窗，按一二三线分组多选）
-        constraints["cities"] = [
-            x.strip() for x in c_city.strip().split(",") if x.strip()
-        ]
+        _city_names.extend(x.strip() for x in c_city.strip().split(",") if x.strip())
+    if c_city_level.strip():
+        tier_map = _get_tier_cities_map(db)
+        for t in c_city_level.strip().split(","):
+            t = t.strip()
+            if t and t in tier_map:
+                _city_names.extend(tier_map[t])
+    if _city_names:
+        constraints["cities"] = _city_names
     if c_nature.strip():
         constraints["natures"] = [
             x.strip() for x in c_nature.strip().split(",") if x.strip()
@@ -590,14 +618,16 @@ def school_detail(
         ),
         {"sn": school_name, "p": province}
     ).fetchall()
-    # 建立 major_name -> info 的映射（同名多方向：取首条作代表，预估位次取最优/最小的非空值）
-    majors_by_name = {}
+    # 建立 major_full -> info 的映射（不同校区/方向按 full name 区分，不再合并）
+    # fallback：若 major_full 为空，用 major_name 兜底（历史数据兼容）
+    majors_by_full = {}
     for r in a26_rows:
-        mn = r[0]
+        mf = (r[1] or "").strip() or r[0]  # major_full  or fallback to major_name
         _est = r[17]
-        if mn not in majors_by_name:
-            majors_by_name[mn] = {
-                "major_full": r[1] or mn,
+        if mf not in majors_by_full:
+            majors_by_full[mf] = {
+                "major_name": r[0] or mf,
+                "major_full": mf,
                 "major_remark": r[2] or "",
                 "subject_req": r[3] or "",
                 "est_rank_26": _est,
@@ -616,10 +646,10 @@ def school_detail(
                 "major_level_tag": r[16] or "",
             }
         else:
-            # 同名其它方向：补一个更优(更小)的预估位次作代表
-            _cur = majors_by_name[mn]["est_rank_26"]
+            # 同 full 多行（极少数重复）：取更优预估位次
+            _cur = majors_by_full[mf]["est_rank_26"]
             if _est and (not _cur or _est < _cur):
-                majors_by_name[mn]["est_rank_26"] = _est
+                majors_by_full[mf]["est_rank_26"] = _est
 
     # 历年录取记录
     records = (
@@ -632,10 +662,10 @@ def school_detail(
         .all()
     )
 
-    # 按 专业名称 分组（同名不同方向/校区/专项合并为一个专业，避免学校页专业列表碎片化）。
+    # 按 专业名 + 备注 分组（相同 major_full 对应相同 major_remark，以此区分不同校区/方向）。
     # 每年保留一条代表记录：优先普通批(无特殊限制)，再取 min_rank 最大(最易录取的主线)，
     # 避免定向/专项等异常高位次记录污染该专业的历年展示。
-    _by_name_year = defaultdict(dict)  # major_name -> {year: best_rec}
+    _by_key_year = defaultdict(dict)  # "major_name||major_remark" -> {year: best_rec}
     for r in records:
         # 院校最低分是学校级底线占位行，不作为独立专业展示
         if not r.major_name or "院校最低分" in r.major_name:
@@ -648,7 +678,8 @@ def school_detail(
             "major_remark": r.major_remark or "",
             "restricted": bool((r.major_restrictions or "").strip()),
         }
-        slot = _by_name_year[r.major_name]
+        key = f"{r.major_name}||{r.major_remark or ''}"
+        slot = _by_key_year[key]
         cur = slot.get(r.year)
         if cur is None:
             slot[r.year] = rec
@@ -659,7 +690,7 @@ def school_detail(
             if new_key > cur_key:
                 slot[r.year] = rec
 
-    major_records = {name: list(yrs.values()) for name, yrs in _by_name_year.items()}
+    major_records = {name: list(yrs.values()) for name, yrs in _by_key_year.items()}
 
     # 学科评估
     evals = (
@@ -700,23 +731,30 @@ def school_detail(
     }
 
     major_analysis = []
-    # 以专业名为维度生成条目（同名已合并）
-    for major_name, recs in major_records.items():
+    # 以 major_full 为维度生成条目（不同校区/方向不再合并）
+    for major_full, mi in majors_by_full.items():
+        major_name = mi.get("major_name", major_full)
+        major_remark = mi.get("major_remark", "")
+        # 匹配历年录取记录：按 major_name + major_remark 查找（同向优先，回退到仅按名匹配）
+        key_exact = f"{major_name}||{major_remark}"
+        key_plain = f"{major_name}||"
+        recs = major_records.get(key_exact) or major_records.get(key_plain) or []
+        # 若仍无匹配，尝试所有以该 major_name 开头的 key（兜底取第一个）
+        if not recs:
+            for k, v in major_records.items():
+                if k.startswith(f"{major_name}||"):
+                    recs = v
+                    break
         valid_recs = [r for r in recs if (r.get("min_rank") or 0) > 0]
-        if not valid_recs:
-            continue
         recs_sorted = sorted(valid_recs, key=lambda x: x["year"])
-        major_remark = recs_sorted[-1].get("major_remark", "") if recs_sorted else ""
         bsy = detect_big_small_year(recs_sorted[-3:])
         gem_b = hidden_gem_type_b(major_name)
         emp = get_major_employment(major_name, db)
-        # 从 admission_2026 补充选科要求、招生人数、专业全称等信息
-        mi = majors_by_name.get(major_name, {})
         major_analysis.append(
             {
                 "major_name": major_name,
-                "major_full": mi.get("major_full", major_name),
-                "major_remark": major_remark or mi.get("major_remark", ""),
+                "major_full": major_full,
+                "major_remark": major_remark,
                 "subject_req": mi.get("subject_req", ""),
                 "plan_count": mi.get("plan_count"),
                 "tuition": mi.get("tuition"),
@@ -744,15 +782,16 @@ def school_detail(
     )
 
     # admission_2026 有数据但 admission_records 完全缺失的情况：保留条目但 records 为空
-    if not major_analysis and majors_by_name:
-        for major_name, mi in majors_by_name.items():
+    if not major_analysis and majors_by_full:
+        for major_full, mi in majors_by_full.items():
+            major_name = mi.get("major_name", major_full)
             bsy = detect_big_small_year([])
             gem_b = hidden_gem_type_b(major_name)
             emp = get_major_employment(major_name, db)
             major_analysis.append(
                 {
                     "major_name": major_name,
-                    "major_full": mi.get("major_full", major_name),
+                    "major_full": major_full,
                     "major_remark": mi.get("major_remark", ""),
                     "subject_req": mi.get("subject_req", ""),
                     "plan_count": mi.get("plan_count"),
@@ -1755,20 +1794,17 @@ _BENKE_ORDER = [
 _CITY_TIERS = ["一线", "新一线", "二线", "三线", "四线", "五线"]
 _MUNICIPALITIES = ("北京", "上海", "天津", "重庆")
 
-
-def _norm_city_tier(city_level: str) -> str:
-    """城市层级归一：取首段、去「城市」后缀 → 一线/新一线/二线/三线/四线/五线，其余归「其他」。"""
-    s = (city_level or "").split("/")[0].strip().replace("城市", "")
-    return s if s in _CITY_TIERS else "其他"
+# 线级→城市名缓存（首次调用时从 admission_2026 构建，兼容旧版 c_city_level 参数）
+_tier_cities_cache: dict | None = None
 
 
-@app.get("/api/cities")
-def list_cities(db: Session = Depends(get_db)):
-    """全国城市按一二三线分组（供城市筛选弹窗用）。
-    数据来自 admission_2026：直辖市的「区」按 school_province 归并为市本级；
-    同城多个 city_level 写法时取众数。"""
-    from sqlalchemy import text as _text
+def _get_tier_cities_map(db: Session) -> dict:
+    """返回 {线级: [城市名列表]}，首次调用时从 admission_2026 构建并缓存。"""
+    global _tier_cities_cache
+    if _tier_cities_cache is not None:
+        return _tier_cities_cache
     from collections import Counter
+    from sqlalchemy import text as _text
     rows = db.execute(_text(
         "SELECT DISTINCT "
         "CASE WHEN school_province IN ('北京','上海','天津','重庆') THEN school_province ELSE city END AS disp_city, "
@@ -1781,12 +1817,28 @@ def list_cities(db: Session = Depends(get_db)):
     tier_cities: dict = defaultdict(list)
     for city, c in votes.items():
         tier_cities[c.most_common(1)[0][0]].append(city)
-    out = []
+    out = {}
     for t in _CITY_TIERS + ["其他"]:
         cities = sorted(tier_cities.get(t, []))
         if cities:
-            out.append({"tier": t, "cities": cities})
-    return {"groups": out}
+            out[t] = cities
+    _tier_cities_cache = out
+    return out
+
+
+def _norm_city_tier(city_level: str) -> str:
+    """城市层级归一：取首段、去「城市」后缀 → 一线/新一线/二线/三线/四线/五线，其余归「其他」。"""
+    s = (city_level or "").split("/")[0].strip().replace("城市", "")
+    return s if s in _CITY_TIERS else "其他"
+
+
+@app.get("/api/cities")
+def list_cities(db: Session = Depends(get_db)):
+    """全国城市按一二三线分组（供城市筛选弹窗用）。
+    复用 _get_tier_cities_map 缓存，首次调用后零 SQL。"""
+    tier_map = _get_tier_cities_map(db)
+    groups = [{"tier": t, "cities": c} for t, c in tier_map.items()]
+    return {"groups": groups}
 
 
 @app.get("/api/major/catalog")

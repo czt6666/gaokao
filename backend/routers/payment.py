@@ -75,6 +75,16 @@ def _resolve_or_create_user_by_openid(db: Session, field: str, openid: str) -> i
         db.refresh(user)
     return user.id
 
+
+# appid → User.openid 字段：回调按付款人 openid 回填 user_id 时，决定 openid 属哪个命名空间。
+# 空 appid 不入表，避免误命中。
+_OPENID_FIELD_BY_APPID = {
+    a: f for a, f in (
+        (WECHAT_MINI_APP_ID, "wechat_mini_openid"),
+        (WECHAT_SERVICE_APP_ID, "wechat_openid"),
+    ) if a
+}
+
 # ── 支付宝配置（预留）──
 ALIPAY_APP_ID        = os.getenv("ALIPAY_APP_ID", "")
 ALIPAY_PRIVATE_KEY   = os.getenv("ALIPAY_PRIVATE_KEY", "")
@@ -98,10 +108,9 @@ class CreateOrderRequest(BaseModel):
 @router.post("/create")
 async def create_order(req: CreateOrderRequest, request: Request, db: Session = Depends(get_db)):
     """创建订单，返回微信支付二维码链接"""
-    # 桌面 Native 扫码无 openid，只能靠 JWT；无身份则拒绝下单（保证 user_id 必存在）
+    # 桌面 Native 扫码无 openid：有 JWT 用 JWT，无则匿名下单（不挡付款）。
+    # user_id 在付款回调按 payer.openid 回填，保证已付订单必有归属。
     user_id = _uid_from_jwt(request)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="请先登录后再下单")
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
 
@@ -238,10 +247,9 @@ class CreateH5Request(BaseModel):
 @router.post("/wechat/h5")
 async def create_h5_order(req: CreateH5Request, request: Request, db: Session = Depends(get_db)):
     """手机浏览器（非微信）H5 支付：下单返回 h5_url，前端 window.location.href 跳转"""
-    # H5 无 openid，只能靠 JWT；无身份则拒绝下单（保证 user_id 必存在）
+    # H5 无 openid：有 JWT 用 JWT，无则匿名下单（不挡付款）。
+    # user_id 在付款回调按 payer.openid 回填，保证已付订单必有归属。
     user_id = _uid_from_jwt(request)
-    if not user_id:
-        raise HTTPException(status_code=401, detail="请先登录后再下单")
 
     amount_fen = PRODUCT_AMOUNTS.get(req.product_type, AMOUNT_FEN)
     order_no = f"GK{int(time.time())}{uuid.uuid4().hex[:6].upper()}"
@@ -437,6 +445,8 @@ async def wechat_notify(
     transaction_id = pay_info.get("transaction_id", "")
     trade_state    = pay_info.get("trade_state", "")
     wechat_total   = pay_info.get("amount", {}).get("total", 0)
+    payer_openid   = (pay_info.get("payer") or {}).get("openid", "")  # 付款人 openid（回填匿名订单用）
+    notify_appid   = pay_info.get("appid", "")                        # 决定 openid 命名空间
 
     # ── 3. 非成功状态直接 ACK，不走入账 ──
     if trade_state != "SUCCESS" or not order_no:
@@ -457,17 +467,17 @@ async def wechat_notify(
         return {"code": "SUCCESS", "message": "成功"}
 
     # ── 5. 异步入账（立即 ACK，避免 DB/邮件耗时触发微信 5 秒超时重试）──
-    background_tasks.add_task(_mark_paid_task, order_no, transaction_id)
+    background_tasks.add_task(_mark_paid_task, order_no, transaction_id, payer_openid, notify_appid)
     logger.info(f"WeChat Pay success queued: {order_no} txn={transaction_id}")
 
     return {"code": "SUCCESS", "message": "成功"}
 
 
-def _mark_paid_task(order_no: str, transaction_id: str):
+def _mark_paid_task(order_no: str, transaction_id: str, payer_openid: str = "", payer_appid: str = ""):
     """BackgroundTasks 入口：开独立 DB session 执行入账（不能复用请求绑定的 session）"""
     db = SessionLocal()
     try:
-        _mark_paid(db, order_no, transaction_id)
+        _mark_paid(db, order_no, transaction_id, payer_openid, payer_appid)
     finally:
         db.close()
 
@@ -488,8 +498,11 @@ async def alipay_notify(request: Request, db: Session = Depends(get_db)):
 # 内部函数
 # ─────────────────────────────────────────────
 
-def _mark_paid(db: Session, order_no: str, transaction_id: str):
-    """将订单标记为已支付，并升级用户付费状态（单事务原子操作）"""
+def _mark_paid(db: Session, order_no: str, transaction_id: str,
+               payer_openid: str = "", payer_appid: str = ""):
+    """将订单标记为已支付，并升级用户付费状态（单事务原子操作）。
+    payer_openid/payer_appid：微信回调中的付款人 openid 及其 appid，
+    用于回填匿名订单（无 user_id）的归属用户。"""
     order = db.query(Order).filter(Order.order_no == order_no).first()
     if not order or order.status != "pending":
         return
@@ -503,6 +516,14 @@ def _mark_paid(db: Session, order_no: str, transaction_id: str):
             logger.warning(f"_mark_paid 发现 transaction_id={transaction_id} 已被其他订单使用，跳过")
             return
     try:
+        # L3 收尾：匿名订单（无 user_id）用付款人 openid 查找/自动注册回填归属用户，
+        # 保证已付订单必有 user_id。payer_appid 决定 openid 命名空间（小程序/服务号）。
+        if not order.user_id and payer_openid:
+            _field = _OPENID_FIELD_BY_APPID.get(payer_appid or "")
+            if _field:
+                order.user_id = _resolve_or_create_user_by_openid(db, _field, payer_openid)
+            else:
+                logger.warning(f"notify 回填跳过：未知 appid={payer_appid!r} order={order_no}")
         order.status         = "paid"
         order.transaction_id = transaction_id
         order.pay_time       = datetime.datetime.utcnow()

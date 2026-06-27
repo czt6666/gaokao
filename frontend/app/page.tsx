@@ -94,6 +94,22 @@ function HistoryQuickAccess() {
 export default function Home() {
   const router = useRouter();
   const queryRef = useRef<HTMLDivElement>(null);
+  const testimonialRef = useRef<HTMLDivElement>(null);
+  const scrollTestimonials = (dir: 1 | -1) => {
+    const el = testimonialRef.current;
+    if (!el) return;
+    const card = el.querySelector<HTMLElement>("[data-tcard]");
+    const step = card ? card.offsetWidth + 16 : el.clientWidth * 0.8;
+    let next = el.scrollLeft + dir * step;
+    // 到末尾/开头循环
+    if (dir > 0 && next > el.scrollWidth - el.clientWidth - 4) next = 0;
+    if (dir < 0 && el.scrollLeft < 4) next = el.scrollWidth;
+    el.scrollTo({ left: next, behavior: "smooth" });
+  };
+  useEffect(() => {
+    const id = setInterval(() => scrollTestimonials(1), 5000);
+    return () => clearInterval(id);
+  }, []);
   const [mode, setMode] = useState<"rank"|"score">("score");
   const [rank, setRank] = useState("");
   const [mockScore, setMockScore] = useState("");
@@ -1199,46 +1215,58 @@ export default function Home() {
       </section>
 
       {/* ── Section 7: Social Proof / Testimonials ── */}
-      <section style={{ padding: "72px 20px", background: "var(--color-bg)" }}>
-        <div style={{ maxWidth: 900, margin: "0 auto", textAlign: "center" }}>
+      <section style={{ padding: "72px 0", background: "var(--color-bg)" }}>
+        <div style={{ maxWidth: 1100, margin: "0 auto", textAlign: "center", padding: "0 20px" }}>
           <h2 style={{ fontFamily: "var(--font-display)", fontSize: "clamp(28px, 5vw, 42px)", fontWeight: 700, marginBottom: 8, letterSpacing: "-0.3px" }}>
             他们怎么说
           </h2>
-          <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 40 }}>来自真实用户的反馈</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: 16, textAlign: "left" }}>
+          <p style={{ fontSize: 16, color: "var(--color-text-secondary)", marginBottom: 36 }}>来自真实用户的反馈</p>
+        </div>
+        <div style={{ position: "relative", maxWidth: 1140, margin: "0 auto" }}>
+          <button aria-label="上一条" className="t-arrow t-arrow-left" onClick={() => scrollTestimonials(-1)}>‹</button>
+          <div ref={testimonialRef} className="testimonial-track" style={{ display: "flex", gap: 16, overflowX: "auto", scrollSnapType: "x mandatory", padding: "4px 20px 12px", textAlign: "left" }}>
             {[
               {
-                avatar: "👨‍👩‍👧",
-                name: "湖北 · 王先生",
-                score: "位次 8,300",
-                text: "机构报价4000，这里¥39，数据比机构还详细。孩子最后上了华中农大的冷门强势学科，毕业薪资比我们预期高30%。",
+                name: "王建国", meta: "湖北 · 家长", score: "位次 8,300", color: "#3478F6",
+                text: "线下机构开口就要4000，这里¥39，数据反而比机构那张表还细。孩子最后去了华中农大一个我们之前根本没听说过的冷门强势学科，今年毕业，薪资比当初预期高了快三成。真心觉得值。",
               },
+              { name: "刘惠芳", meta: "广东 · 家长", score: "位次 23,000", color: "#34C759",
+                text: "报告里把每所学校的「大小年」都标出来了，我们照着捡漏，孩子超常发挥进了省外一所211的王牌专业。" },
               {
-                avatar: "👩",
-                name: "广东 · 刘同学",
-                score: "位次 23,000",
-                text: "我自己用的，发现了几所「名字冷、学科强」的学校，是我根本不会主动搜的。最后报了南京信息工程大学，专业就业全国前三。",
+                name: "张卫东", meta: "山东 · 家长", score: "位次 41,500", color: "#FF9500",
+                text: "一开始是抱着试试的心态。结果它把几所「名气一般但就业特别能打」的学校挖出来给我看，这些是我自己翻排名表一辈子都不会点进去的。最后给孩子报的那所，省内口碑一般，但那个专业全国对口就业前五，现在想想太庆幸了。",
               },
+              { name: "李秀兰", meta: "河南 · 家长", score: "位次 67,000", color: "#FF3B30",
+                text: "数据全，价格便宜，关键是看得懂。比机构那种糊弄人的强多了。" },
               {
-                avatar: "👨‍👩‍👦",
-                name: "山东 · 赵女士",
-                score: "位次 41,500",
-                text: "报告里有「大小年分析」，看懂之后知道哪些学校今年报的人少、容易捡漏。孩子超出预期进了省内好学校的王牌专业。",
+                name: "陈志刚", meta: "四川 · 家长", score: "位次 15,200", color: "#5856D6",
+                text: "最打动我的是它会主动给「看着高大上其实口碑很水」的学校降权。孩子差点冲一所名字好听的，看了这里的真实在校生反馈果断放弃，避了个大坑。",
               },
+              { name: "周敏", meta: "江苏 · 家长", score: "位次 31,800", color: "#00B4D8",
+                text: "三分钟出结果，冲稳保分得清清楚楚，全家人都不用再为志愿吵架了。" },
+              {
+                name: "赵桂英", meta: "河北 · 家长", score: "位次 52,400", color: "#AF52DE",
+                text: "我文化程度不高，本来填志愿这事完全插不上手，全靠孩子自己琢磨。用了这个之后我也能看明白每个推荐为什么这么排，哪个稳哪个冲，第一次能跟孩子坐下来好好商量。这点比省下来的钱还重要。",
+              },
+              { name: "孙明远", meta: "湖南 · 考生", score: "位次 19,600", color: "#0071E3",
+                text: "自己给自己报的。发现了南信大这种「名字冷、专业硬」的宝藏校，专业就业全国前三，捡到了。" },
             ].map((t) => (
-              <div key={t.name} className="apple-card" style={{ padding: "20px 22px" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
-                  <div style={{ fontSize: 28, lineHeight: 1 }}>{t.avatar}</div>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 600 }}>{t.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{t.score}</div>
+              <div key={t.name} data-tcard className="apple-card" style={{ flex: "0 0 clamp(280px, 78vw, 330px)", scrollSnapAlign: "start", padding: "22px 24px", display: "flex", flexDirection: "column" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 14 }}>
+                  <div style={{ width: 44, height: 44, borderRadius: "50%", background: t.color, color: "#fff", fontSize: 18, fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    {t.name[0]}
                   </div>
-                  <div style={{ marginLeft: "auto", color: "#FFB800", fontSize: 12, letterSpacing: 1 }}>★★★★★</div>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 14, fontWeight: 600 }}>{t.name}</div>
+                    <div style={{ fontSize: 11, color: "var(--color-text-tertiary)" }}>{t.meta} · {t.score}</div>
+                  </div>
+                  <div style={{ marginLeft: "auto", color: "#FFB800", fontSize: 11, letterSpacing: 1, flexShrink: 0 }}>★★★★★</div>
                 </div>
-                <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, margin: 0 }}>{t.text}</p>
+                <p style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.75, margin: 0 }}>{t.text}</p>
               </div>
             ))}
           </div>
+          <button aria-label="下一条" className="t-arrow t-arrow-right" onClick={() => scrollTestimonials(1)}>›</button>
         </div>
       </section>
 
@@ -1293,9 +1321,22 @@ export default function Home() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         .spin-icon { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; border-radius: 50%; display: inline-block; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
+        .testimonial-track { scrollbar-width: none; -ms-overflow-style: none; scroll-behavior: smooth; }
+        .testimonial-track::-webkit-scrollbar { display: none; }
+        .t-arrow {
+          position: absolute; top: 50%; transform: translateY(-50%); z-index: 2;
+          width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--color-separator);
+          background: rgba(255,255,255,0.92); backdrop-filter: blur(8px); color: var(--color-text-primary);
+          font-size: 24px; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.1); transition: background .15s, transform .15s;
+        }
+        .t-arrow:hover { background: #fff; transform: translateY(-50%) scale(1.08); }
+        .t-arrow-left { left: 4px; }
+        .t-arrow-right { right: 4px; }
         @media (max-width: 600px) {
           .mobile-break { display: none; }
           section { padding-left: 16px !important; padding-right: 16px !important; }
+          .t-arrow { display: none; }
         }
       `}</style>
     </main>

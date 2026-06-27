@@ -24,7 +24,7 @@ import time
 SYNC_TABLES = ["admission_records", "admission_2026"]
 
 
-def export_tables(source_db: str, output: str):
+def export_tables(source_db: str, output: str, tables: list[str] = SYNC_TABLES):
     """用 VACUUM INTO 导出只含两表的精简库，再 gzip。"""
     if not os.path.exists(source_db):
         sys.exit(f"源库不存在: {source_db}")
@@ -36,10 +36,10 @@ def export_tables(source_db: str, output: str):
 
     src = sqlite3.connect(source_db)
 
-    # 1) 在新库里建两表（schema + 数据）
-    print(f"导出 {SYNC_TABLES} 到精简库...")
+    # 1) 在新库里建表（schema + 数据）
+    print(f"导出 {tables} 到精简库...")
     src.execute(f"ATTACH DATABASE '{tmp_db}' AS sync")
-    for tbl in SYNC_TABLES:
+    for tbl in tables:
         # 取建表 SQL
         ddl = src.execute(
             "SELECT sql FROM sqlite_master WHERE type='table' AND name=?", (tbl,)
@@ -66,8 +66,8 @@ def export_tables(source_db: str, output: str):
     print(f"✅ 导出完成: {output}.gz ({size_mb:.1f} MB)")
 
 
-def apply_tables(sync_file: str, target_db: str):
-    """在服务器上用同步库替换线上两表（事务内 DELETE + INSERT）。"""
+def apply_tables(sync_file: str, target_db: str, tables: list[str] = SYNC_TABLES):
+    """在服务器上用同步库替换线上表（事务内 DELETE + INSERT）。"""
     if not os.path.exists(sync_file):
         # 允许传 .gz
         if os.path.exists(sync_file + ".gz"):
@@ -90,7 +90,7 @@ def apply_tables(sync_file: str, target_db: str):
     tgt.execute(f"ATTACH DATABASE '{work_db}' AS sync")
 
     t0 = time.time()
-    for tbl in SYNC_TABLES:
+    for tbl in tables:
         # 同步库里有这张表才替换
         exists = tgt.execute(
             "SELECT 1 FROM sync.sqlite_master WHERE type='table' AND name=?", (tbl,)
@@ -145,13 +145,16 @@ def main():
     ap = argparse.ArgumentParser(description="全量替换式同步 admission_records + admission_2026")
     ap.add_argument("--db", required=True, help="数据库路径（导出=源，应用=目标）")
     ap.add_argument("--export", metavar="OUTPUT", help="导出精简库（输出 OUTPUT.gz）")
-    ap.add_argument("--apply", metavar="SYNC_FILE", help="应用精简库到目标库（替换两表）")
+    ap.add_argument("--apply", metavar="SYNC_FILE", help="应用精简库到目标库（替换表）")
+    ap.add_argument("--tables", help=f"逗号分隔的表名，覆盖默认 {SYNC_TABLES}")
     args = ap.parse_args()
 
+    tables = [t.strip() for t in args.tables.split(",")] if args.tables else SYNC_TABLES
+
     if args.export:
-        export_tables(args.db, args.export)
+        export_tables(args.db, args.export, tables)
     elif args.apply:
-        apply_tables(args.apply, args.db)
+        apply_tables(args.apply, args.db, tables)
     else:
         ap.print_help()
 

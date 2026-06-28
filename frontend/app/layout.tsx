@@ -89,7 +89,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN">
+    <html lang="zh-CN" suppressHydrationWarning>
       <head>
         {/* 百度站长验证 — 登录 https://ziyuan.baidu.com/ 获取 */}
         <meta name="baidu-site-verification" content="codeva-gBf887uEor" />

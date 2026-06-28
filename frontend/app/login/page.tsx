@@ -48,6 +48,7 @@ export default function LoginPage() {
     const qrDone = params.get("qr_done");
     if (token) {
       localStorage.setItem("auth_token", token);
+      sessionStorage.setItem("gaokao_just_logged_in", "1");
       // 优先从 localStorage 恢复查询条件
       let target = params.get("redirect_to") || params.get("redirect") || "/";
       try {
@@ -116,6 +117,7 @@ export default function LoginPage() {
         if (d.status === "success") {
           clearInterval(pollRef.current!);
           localStorage.setItem("auth_token", d.token);
+          sessionStorage.setItem("gaokao_just_logged_in", "1");
           setWechatMode("done");
           setTimeout(() => {
             // 优先从 localStorage 恢复查询条件
@@ -173,6 +175,7 @@ export default function LoginPage() {
         const d = await res.json();
         localStorage.setItem("auth_token", d.token);
         localStorage.setItem("auth_phone", phone);
+        sessionStorage.setItem("gaokao_just_logged_in", "1");
         // 优先从 localStorage 恢复查询条件，而非依赖 URL redirect
         let target = redirectTarget;
         try {

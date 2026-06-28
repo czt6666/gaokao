@@ -381,7 +381,13 @@ export default function ComparePage() {
                   background: "var(--color-bg-secondary)", border: "1px solid var(--color-separator)",
                   borderRadius: 14, padding: "0 16px", overflow: "hidden", minWidth: 640,
                 }}>
-                  <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <table style={{ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" }}>
+                    <colgroup>
+                      <col width="80" />
+                      {Array(MAX_COMPARE).fill(null).map((_, i) => (
+                        <col key={i} width="*" />
+                      ))}
+                    </colgroup>
                     <tbody>
                       <Row label="软科排名" cells={schools.map((s) => s?.rank_2025 && s.rank_2025 > 0 ? `第 ${s.rank_2025} 名` : "未上榜")} />
                       <Row label="所在城市" cells={schools.map((s) => s ? `${s.city || "—"}（${s.city_level || ""}）` : "")} />

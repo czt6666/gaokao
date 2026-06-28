@@ -1020,10 +1020,13 @@ function ResultsContent() {
   // 登录前把查询条件持久化，供登录后恢复（避免依赖 URL redirect）
   useEffect(() => {
     try {
-      localStorage.setItem("gaokao_query_restore", JSON.stringify({ province, rank, subject, examMode, fromMock, mockScore, rankYear }));
+      localStorage.setItem("gaokao_query_restore", JSON.stringify({
+        province, rank, subject, examMode, fromMock, mockScore, rankYear,
+        cMajor, cCity, cNature, cTier, disciplineFilter, batchFilterParam, excludeRestrictionsParam,
+      }));
     } catch { }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [province, rank, subject, examMode, fromMock, mockScore, rankYear]);
+  }, [province, rank, subject, examMode, fromMock, mockScore, rankYear, cMajor, cCity, cNature, cTier, disciplineFilter, batchFilterParam, excludeRestrictionsParam]);
 
   // H5 支付跳回时 URL 可能带 ?paid=<order_no>，用于自动查单后刷新数据
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -1221,7 +1224,8 @@ function ResultsContent() {
           if (res.ok) {
             const d = await res.json();
             if (d.status === "paid") {
-              // 支付成功，fetch effect 已通过 isPaidReturn 强制刷新数据
+              // 支付成功，标记需强制刷新
+              try { sessionStorage.setItem("gaokao_just_paid", "1"); } catch {}
             }
           }
         } catch { }
@@ -1281,13 +1285,17 @@ function ResultsContent() {
       try { sessionStorage.removeItem("gaokao_just_logged_in"); } catch {}
     }
     const isPaidReturn = searchParams.get("paid") != null;
-    if (isPaidReturn) {
+    const justPaidFlag = typeof window !== "undefined" && sessionStorage.getItem("gaokao_just_paid") === "1";
+    if (justPaidFlag) {
+      try { sessionStorage.removeItem("gaokao_just_paid"); } catch {}
+    }
+    if (isPaidReturn || justPaidFlag) {
       try { localStorage.removeItem(RESULT_CACHE_KEY); } catch {}
     }
 
     // 尝试从缓存恢复（查询参数相同则秒开，跳过 18s 强制等待）
     let restored = false;
-    if (!isPaidReturn && !hasRestoredFromCache.current) {
+    if (!isPaidReturn && !justPaidFlag && !hasRestoredFromCache.current) {
       try {
         const cached = JSON.parse(localStorage.getItem(RESULT_CACHE_KEY) || "null");
         if (cached?.data && cached?.params) {

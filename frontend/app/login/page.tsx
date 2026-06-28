@@ -56,7 +56,21 @@ export default function LoginPage() {
         if (saved) {
           const q = JSON.parse(saved);
           if (q.province && q.rank && q.subject) {
-            target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
+            const parts = [
+              `rank=${q.rank}`,
+              `province=${encodeURIComponent(q.province)}`,
+              `subject=${encodeURIComponent(q.subject)}`,
+              q.examMode ? `exam_mode=${encodeURIComponent(q.examMode)}` : "",
+              q.fromMock ? `from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : "",
+              q.cMajor ? `c_major=${encodeURIComponent(q.cMajor)}` : "",
+              q.cCity ? `c_city=${encodeURIComponent(q.cCity)}` : "",
+              q.cNature ? `c_nature=${encodeURIComponent(q.cNature)}` : "",
+              q.cTier ? `c_tier=${encodeURIComponent(q.cTier)}` : "",
+              q.disciplineFilter ? `discipline_filter=${encodeURIComponent(q.disciplineFilter)}` : "",
+              q.batchFilterParam ? `batch_filter=${encodeURIComponent(q.batchFilterParam)}` : "",
+              (q.excludeRestrictionsParam != null && q.excludeRestrictionsParam !== "") ? `exclude_restrictions=${encodeURIComponent(q.excludeRestrictionsParam)}` : "",
+            ];
+            target = `/results?${parts.filter(Boolean).join("&")}`;
           }
         }
       } catch {}
@@ -127,7 +141,7 @@ export default function LoginPage() {
               if (saved) {
                 const q = JSON.parse(saved);
                 if (q.province && q.rank && q.subject) {
-                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
+                  target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}${q.cMajor ? `&c_major=${encodeURIComponent(q.cMajor)}` : ""}${q.cCity ? `&c_city=${encodeURIComponent(q.cCity)}` : ""}${q.cNature ? `&c_nature=${encodeURIComponent(q.cNature)}` : ""}${q.cTier ? `&c_tier=${encodeURIComponent(q.cTier)}` : ""}${q.disciplineFilter ? `&discipline_filter=${encodeURIComponent(q.disciplineFilter)}` : ""}${q.batchFilterParam ? `&batch_filter=${encodeURIComponent(q.batchFilterParam)}` : ""}${(q.excludeRestrictionsParam != null && q.excludeRestrictionsParam !== "") ? `&exclude_restrictions=${encodeURIComponent(q.excludeRestrictionsParam)}` : ""}`;
                 }
               }
             } catch {}
@@ -183,7 +197,7 @@ export default function LoginPage() {
           if (saved) {
             const q = JSON.parse(saved);
             if (q.province && q.rank && q.subject) {
-              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}`;
+              target = `/results?rank=${q.rank}&province=${encodeURIComponent(q.province)}&subject=${encodeURIComponent(q.subject)}${q.examMode ? `&exam_mode=${encodeURIComponent(q.examMode)}` : ""}${q.fromMock ? `&from_mock=1&mock_score=${q.mockScore || ""}&rank_year=${encodeURIComponent(q.rankYear || "")}` : ""}${q.cMajor ? `&c_major=${encodeURIComponent(q.cMajor)}` : ""}${q.cCity ? `&c_city=${encodeURIComponent(q.cCity)}` : ""}${q.cNature ? `&c_nature=${encodeURIComponent(q.cNature)}` : ""}${q.cTier ? `&c_tier=${encodeURIComponent(q.cTier)}` : ""}${q.disciplineFilter ? `&discipline_filter=${encodeURIComponent(q.disciplineFilter)}` : ""}${q.batchFilterParam ? `&batch_filter=${encodeURIComponent(q.batchFilterParam)}` : ""}${(q.excludeRestrictionsParam != null && q.excludeRestrictionsParam !== "") ? `&exclude_restrictions=${encodeURIComponent(q.excludeRestrictionsParam)}` : ""}`;
             }
           }
         } catch {}

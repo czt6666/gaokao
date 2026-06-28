@@ -3,7 +3,7 @@
   重复请求直接返回，解决小程序 fetchBinary timeout 问题。
 """
 from fastapi import APIRouter, Depends, HTTPException, Query, Header, Request
-from fastapi.responses import Response, HTMLResponse
+from fastapi.responses import Response, HTMLResponse, JSONResponse
 from sqlalchemy.orm import Session
 from urllib.parse import quote
 from typing import Optional
@@ -33,9 +33,19 @@ def _parse_discipline_filter(raw: str):
     return out or None
 
 
-def _pdf_cache_key(province: str, rank: int, subject: str) -> str:
-    """生成缓存 key：同省份+位次+选科共享同一份 PDF"""
-    raw = f"{province}:{rank}:{subject}"
+def _pdf_cache_key(province: str, rank: int, subject: str, exam_mode: str = "",
+                   part: int = 0, c_major: str = "", c_city: str = "", c_nature: str = "",
+                   c_tier: str = "", batch_filter: str = "",
+                   exclude_restrictions: str | None = None, discipline_filter: str = "",
+                   score: int | None = None) -> str:
+    """生成缓存 key：必须涵盖所有影响 PDF 内容的参数（省份/位次/选科/科目/分册/各项筛选），
+    否则带筛选与不带筛选的报告会命中同一份缓存。"""
+    raw = "|".join([
+        province, str(rank), subject, exam_mode, str(part),
+        c_major, c_city, c_nature, c_tier, batch_filter,
+        "" if exclude_restrictions is None else exclude_restrictions,
+        discipline_filter, "" if score is None else str(score),
+    ])
     return hashlib.md5(raw.encode()).hexdigest()
 
 def _pdf_cache_get(key: str):
@@ -118,7 +128,7 @@ async def export_report(
     subject: str = Query("物理", description="选科（与查询时一致）"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
-    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_city: str = Query("", description="目标城市名，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
@@ -147,7 +157,8 @@ async def export_report(
     if c_major.strip():
         constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
     if c_city.strip():
-        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+        # c_city 现为具体城市名列表（与 /api/recommend 一致，城市筛选弹窗多选）
+        constraints["cities"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
     if c_nature.strip():
         constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
     if c_tier.strip():
@@ -250,7 +261,7 @@ async def preview_report_html(
     subject: str = Query("物理"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
-    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_city: str = Query("", description="目标城市名，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
@@ -274,7 +285,8 @@ async def preview_report_html(
     if c_major.strip():
         constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
     if c_city.strip():
-        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+        # c_city 现为具体城市名列表（与 /api/recommend 一致，城市筛选弹窗多选）
+        constraints["cities"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
     if c_nature.strip():
         constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
     if c_tier.strip():
@@ -328,10 +340,13 @@ async def generate_report_free(
     rank: int = Query(..., description="位次"),
     subject: str = Query("物理", description="选科"),
     order_no: str = Query("", description="付费订单号，有效则允许下载"),
+    token: str = Query("", description="JWT（用于移动端直接导航下载，无法带 Authorization 头时）"),
+    inline: int = Query(0, description="1=浏览器内打开预览（移动端兼容），0=作为附件下载"),
+    warm: int = Query(0, description="1=仅预生成并写入缓存，返回极小 JSON（移动端先预热、再导航取缓存）"),
     part: int = Query(0, description="分册：0=全部（旧兼容），1=上册(冲+稳)，2=下册(保+冷门)"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
-    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_city: str = Query("", description="目标城市名，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
@@ -362,9 +377,14 @@ async def generate_report_free(
 
     if not is_paid:
         from routers.auth import _verify_token
+        # JWT 可来自 Authorization 头（桌面 fetch）或 token 查询参数（移动端直接导航）
+        jwt_str = ""
         if authorization and authorization.startswith("Bearer "):
-            token = authorization[7:]
-            payload = _verify_token(token)
+            jwt_str = authorization[7:]
+        elif token:
+            jwt_str = token
+        if jwt_str:
+            payload = _verify_token(jwt_str)
             if payload:
                 uid = payload.get("uid")
                 phone = payload.get("phone")
@@ -383,7 +403,8 @@ async def generate_report_free(
     if c_major.strip():
         constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
     if c_city.strip():
-        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+        # c_city 现为具体城市名列表（与 /api/recommend 一致，城市筛选弹窗多选）
+        constraints["cities"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
     if c_nature.strip():
         constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
     if c_tier.strip():
@@ -408,9 +429,12 @@ async def generate_report_free(
         else:
             _exclude_restrictions = _parsed
 
-    # ── 缓存层：同参数+分册 30 分钟内直接返回 ──────────
-    cache_suffix = f"_p{part}" if part in (1, 2) else ""
-    cache_key = _pdf_cache_key(province, rank, subject + cache_suffix)
+    # ── 缓存层：同参数 30 分钟内直接返回（key 涵盖全部筛选项）──────────
+    cache_key = _pdf_cache_key(
+        province, rank, subject, exam_mode, part,
+        c_major, c_city, c_nature, c_tier, batch_filter,
+        exclude_restrictions, discipline_filter, score,
+    )
     cached = _pdf_cache_get(cache_key)
     if cached:
         report_id = cached["report_id"]
@@ -462,6 +486,10 @@ async def generate_report_free(
 
         _pdf_cache_set(cache_key, pdf_bytes, report_id)
 
+    # ── warm=1：仅预热缓存，返回极小 JSON（移动端先预热、再导航取缓存，避免下载整份 PDF 两次）──
+    if warm:
+        return JSONResponse({"ok": True, "cached": cached is not None})
+
     # ── 埋点：PDF 下载（记录用户 + 详细推荐参数）────────────────
     try:
         from services.event_log import log_event
@@ -492,11 +520,13 @@ async def generate_report_free(
     part_label = {1: "上册_冲稳", 2: "下册_保底"}.get(part, "")
     filename = f"水卢报告_{province}_{rank}{'_' + part_label if part_label else ''}.pdf"
     filename_encoded = quote(filename, safe="")
+    # inline=1：浏览器内打开预览（移动端 App 内置浏览器对附件下载支持差，预览更可靠）
+    disp_type = "inline" if inline else "attachment"
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
         headers={
-            "Content-Disposition": f"attachment; filename=\"report_{rank}.pdf\"; filename*=UTF-8''{filename_encoded}",
+            "Content-Disposition": f"{disp_type}; filename=\"report_{rank}.pdf\"; filename*=UTF-8''{filename_encoded}",
             "Content-Length": str(len(pdf_bytes)),
         }
     )
@@ -535,7 +565,7 @@ async def email_report(
     subject: str = Query("", description="选科"),
     exam_mode: str = Query("", description="高考模式：3+1+2 / 3+3 / old"),
     c_major: str = Query("", description="感兴趣的专业关键词，空格分隔"),
-    c_city: str = Query("", description="目标城市等级，逗号分隔"),
+    c_city: str = Query("", description="目标城市名，逗号分隔"),
     c_nature: str = Query("", description="办学性质，逗号分隔"),
     c_tier: str = Query("", description="院校档次，逗号分隔"),
     batch_filter: str = Query("", description="批次类型筛选，逗号分隔"),
@@ -567,7 +597,8 @@ async def email_report(
     if c_major.strip():
         constraints["major_keywords"] = [k.strip() for k in c_major.strip().split() if k.strip()]
     if c_city.strip():
-        constraints["city_levels"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
+        # c_city 现为具体城市名列表（与 /api/recommend 一致，城市筛选弹窗多选）
+        constraints["cities"] = [x.strip() for x in c_city.strip().split(",") if x.strip()]
     if c_nature.strip():
         constraints["natures"] = [x.strip() for x in c_nature.strip().split(",") if x.strip()]
     if c_tier.strip():

@@ -1,5 +1,5 @@
 """
-袁希高报引擎 — 统一数据补全工具 v1.0
+水卢高报引擎 — 统一数据补全工具 v1.0
 ========================================
 解决三大核心数据缺口：
   Phase 1: CDN 省份录取数据补全（湖北/湖南/福建 等缺失省份）
@@ -800,7 +800,7 @@ def show_status():
 # ══════════════════════════════════════════════════════════════════
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="袁希高报引擎 — 统一数据补全工具")
+    parser = argparse.ArgumentParser(description="水卢高报引擎 — 统一数据补全工具")
     parser.add_argument("--phase", default="all",
         choices=["all", "cdn", "batch_tag", "control_lines", "reviews"],
         help="执行阶段: all=全部, cdn=录取数据, batch_tag=批次标注, control_lines=控制线, reviews=口碑")
@@ -824,7 +824,7 @@ async def main():
         show_status()
         return
 
-    print(f"\n🚀 袁希高报引擎数据补全工具")
+    print(f"\n🚀 水卢高报引擎数据补全工具")
     print(f"   执行阶段: {args.phase}")
     print(f"   时间: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
 

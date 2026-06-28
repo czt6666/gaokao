@@ -756,8 +756,10 @@ function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult;
               <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 4, background: "rgba(201,146,42,0.15)", color: "var(--color-accent)", fontWeight: 600 }}>◆ 冷门宝藏</span>
             )}
           </div>
-          <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginTop: 3 }}>
-            {item.city}
+          <div style={{ fontSize: 13, color: "var(--color-text-secondary)", marginTop: 4 }}>
+            {item.major_name === "[院校最低分]" ? "院校整体录取" : item.major_name}
+            {item.major_remark ? <span style={{ marginLeft: 6 }}>· {item.major_remark}</span> : null}
+            {item.city ? <span style={{ marginLeft: 6 }}>· {item.city}</span> : null}
           </div>
           {/* P6: 锁定卡预览标签 — 透出1条价值信息 */}
           <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 5 }}>
@@ -796,7 +798,6 @@ function LockedSchoolCard({ item, onUnlock, unlockLabel }: { item: SchoolResult;
           filter: "blur(5px)", userSelect: "none", pointerEvents: "none",
           fontSize: 13, color: "var(--color-text-secondary)", lineHeight: 1.8,
         }}>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>专业：██████████</div>
           <div>录取概率：██% · 安全线分析：████████</div>
           <div>近3年最低位次：██,███ / ██,███ / ██,███</div>
           <div>大小年预测：████ · 就业薪资：████元</div>
@@ -889,6 +890,8 @@ function ResultsContent() {
   const isCurrentYearRank = rankYear === "2026";
   /** 与卡片「去年最低分」对比用：显式 ?score= 或 mock_score */
   const score = searchParams.get("score") || searchParams.get("mock_score") || "";
+  // 付费订单号（从 dashboard / paid-orders 链接带过来时存在；移动端导航下载用作鉴权）
+  const orderNo = searchParams.get("order_no") || "";
   // 约束条件（从首页带过来）
   const cMajor = searchParams.get("c_major") || "";
   const cCity = searchParams.get("c_city") || "";
@@ -952,6 +955,41 @@ function ResultsContent() {
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [showGuidePrompt, setShowGuidePrompt] = useState(false);
 
+  // ── 结果揭晓门控：首次需做 3 道偏好题；之后强制走满「生成」时长 + 数据就绪，才显示结果页 ──
+  // 强制生成时长（每次揭晓都走，不止首次）。报告含金量高，不该秒出。
+  const MIN_GENERATING_MS = 18000;
+  const [revealMounted, setRevealMounted] = useState(false);   // 已读 localStorage 标记
+  const [quizDone, setQuizDone] = useState(false);             // 答题完成（或老用户跳过答题）
+  const [gateReady, setGateReady] = useState(false);           // 强制生成时长已满
+  function startGenerating() {
+    setTimeout(() => setGateReady(true), MIN_GENERATING_MS);
+  }
+  useEffect(() => {
+    let done = false;
+    let skipWait = false;
+    try {
+      done = !!localStorage.getItem("gaokao_reveal_done");
+      skipWait = localStorage.getItem("gaokao_skip_wait") === "1";
+    } catch { }
+    if (skipWait) {
+      // 后门：跳过答题和强制等待，直接展示结果
+      setQuizDone(true);
+      setGateReady(true);
+    } else if (done) {
+      setQuizDone(true);
+      startGenerating(); // 老用户：跳过答题，但仍走强制生成时长
+    }
+    setRevealMounted(true);
+  }, []);
+  function handleQuizComplete(ans: string[]) {
+    try {
+      localStorage.setItem("gaokao_reveal_answers", JSON.stringify(ans));
+      localStorage.setItem("gaokao_reveal_done", "1");
+    } catch { }
+    setQuizDone(true);
+    startGenerating();  // 答完题再走满强制生成时长
+  }
+
   // 首次进入结果页：弹出「使用教程」提示（点「不再显示」后永久关闭）
   useEffect(() => {
     try {
@@ -1008,30 +1046,74 @@ function ResultsContent() {
     track("export_click", { province, rankInput: Number(rank), eventData: { subject } });
     setExporting(true);
     setShowExportLoading(true);
+
+    const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
+    const constraintParams = [
+      cMajor ? `c_major=${encodeURIComponent(cMajor)}` : "",
+      cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
+      cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
+      cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
+      disciplineFilter ? `discipline_filter=${encodeURIComponent(disciplineFilter)}` : "",
+      batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
+      hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
+      score ? `score=${encodeURIComponent(score)}` : "",
+    ].filter(Boolean).join("&");
+    const baseUrl = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${examParam}${constraintParams ? "&" + constraintParams : ""}`;
+
+    // 移动端 / App 内置浏览器：blob + a.download 在安卓夸克/Via/Kimi/微信等浏览器上不被支持，
+    // 改为直接导航到带鉴权的真实 PDF 链接（浏览器内打开预览，可自行保存/分享），兼容性最佳。
+    const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const isMobile = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger|Quark|Via|UCBrowser|MQQBrowser|HeyTapBrowser|VivoBrowser|OppoBrowser|MiuiBrowser|HuaweiBrowser|Kimi/i.test(ua);
+    if (isMobile) {
+      // 鉴权优先用订单号（作用域更小），否则退回 JWT（仅本人 token，短时导航）
+      const authParam = orderNo
+        ? `order_no=${encodeURIComponent(orderNo)}`
+        : `token=${encodeURIComponent(token)}`;
+      const inlineUrl = `${baseUrl}&${authParam}&inline=1`;
+      // 先同步打开占位标签页（避免 await 后被弹窗拦截），显示「生成中」
+      const win = window.open("", "_blank");
+      if (win) {
+        try {
+          win.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>报告生成中</title><body style="margin:0;font:16px -apple-system,BlinkMacSystemFont,sans-serif;color:#333;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center"><div>正在生成报告，请稍候…<br><span style="font-size:13px;color:#999">首次生成约需 10–30 秒</span></div></body>');
+        } catch { }
+      }
+      try {
+        // 先预热：服务端生成并写入缓存（返回极小 JSON），等待真正生成完成后再导航
+        const res = await fetch(`${baseUrl}&warm=1`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
+          throw new Error(err.detail || "生成失败");
+        }
+        // 已缓存 → 导航到内联 PDF（秒开）
+        if (win) win.location.href = inlineUrl;
+        else window.location.href = inlineUrl;
+      } catch (e: any) {
+        try { win?.close(); } catch { }
+        alert(`报告生成失败：${e.message}`);
+      } finally {
+        setExporting(false);
+        setShowExportLoading(false);
+      }
+      return;
+    }
+
+    // 桌面端：fetch + blob 下载（保留更好的文件名与错误提示）
     try {
-      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
-      const constraintParams = [
-        cMajor ? `c_major=${encodeURIComponent(cMajor)}` : "",
-        cCity ? `c_city=${encodeURIComponent(cCity)}` : "",
-        cNature ? `c_nature=${encodeURIComponent(cNature)}` : "",
-        cTier ? `c_tier=${encodeURIComponent(cTier)}` : "",
-        disciplineFilter ? `discipline_filter=${encodeURIComponent(disciplineFilter)}` : "",
-        batchFilterParam ? `batch_filter=${encodeURIComponent(batchFilterParam)}` : "",
-        hasExcludeRestrictionsParam ? `exclude_restrictions=${encodeURIComponent(excludeRestrictionsParam)}` : "",
-        score ? `score=${encodeURIComponent(score)}` : "",
-      ].filter(Boolean).join("&");
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rank}&subject=${encodeURIComponent(subject)}${examParam}${constraintParams ? "&" + constraintParams : ""}`;
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(baseUrl, { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
         throw new Error(err.detail || "生成失败");
       }
       const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
+      a.href = objUrl;
       a.download = `水卢报告_${province}_${rank}.pdf`;
+      document.body.appendChild(a);   // 部分浏览器要求元素在 DOM 中才能触发下载
       a.click();
-      URL.revokeObjectURL(a.href);
+      a.remove();
+      // 延迟回收 objectURL，避免下载尚未开始就被释放
+      setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
     } catch (e: any) {
       alert(`报告生成失败：${e.message}`);
     } finally {
@@ -1245,10 +1327,7 @@ function ResultsContent() {
     };
   }, [rank, province, subject, refreshTrigger, cMajor, cCity, cNature, cTier, disciplineFilter, batchFilterParam, excludeRestrictionsParam]);
 
-  if (loading) {
-    return <LoadingScreen />;
-  }
-
+  // 错误优先展示（即使门控未完成）
   if (fetchError) {
     const isFirstChoiceMissing = fetchErrorCode === "FIRST_CHOICE_REQUIRED";
     return (
@@ -1273,6 +1352,11 @@ function ResultsContent() {
       </div>
     );
   }
+
+  // ── 揭晓门控 ──
+  if (!revealMounted) return <GeneratingScreen province={province} rank={rank} />;
+  if (!quizDone) return <RevealQuiz province={province} rank={rank} onComplete={handleQuizComplete} />;
+  if (loading || !gateReady) return <GeneratingScreen province={province} rank={rank} />;
 
   const totalSchools = (data?.surge.length || 0) + (data?.stable.length || 0) + (data?.safe.length || 0);
   const gemCount = data?.hidden_gems.length || 0;
@@ -1778,7 +1862,13 @@ function ResultsContent() {
                         还有 <strong style={{ color: "var(--color-navy)" }}>{hiddenLockedCount} 所</strong>锁定
                       </div>
                       <button
-                        onClick={() => setLockedExpanded(true)}
+                        onClick={() => {
+                          if (data?.is_paid || data?.is_trial) {
+                            setLockedExpanded(true);
+                          } else {
+                            openPayModal("season_2026");
+                          }
+                        }}
                         style={{
                           fontSize: 12, padding: "6px 14px", borderRadius: 8,
                           border: "1px solid var(--color-border-light)",
@@ -1786,7 +1876,7 @@ function ResultsContent() {
                           cursor: "pointer",
                         }}
                       >
-                        展开预览
+                        展开预览 {!data?.is_paid && !data?.is_trial ? "· 需付费" : ""}
                       </button>
                     </div>
                   )}
@@ -2114,35 +2204,143 @@ function ResultsContent() {
   );
 }
 
-// ── 营销轮播 Loading 页 ─────────────────────────────────────────
-const LOADING_SLIDES = [
-  { icon: "🔬", title: "正在运行概率模型", body: "基于近3年逐分录取数据，用 Sigmoid 函数计算你的真实录取概率，而非简单位次对比。" },
-  { icon: "💎", title: "扫描冷门黑马", body: "系统正在识别「学科强·排名低」的套利机会——相同分数，在冷门院校能进入更强的专业。" },
-  { icon: "📈", title: "分析产业信号", body: "结合核能、低空经济、AI等7大新兴产业的招聘趋势，标记未来4年毕业时需求最旺的专业方向。" },
-  { icon: "🏙️", title: "计算城市折价", body: "哈尔滨、兰州等城市的高校因地理因素被系统性低估，同等专业实力录取分数低200–500分。" },
-  { icon: "✅", title: "即将完成", body: "正在生成冲·稳·保梯度配置，以及每所学校的个性化填报建议。" },
+// ── 首次揭晓：3 道偏好单选题（选完左划进入下一题）────────────────
+const QUIZ_QUESTIONS: { q: React.ReactNode; hint?: string; options: string[] }[] = [
+  {
+    q: "选大学时，你更愿意为哪一项让步？",
+    hint: "没有标准答案，帮我们更懂你的偏好",
+    options: ["院校名气优先（冲名校）", "专业实力优先（认准专业）", "城市优先（去想去的地方）"],
+  },
+  {
+    q: "本科毕业后，你目前更倾向？",
+    options: ["直接就业", "考研 / 保研深造", "出国留学", "还没想好"],
+  },
+  {
+    // Q3：报告价值说明（家长确认即可，非真实选择题）
+    q: (
+      <>
+        这份志愿表以孩子未来 4 年的就业为<br />
+        目标，围绕<span style={{ color: "var(--color-accent)" }}>就业 · 保研 · 考研</span><br />
+        为你筛选院校与专业——不只看分数够不够，更看毕业时值不值。
+      </>
+    ),
+    options: ["明白", "确定"],
+  },
 ];
 
-function LoadingScreen() {
-  const [idx, setIdx] = React.useState(0);
-  React.useEffect(() => {
-    const t = setInterval(() => setIdx(i => (i + 1) % LOADING_SLIDES.length), 2200);
-    return () => clearInterval(t);
-  }, []);
-  const slide = LOADING_SLIDES[idx];
+function RevealQuiz({ province, rank, onComplete }: { province: string; rank: string; onComplete: (ans: string[]) => void }) {
+  const [current, setCurrent] = useState(0);
+  const [answers, setAnswers] = useState<string[]>([]);
+  const [picked, setPicked] = useState<number | null>(null);
+
+  function choose(optIdx: number, optLabel: string) {
+    if (picked !== null) return;          // 防连点
+    setPicked(optIdx);
+    const next = [...answers];
+    next[current] = optLabel;
+    setAnswers(next);
+    setTimeout(() => {                     // 选中高亮短暂停留后左划
+      if (current < QUIZ_QUESTIONS.length - 1) {
+        setCurrent(current + 1);
+        setPicked(null);
+      } else {
+        onComplete(next);
+      }
+    }, 240);
+  }
+
   return (
-    <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "0 24px" }}>
-      <div style={{ textAlign: "center", maxWidth: 360 }}>
-        <div style={{ fontSize: 48, marginBottom: 16, lineHeight: 1 }}>{slide.icon}</div>
-        <div style={{ fontSize: 17, fontWeight: 600, color: "var(--color-text)", marginBottom: 10 }}>{slide.title}</div>
-        <div style={{ fontSize: 14, color: "var(--color-text-secondary)", lineHeight: 1.7, marginBottom: 28, minHeight: 60 }}>{slide.body}</div>
-        {/* progress dots */}
-        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginBottom: 20 }}>
-          {LOADING_SLIDES.map((_, i) => (
-            <div key={i} style={{ width: i === idx ? 20 : 6, height: 6, borderRadius: 3, background: i === idx ? "var(--color-accent)" : "var(--color-separator)", transition: "width 0.3s" }} />
+    <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", flexDirection: "column" }}>
+      <div style={{ padding: "40px 24px 8px", textAlign: "center" }}>
+        <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", letterSpacing: 1, marginBottom: 6 }}>个性化校准 · {current + 1}/{QUIZ_QUESTIONS.length}</div>
+        <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>正在为 {province} · {rank ? Number(rank).toLocaleString() : "—"} 位次 定制方案</div>
+        <div style={{ display: "flex", justifyContent: "center", gap: 6, marginTop: 16 }}>
+          {QUIZ_QUESTIONS.map((_, i) => (
+            <div key={i} style={{ width: i === current ? 24 : 8, height: 8, borderRadius: 4, background: i <= current ? "var(--color-accent)" : "var(--color-separator)", transition: "all .3s" }} />
           ))}
         </div>
-        <div className="spinner" style={{ width: 24, height: 24, margin: "0 auto" }} />
+      </div>
+      <div style={{ flex: 1, overflow: "hidden", display: "flex", alignItems: "center" }}>
+        <div style={{ display: "flex", width: "100%", transform: `translateX(-${current * 100}%)`, transition: "transform .42s cubic-bezier(.4,0,.2,1)" }}>
+          {QUIZ_QUESTIONS.map((qq, qi) => (
+            <div key={qi} style={{ flex: "0 0 100%", width: "100%", padding: "0 24px", boxSizing: "border-box" }}>
+              <div style={{ maxWidth: 440, margin: "0 auto" }}>
+                <h2 style={{ fontSize: 22, fontWeight: 700, color: "var(--color-text-primary)", lineHeight: 1.5, marginBottom: qq.hint ? 8 : 22 }}>{qq.q}</h2>
+                {qq.hint && <div style={{ fontSize: 13, color: "var(--color-text-tertiary)", marginBottom: 22 }}>{qq.hint}</div>}
+                <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                  {qq.options.map((opt, oi) => {
+                    const isPicked = qi === current && picked === oi;
+                    return (
+                      <button
+                        key={oi}
+                        onClick={() => qi === current && choose(oi, opt)}
+                        style={{
+                          textAlign: "left", padding: "16px 18px", borderRadius: 14, fontSize: 16, cursor: "pointer",
+                          border: `1.5px solid ${isPicked ? "var(--color-accent)" : "var(--color-separator)"}`,
+                          background: isPicked ? "rgba(201,146,42,0.10)" : "var(--color-bg)",
+                          color: isPicked ? "var(--color-accent)" : "var(--color-text-primary)",
+                          fontWeight: isPicked ? 700 : 500, transition: "all .15s",
+                        }}
+                      >
+                        {opt}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div style={{ textAlign: "center", padding: "16px 24px 32px", fontSize: 12, color: "var(--color-text-tertiary)" }}>选择后自动进入下一题</div>
+    </div>
+  );
+}
+
+// ── 生成中：分步工序逐项打勾（劳动可见化）──────────────────
+const GEN_STEPS = [
+  "拉取本省近 4 年逐分录取数据",
+  "为候选院校逐一测算录取概率",
+  "评估各专业未来 4 年就业 / 保研 / 考研前景",
+  "识别被市场低估的冷门宝藏院校",
+  "比对就业率 / 深造率 / 大小年趋势",
+  "生成冲·稳·保梯度与填报建议",
+];
+
+function GeneratingScreen({ province, rank }: { province: string; rank: string }) {
+  const [step, setStep] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStep(s => Math.min(s + 1, GEN_STEPS.length)), 2800);
+    return () => clearInterval(t);
+  }, []);
+  return (
+    <div style={{ minHeight: "100vh", background: "var(--color-bg)", display: "flex", alignItems: "center", justifyContent: "center", padding: "32px 24px" }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 22 }}>
+          <div className="spinner" style={{ width: 32, height: 32, margin: "0 auto 16px" }} />
+          <div style={{ fontSize: 17, fontWeight: 700, color: "var(--color-text-primary)", marginBottom: 6 }}>正在生成你的专属方案</div>
+          {province && <div style={{ fontSize: 13, color: "var(--color-text-secondary)" }}>{province} · {rank ? Number(rank).toLocaleString() : "—"} 位次</div>}
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {GEN_STEPS.map((s, i) => {
+            const done = i < step;
+            const active = i === step;
+            return (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, opacity: done || active ? 1 : 0.4, transition: "opacity .3s" }}>
+                <div style={{
+                  width: 22, height: 22, borderRadius: 11, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center",
+                  background: done ? "var(--color-accent)" : "transparent",
+                  border: done ? "none" : `1.5px solid ${active ? "var(--color-accent)" : "var(--color-separator)"}`,
+                  color: "#fff", fontSize: 13,
+                }}>
+                  {done ? "✓" : (active ? <div className="spinner" style={{ width: 12, height: 12 }} /> : "")}
+                </div>
+                <span style={{ fontSize: 14, fontWeight: active ? 600 : 400, color: (done || active) ? "var(--color-text-primary)" : "var(--color-text-tertiary)" }}>{s}</span>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

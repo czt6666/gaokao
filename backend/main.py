@@ -58,7 +58,7 @@ from services.recommend_core import (
 )
 from services._prewarm_cache import start_prewarm_daemon
 
-app = FastAPI(title="高考志愿填报决策引擎", version="3.0.0")
+app = FastAPI(title="高考志愿填报决策引擎", version="3.1.0")
 app.include_router(auth_router.router)
 app.include_router(payment_router.router)
 app.include_router(track_router.router)
@@ -114,7 +114,7 @@ def root():
 @app.get("/api/version")
 def version():
     return {
-        "version": os.getenv("BACKEND_VERSION", "3.0.1"),
+        "version": os.getenv("BACKEND_VERSION", "3.1.0"),
     }
 
 

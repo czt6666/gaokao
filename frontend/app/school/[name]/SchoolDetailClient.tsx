@@ -96,7 +96,6 @@ const GRADE_COLOR: Record<string, string> = {
 };
 
 const COMPARE_KEY = "gaokao_compare";
-const FORM_KEY = "gaokao_form_v3";
 
 function addToCompareLocal(name: string) {
   try {
@@ -276,38 +275,8 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
 
   const [data, setData] = useState<SchoolDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [exportLoading, setExportLoading] = useState(false);
   const [outlook, setOutlook] = useState<string>("");
   const [outlookLoading, setOutlookLoading] = useState(false);
-
-  async function handleExport() {
-    const rankStr = searchParams.get("rank") || "";
-    if (!rankStr) {
-      alert("请先在首页输入位次后再从结果页进入学校详情，这样才能生成个性化报告");
-      return;
-    }
-    setExportLoading(true);
-    try {
-      const examMode = searchParams.get("exam_mode") || "";
-      const examParam = examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : "";
-      const url = `${API}/api/report/generate?province=${encodeURIComponent(province)}&rank=${rankStr}&subject=${encodeURIComponent(searchParams.get("subject") || "物理")}${examParam}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({ detail: "未知错误" }));
-        throw new Error(err.detail || "生成失败");
-      }
-      const blob = await res.blob();
-      const link = document.createElement("a");
-      link.href = URL.createObjectURL(blob);
-      link.download = `水卢报告_${province}_${rankStr}.pdf`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    } catch (e: any) {
-      alert(`报告生成失败：${e.message}`);
-    } finally {
-      setExportLoading(false);
-    }
-  }
 
   useEffect(() => {
     fetch(`${API}/api/school/${encodeURIComponent(schoolName)}?province=${province}`)
@@ -613,44 +582,6 @@ export default function SchoolDetailClient({ schoolName }: { schoolName: string 
         <p style={{ fontSize: 12, color: "var(--color-text-tertiary)", textAlign: "center", marginTop: 32, paddingBottom: 16 }}>
           以上数据基于公开信息，请以各省教育考试院及高校招生简章为准。
         </p>
-      </div>
-
-      {/* Bottom action bar */}
-      <div style={{
-        position: "fixed",
-        bottom: 0,
-        left: 0,
-        right: 0,
-        background: "var(--color-bg)",
-        borderTop: "1px solid var(--color-separator)",
-        padding: "12px 20px",
-        display: "flex",
-        gap: 12,
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        maxWidth: 680,
-        margin: "0 auto",
-      }}>
-        <button
-          onClick={() => {
-            const formItem = { id: `${Date.now()}`, rank: 1, school: school.name, major: majors[0]?.major_name || "", probability: 50, action: "稳", category: "稳" };
-            const saved = JSON.parse(localStorage.getItem(FORM_KEY) || "[]");
-            localStorage.setItem(FORM_KEY, JSON.stringify([...saved, formItem]));
-            alert("已加入志愿表");
-          }}
-          className="btn-secondary"
-          style={{ flex: 1 }}
-        >
-          加入志愿表
-        </button>
-        <button
-          onClick={handleExport}
-          disabled={exportLoading}
-          className="btn-primary"
-          style={{ flex: 1, opacity: exportLoading ? 0.7 : 1 }}
-        >
-          {exportLoading ? "生成中…" : "导出PDF报告"}
-        </button>
       </div>
     </div>
   );

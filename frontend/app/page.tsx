@@ -385,7 +385,7 @@ export default function Home() {
               className="nav-brand-sub"
               onClick={() => setShowFeedback(true)}
               style={{ fontSize: 11, color: "var(--color-text-tertiary)", letterSpacing: ".3px", cursor: "pointer" }}
-            >袁希团队出品</span>
+            >意见反馈</span>
             {/* 桌面端链接 */}
             <div className="nav-link-mobile-hide" style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <Link href="/search" className="btn-ghost" style={{ padding: "6px 12px", fontSize: 13 }}>学校库</Link>
@@ -550,6 +550,7 @@ export default function Home() {
                 }
               }}
               onKeyDown={e => e.key === "Enter" && handleSubmit()}
+              onWheel={e => e.currentTarget.blur()}
               placeholder={mode === "rank" ? "例如：28000" : "例如：630"}
               className="apple-input"
               style={{ fontSize: 28, fontWeight: 300, letterSpacing: "-0.3px", padding: "16px 18px" }}
@@ -681,20 +682,18 @@ export default function Home() {
               type="button"
               onClick={() => setShowConstraints(v => !v)}
               style={{
-                display: "flex", alignItems: "center", gap: 6,
-                background: "none", border: "none", cursor: "pointer",
-                fontSize: 13, color: "var(--color-text-secondary)", padding: 0,
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                width: "100%", boxSizing: "border-box",
+                background: showConstraints ? "var(--color-bg-secondary)" : "var(--color-bg)",
+                border: `1.5px ${showConstraints ? "solid" : "dashed"} var(--color-navy)`,
+                borderRadius: 12, cursor: "pointer", transition: "all .2s",
+                fontSize: 15, fontWeight: 600, color: "var(--color-navy)", padding: "13px 16px",
               }}
             >
-              <span style={{
-                display: "inline-block", width: 20, height: 20, borderRadius: 6,
-                background: showConstraints ? "var(--color-navy)" : "var(--color-bg-secondary)",
-                color: showConstraints ? "#fff" : "var(--color-text-secondary)",
-                fontSize: 12, lineHeight: "20px", textAlign: "center", transition: "all .2s",
-              }}>{showConstraints ? "−" : "+"}</span>
-              添加偏好约束
+              <span style={{ fontSize: 18, lineHeight: 1, fontWeight: 400 }}>{showConstraints ? "−" : "+"}</span>
+              添加偏好约束（专业 / 城市 / 院校）
               {(cDisciplines.length || cCities.length || cNature.length || cTiers.length || (cBatchTypes.length && cBatchTypes.length < BATCH_OPTIONS.length) || cGender || cSpecialPlans.length > 0) ? (
-                <span style={{ fontSize: 11, color: "var(--color-accent)", fontWeight: 600 }}>（已选）</span>
+                <span style={{ fontSize: 11, color: "#fff", background: "var(--color-accent)", borderRadius: 99, padding: "1px 8px", fontWeight: 700 }}>已选</span>
               ) : null}
             </button>
 
@@ -1278,7 +1277,7 @@ export default function Home() {
       {/* ── Footer ── */}
       <footer style={{ borderTop: "1px solid var(--color-separator)", padding: "24px 20px", display: "flex", justifyContent: "center", alignItems: "center", gap: 24, flexWrap: "wrap" }}>
         <span style={{ fontSize: 13, color: "var(--color-text-tertiary)" }}>
-          © 2026 水卢冷门高报引擎 · 袁希团队出品
+          © 2026 水卢冷门高报引擎
         </span>
         {[["学校数据库", "/search"], ["我的志愿表", "/form"], ["学校对比", "/compare"], ["用户协议", "/terms"], ["隐私政策", "/privacy"]].map(([label, href]) => (
           <Link key={href} href={href} style={{ fontSize: 13, color: "var(--color-text-secondary)", textDecoration: "none" }}

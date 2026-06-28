@@ -239,6 +239,24 @@ BATCH_TYPE_MAP = {
     # ── 预科 ──
     "本科其他预科批": "preparatory",
 
+    # ── 新疆特有 ──
+    "本科一批次": "undergraduate",
+    "本科二批次": "undergraduate",
+    "本科一批次(国专地专南疆单列对口援疆)": "undergraduate",
+    "本科二批次(国专地专南疆单列对口援疆)": "undergraduate",
+    "本科提前批次": "advance_batch",
+    "高职(专科)批次": "junior_college",
+    "高职(专科)提前批次": "advance_batch",
+    "单列类本科一批次": "undergraduate",
+    "单列类本科二批次": "undergraduate",
+    "单列类本科提前批次": "advance_batch",
+    "单列类高职(专科)批次": "junior_college",
+    "单列类高职(专科)提前批次": "advance_batch",
+    "单列类本科一批次(国专地专南疆单列类对口援疆)": "undergraduate",
+    "单列类本科二批次(国专地专南疆单列类对口援疆)": "undergraduate",
+    "高水平运动队本科一批次": "special_type",
+    "高水平运动队本科二批次": "special_type",
+
     # ── 其他 ──
     "高本贯通批": "other",
 }
@@ -448,6 +466,27 @@ PLAN_CATEGORY_MAP = {
     "7.其他高校及专业": [],
     "5.医学类": [],
     "2.医学类": [],
+
+    # ── 新疆特有 ──
+    "公安(武警)类": ["special:military"],
+    "南疆单列计划": ["special:national_special"],
+    "国家公费师范生-高校专项计划": ["special:free_teacher"],
+    "地方免费医学生": ["special:oriented"],
+    "对口援疆计划": ["special:local_special"],
+
+    # ── 河南特有 ──
+    "公安类-国家专项": ["special:military", "special:national_special"],
+    "其他高校及专业": [],
+    "医学类": [],
+    "司法类": ["special:military"],
+    "司法类-国家专项": ["special:military", "special:national_special"],
+    "定向就业": ["special:oriented"],
+    "少数民族预科班": ["special:preparatory"],
+    "民航招收飞行学员": ["special:experiment"],
+    "综合评价招生": ["special:experiment"],
+    "行业类": [],
+    "边防军人子女预科班": ["special:preparatory"],
+    "马克思主义理论专业": [],
 }
 
 
@@ -507,6 +546,11 @@ CATEGORY_TO_DERIVED = {
     "历史类": "历史类",
     "文科": "历史类",
     "综合": "综合",
+    # 新疆（3+3 省份，用理工/文史区分）
+    "理工": "物理类",
+    "文史": "历史类",
+    "单列类理工": "物理类",
+    "单列类文史": "历史类",
 }
 
 

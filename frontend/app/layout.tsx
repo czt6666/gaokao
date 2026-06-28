@@ -3,6 +3,7 @@ import Script from "next/script";
 import "./globals.css";
 import VConsoleLoader from "@/components/VConsoleLoader";
 import FloatingService from "@/components/FloatingService";
+import VersionChecker from "@/components/VersionChecker";
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -12,12 +13,12 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: "水卢冷门高报引擎 · 高考志愿智能决策系统",
-  description: "输入高考位次，精确计算每所学校的录取概率，发现低知名度高就业率的冷门好校。覆盖3,217所高校，融合多年历史录取数据+就业真实数据。袁希团队出品。",
+  description: "输入高考位次，精确计算每所学校的录取概率，发现低知名度高就业率的冷门好校。覆盖3,217所高校，融合多年历史录取数据+就业真实数据。",
   keywords: "高考志愿,志愿填报,录取概率,高考位次,冷门好学校,志愿参考,高考择校,院校推荐,水卢,高考2025,大学推荐",
-  authors: [{ name: "袁希团队" }],
+  authors: [{ name: "水卢教育" }],
   openGraph: {
     title: "水卢冷门高报引擎 · 高考志愿智能决策系统",
-    description: "输入位次，精确计算录取概率，发现别人看不到的冷门好校。多年历史数据+就业真实数据。袁希团队出品。",
+    description: "输入位次，精确计算录取概率，发现别人看不到的冷门好校。多年历史数据+就业真实数据。",
     url: "https://www.theyuanxi.cn",
     siteName: "水卢冷门高报引擎",
     locale: "zh_CN",
@@ -34,7 +35,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "水卢冷门高报引擎 · 高考志愿智能决策系统",
-    description: "输入位次，精确计算录取概率，发现别人看不到的冷门好校。袁希团队出品。",
+    description: "输入位次，精确计算录取概率，发现别人看不到的冷门好校。",
     images: ["https://www.theyuanxi.cn/og-image.png"],
   },
   robots: {
@@ -75,7 +76,7 @@ const jsonLd = {
     {
       "@type": "Organization",
       "@id": "https://www.theyuanxi.cn/#organization",
-      name: "袁希团队",
+      name: "水卢教育",
       url: "https://www.theyuanxi.cn",
       description: "专注高考志愿填报智能化的技术团队",
     },
@@ -138,6 +139,7 @@ export default function RootLayout({
         {children}
         <VConsoleLoader />
         <FloatingService />
+        <VersionChecker />
       </body>
     </html>
   );

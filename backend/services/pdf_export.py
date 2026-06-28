@@ -8,7 +8,7 @@ def _make_qr_base64(url: str) -> str:
     """生成二维码 PNG，返回 base64 字符串；失败时返回空字符串"""
     try:
         import qrcode
-        qr = qrcode.QRCode(version=2, box_size=4, border=2,
+        qr = qrcode.QRCode(version=None, box_size=8, border=2,
                            error_correction=qrcode.constants.ERROR_CORRECT_M)
         qr.add_data(url)
         qr.make(fit=True)
@@ -60,6 +60,25 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
     today = datetime.date.today().strftime("%Y年%m月%d日")
 
     # ── 按学校去重 ──
+    def _collect_plan(entry: dict, r: dict):
+        """汇总该校所有匹配专业的 2026 招生计划方向（按 专业全称+批次+选科 去重）+ 各专业办学实力。"""
+        plan = r.get("plan_2026") or {}
+        if plan.get("is_new"):
+            entry["_plan_has_new"] = True
+        for d in plan.get("directions", []):
+            label = d.get("major_full") or d.get("group_name") or ""
+            key = (label, d.get("batch", ""), d.get("subject_req", ""))
+            if label and key not in entry["_plan_dirs"]:
+                entry["_plan_dirs"][key] = d
+        # 各专业办学实力（软科评级/学科评估/硕博点），按专业名归集，首条非空生效
+        mname = r.get("major_name", "")
+        if mname and mname != "[院校最低分]":
+            prof = {k: plan.get(k) for k in
+                    ("ruanke_grade", "ruanke_rank", "discipline_eval", "major_master", "major_phd")
+                    if plan.get(k)}
+            if prof and mname not in entry["_prof_by_major"]:
+                entry["_prof_by_major"][mname] = prof
+
     _dedup_idx: dict = {}
     results_dedup: list = []
     for r in results:
@@ -69,12 +88,17 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
             _dedup_idx[name] = len(results_dedup)
             entry = dict(r)
             entry["_matched_majors"] = [mn] if mn and mn != "[院校最低分]" else []
+            entry["_plan_dirs"] = {}
+            entry["_prof_by_major"] = {}
+            entry["_plan_has_new"] = False
+            _collect_plan(entry, r)
             results_dedup.append(entry)
         else:
             idx = _dedup_idx[name]
             existing = results_dedup[idx]
             if mn and mn != "[院校最低分]" and mn not in existing["_matched_majors"]:
                 existing["_matched_majors"].append(mn)
+            _collect_plan(existing, r)
             if (r.get("probability") or 0) > (existing.get("probability") or 0):
                 for k in ("probability", "prob_low", "prob_high", "reason", "reason_sections",
                           "big_small_year", "recent_data"):
@@ -85,8 +109,8 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
     _ctx_label, _ctx_note = _rank_context(rank, total)
 
     site_url  = os.getenv("SITE_URL", "https://www.theyuanxi.cn")
-    track_url = f"{site_url}/r/{report_id}" if report_id else site_url
-    qr_b64    = _make_qr_base64(track_url)
+    # 二维码只编码主域名，不带 /r/{report_id} 追踪后缀（更短、更易扫）
+    qr_b64    = _make_qr_base64(site_url)
 
     chong = sum(1 for r in results_dedup if r.get("tier") == "冲")
     wen   = sum(1 for r in results_dedup if r.get("tier") == "稳")
@@ -149,7 +173,9 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
             emp_rate   = emp.get("school_employment_rate") or 0
             emp_str    = f"{emp_rate * 100:.0f}%" if emp_rate else "—"
             postgrad   = emp.get("school_postgrad_rate") or 0
-            pg_str     = f"{postgrad * 100:.0f}%" if postgrad else "—"
+            overseas   = emp.get("school_overseas_rate") or 0
+            deepen     = min(1.0, postgrad + overseas)  # 深造率=保研考研+出国
+            pg_str     = f"{deepen * 100:.0f}%" if deepen else "—"
             employer   = emp.get("school_employer_tier") or "—"
 
             bsy        = r.get("big_small_year") or {}
@@ -184,6 +210,60 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
             # 标签
             gem_mark = " ★ 冷门宝藏" if is_gem else ""
             top_mark = " ◆ 本档首选" if is_top and r.get("top_pick_rank") == 1 else (" ◇ 智能精选" if is_top else "")
+
+            # 2026 招生计划表（该校所有匹配专业）
+            plan_html = ""
+            plan_dirs = list((r.get("_plan_dirs") or {}).values())
+            if plan_dirs:
+                plan_total = sum((d.get("plan_count") or 0) for d in plan_dirs)
+                prows = []
+                for d in plan_dirs:
+                    label   = d.get("major_full") or d.get("group_name") or "—"
+                    pc      = d.get("plan_count") or 0
+                    pc_str  = f"{pc}" if pc else "—"
+                    tu      = d.get("tuition") or "—"
+                    dur     = d.get("duration") or "—"
+                    sreq    = d.get("subject_req") or "不限"
+                    batch   = d.get("batch") or "—"
+                    prows.append(
+                        f'<tr><td>{_esc(label)}</td><td>{pc_str}</td>'
+                        f'<td>{_esc(tu)}</td><td>{_esc(dur)}</td>'
+                        f'<td>{_esc(sreq)}</td><td>{_esc(batch)}</td></tr>'
+                    )
+                new_badge = '<span class="plan-new">含新增专业</span>' if r.get("_plan_has_new") else ''
+                total_str = f"（合计 {plan_total} 人）" if plan_total else ""
+                plan_html = (
+                    f'<div class="plan-title">2026年招生计划{total_str}{new_badge}</div>'
+                    f'<table class="plan-table">'
+                    f'<tr><th>专业</th><th>计划数</th><th>学费</th><th>学制</th><th>选科要求</th><th>批次</th></tr>'
+                    f'{"".join(prows)}</table>'
+                )
+
+            # 办学实力（按专业：软科评级 / 学科评估 / 硕博点）
+            strength_html = ""
+            prof_by_major = r.get("_prof_by_major") or {}
+            if prof_by_major:
+                slines = []
+                for mname, prof in prof_by_major.items():
+                    bits = []
+                    rg = prof.get("ruanke_grade")
+                    if rg:
+                        rr = prof.get("ruanke_rank")
+                        bits.append(f"软科{_esc(rg)}" + (f"（全国#{_esc(rr)}）" if rr else ""))
+                    de = prof.get("discipline_eval")
+                    if de:
+                        bits.append(f"学科评估 {_esc(de)}")
+                    if prof.get("major_phd"):
+                        bits.append("博士点")
+                    elif prof.get("major_master"):
+                        bits.append("硕士点")
+                    if bits:
+                        slines.append(f'<li><span class="st-major">{_esc(mname)}</span>：{" · ".join(bits)}</li>')
+                if slines:
+                    strength_html = (
+                        f'<div class="plan-title">办学实力（按专业）</div>'
+                        f'<ul class="strength-list">{"".join(slines)}</ul>'
+                    )
 
             analysis_html = _build_analysis_text(r, is_gem=is_gem)
 
@@ -220,6 +300,8 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
     </tr>
   </table>
   {f'<div class="data-note">A类学科：{_esc(subs_str)}</div>' if subs_str else ''}
+  {plan_html}
+  {strength_html}
 
   {analysis_html}
   {outlook_html}
@@ -239,7 +321,8 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
             emp = r.get("employment") or {}
             salary = emp.get("avg_salary") or 0
             sal = f"¥{salary // 1000}k" if salary else "—"
-            gem = "★" if r.get("is_hidden_gem") else ""
+            emp_rate = emp.get("school_employment_rate") or 0
+            er = f"{emp_rate * 100:.0f}%" if emp_rate else "—"
             majors = r.get("_matched_majors") or []
             if not majors:
                 mn = r.get("major_name", "")
@@ -253,20 +336,19 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
                 f'<td class="tier-{tier}">{tier}</td>'
                 f'<td>{ps}</td>'
                 f'<td>{sal}</td>'
-                f'<td>{gem}</td>'
+                f'<td>{er}</td>'
                 f'</tr>'
             )
         return "".join(rows)
 
-    # ── QR 水印（仅封面一处） ──
-    cover_qr = ""
-    if qr_b64:
-        cover_qr = (
-            f'<div style="text-align:center;margin-top:16px">'
-            f'<img src="data:image/png;base64,{qr_b64}" style="width:64px;height:64px;opacity:0.3">'
-            f'<div style="font-size:8px;color:#999;margin-top:4px">扫码访问水卢冷门高报引擎</div>'
-            f'</div>'
-        )
+    # ── QR + 网址（封面，可扫码亦可手输） ──
+    cover_qr = (
+        f'<div style="text-align:center;margin-top:20px">'
+        + (f'<img src="data:image/png;base64,{qr_b64}" style="width:120px;height:120px">' if qr_b64 else '')
+        + f'<div style="font-size:11px;color:#444;margin-top:6px">'
+          f'扫码或访问 <strong style="color:#1D1D1F">{_esc(site_url)}</strong> 在线查看完整分析</div>'
+        + f'</div>'
+    )
 
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">
@@ -311,6 +393,16 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
   .data-table td {{ padding: 4px 6px; border-bottom: 1px solid #eee; }}
   .data-note {{ font-size: 10px; color: #555; margin-bottom: 10px; }}
 
+  /* 2026 招生计划表 */
+  .plan-title {{ font-size: 11px; font-weight: 700; color: #1A2744; margin: 4px 0 4px; }}
+  .plan-new {{ font-size: 9px; font-weight: 600; color: #b8860b; background: #fff8e1; border: 1px solid #ffe58f; border-radius: 3px; padding: 0 4px; margin-left: 6px; }}
+  .plan-table {{ width: 100%; border-collapse: collapse; margin-bottom: 10px; font-size: 10px; }}
+  .plan-table th {{ background: #eef1f6; padding: 4px 6px; text-align: left; font-weight: 600; border-bottom: 1px solid #c4ccd8; white-space: nowrap; }}
+  .plan-table td {{ padding: 4px 6px; border-bottom: 1px solid #eee; vertical-align: top; }}
+  .strength-list {{ list-style: none; margin: 0 0 10px; padding: 0; font-size: 10px; color: #444; }}
+  .strength-list li {{ padding: 2px 0; border-bottom: 1px dashed #eee; line-height: 1.6; }}
+  .st-major {{ font-weight: 600; color: #1A2744; }}
+
   /* 冷门突出区块 */
   .gem-highlight {{ background: #fffbe6; border: 1px solid #ffe58f; padding: 10px 14px; margin-bottom: 10px; }}
   .gem-title {{ font-size: 12px; font-weight: 700; color: #8b6914; margin-bottom: 4px; }}
@@ -339,7 +431,7 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
     冲院校 {chong} 所 &nbsp;|&nbsp; 稳院校 {wen} 所 &nbsp;|&nbsp; 保院校 {bao} 所 &nbsp;|&nbsp; 共推荐 {total} 所
     {'&nbsp;|&nbsp; 含 ' + str(gems) + ' 所冷门宝藏院校' if gems else ''}
   </div>
-  <div style="font-size:10px;color:#888">生成于 {today} · 数据截至 2025年</div>
+  <div style="font-size:10px;color:#888">生成于 {today} · 录取数据截至2025年 · 含2026招生计划</div>
   {f'<div class="ctx"><strong>{_ctx_label}</strong><br>{_ctx_note}</div>' if _ctx_note else ''}
   {cover_qr}
 </div>
@@ -348,11 +440,11 @@ def _html_template(province: str, rank: int, results: List[Dict[str, Any]],
 <div class="summary">
   <h1>全部推荐院校一览</h1>
   <div style="font-size:10px;color:#666;margin-bottom:12px">
-    共 {total} 所 · {province} · 位次 {rank:,} · 冲{chong}所 · 稳{wen}所 · 保{bao}所 · ★=冷门宝藏
+    共 {total} 所 · {province} · 位次 {rank:,} · 冲{chong}所 · 稳{wen}所 · 保{bao}所
   </div>
   <table class="idx-table">
     <thead><tr>
-      <th>#</th><th>院校名称</th><th>推荐专业</th><th>层次</th><th>概率</th><th>月薪</th><th>冷门</th>
+      <th>#</th><th>院校名称</th><th>推荐专业</th><th>层次</th><th>概率</th><th>月薪</th><th>就业率</th>
     </tr></thead>
     <tbody>{summary_rows()}</tbody>
   </table>

@@ -6,8 +6,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5198";
 
 const PRODUCTS = [
   { productType: "trial_report",  price: 9.9,  label: "试看报告",       desc: "解锁前3所学校的完整分析", highlight: false },
-  { productType: "single_report", price: 39,   label: "单次完整报告",   desc: "本次查询的全部院校完整分析", highlight: true },
-  { productType: "season_2026",   price: 99,   label: "2026填报季会员", desc: "即日起至2026年9月1日 · 无限次查询", highlight: false },
+  { productType: "single_report", price: 39,   label: "单次完整报告",   desc: "本次查询的全部院校完整分析（更换专业筛选条件算作另一份报告）", highlight: false },
+  { productType: "season_2026",   price: 99,   label: "2026填报季会员", desc: "即日起至2026年9月1日 · 无限次查询 · 换专业筛选不限次", highlight: true },
 ];
 
 interface PayModalProps {
@@ -58,10 +58,10 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       const found = visibleProducts.find(p => p.productType === defaultProductType);
       if (found) return found;
     }
-    // 如果 ¥39 不可见（已购 trial），默认选 ¥99；否则默认 ¥39
-    return visibleProducts.find(p => p.productType === "single_report")
+    // 默认主推 ¥99 季会员；不可见时退回首个可见方案
+    return visibleProducts.find(p => p.productType === "season_2026")
       || visibleProducts[0]
-      || PRODUCTS[1];
+      || PRODUCTS[2];
   });
   const pollRef = useRef<NodeJS.Timeout | null>(null);
   const pollStartRef = useRef<number>(0);

@@ -117,6 +117,7 @@ type RecommendResult = {
 const FORM_KEY = "gaokao_form_v3";
 const COMPARE_KEY = "gaokao_compare";
 const HISTORY_KEY = "gaokao_query_history";
+const RESULT_CACHE_KEY = "gaokao_result_cache";
 
 function addToForm(item: SchoolResult, showToast?: (msg: string) => void) {
   try {

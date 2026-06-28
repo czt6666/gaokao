@@ -10,6 +10,7 @@ from typing import Optional
 
 import random, string, datetime, time, hashlib
 from database import get_db, Order, User, ReportLog
+from services.report_scope import build_report_scope_key, order_matches_report
 
 # ── PDF 内存缓存（LRU-like，最多缓存 20 份，每份有效 30 分钟）──────
 _pdf_cache: dict = {}          # key → {"bytes": bytes, "ts": float, "report_id": str}
@@ -151,6 +152,15 @@ async def export_report(
 
     province  = order.province or "北京"
     rank      = order.rank_input or 5000
+    scope_kwargs = dict(
+        province=province, rank=rank, subject=subject, score=score,
+        c_major=c_major, c_city=c_city, c_nature=c_nature, c_tier=c_tier,
+        discipline_filter=discipline_filter, batch_filter=batch_filter,
+        exclude_restrictions=exclude_restrictions,
+    )
+    if order.product_type not in ("season_2026", "monthly_sub", "quarterly_sub"):
+        if not order_matches_report(order, build_report_scope_key(**scope_kwargs), **scope_kwargs):
+            raise HTTPException(status_code=403, detail="当前筛选条件与已购报告不一致")
 
     # 解析约束条件（与 /api/recommend 保持一致）
     constraints = {}
@@ -362,18 +372,30 @@ async def generate_report_free(
     """
     PUBLIC_TESTING = False
 
-    # 验证付费状态：order_no 优先，fallback 到 JWT user.is_paid
+    scope_kwargs = dict(
+        province=province, rank=rank, subject=subject, score=score,
+        c_major=c_major, c_city=c_city, c_nature=c_nature, c_tier=c_tier,
+        discipline_filter=discipline_filter, batch_filter=batch_filter,
+        exclude_restrictions=exclude_restrictions,
+    )
+    current_scope_key = build_report_scope_key(**scope_kwargs)
+
+    def _active_subscription(u: User | None) -> bool:
+        return bool(u and u.is_paid and u.subscription_end_at and u.subscription_end_at > datetime.datetime.utcnow())
+
+    # 验证付费状态：order_no 优先，fallback 到 JWT 用户订单
     is_paid = False
     user = None
     paid_order = None
 
     if order_no:
-        paid_order = db.query(Order).filter(
-            Order.order_no == order_no,
-            Order.status == "paid"
-        ).first()
+        paid_order = db.query(Order).filter(Order.order_no == order_no, Order.status == "paid").first()
         if paid_order:
-            is_paid = True
+            if paid_order.product_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+                order_user = db.query(User).filter(User.id == paid_order.user_id).first() if paid_order.user_id else None
+                is_paid = _active_subscription(order_user)
+            else:
+                is_paid = order_matches_report(paid_order, current_scope_key, **scope_kwargs)
 
     if not is_paid:
         from routers.auth import _verify_token
@@ -392,8 +414,16 @@ async def generate_report_free(
                     user = db.query(User).filter(User.id == uid).first()
                 elif phone:
                     user = db.query(User).filter(User.phone == phone).first()
-                if user and user.is_paid:
-                    is_paid = True
+                if user:
+                    if _active_subscription(user):
+                        is_paid = True
+                    else:
+                        paid_orders = db.query(Order).filter(Order.user_id == user.id, Order.status == "paid").all()
+                        is_paid = any(
+                            o.product_type not in ("season_2026", "monthly_sub", "quarterly_sub")
+                            and order_matches_report(o, current_scope_key, **scope_kwargs)
+                            for o in paid_orders
+                        )
 
     if not PUBLIC_TESTING and not is_paid:
         raise HTTPException(status_code=403, detail="请先完成支付后再下载报告")

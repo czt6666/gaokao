@@ -13,7 +13,7 @@ const PRODUCTS = [
 interface PayModalProps {
   onClose: () => void;
   onSuccess?: (orderNo: string) => void;
-  queryParams?: { province?: string; rank?: number; subject?: string; c_major?: string; c_city?: string; c_nature?: string; c_tier?: string; mock_score?: number };
+  queryParams?: { province?: string; rank?: number; subject?: string; c_major?: string; c_city?: string; c_nature?: string; c_tier?: string; mock_score?: number; score?: number; discipline_filter?: string; batch_filter?: string; exclude_restrictions?: string | null };
   totalSchools?: number;
   isPaid?: boolean; // 由父组件传入，替代 localStorage 判断
   defaultProductType?: string; // 默认选中的产品类型，如 "trial_report"
@@ -175,6 +175,10 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
           c_city: queryParams?.c_city || "",
           c_nature: queryParams?.c_nature || "",
           c_tier: queryParams?.c_tier || "",
+          discipline_filter: queryParams?.discipline_filter || "",
+          batch_filter: queryParams?.batch_filter || "",
+          exclude_restrictions: queryParams?.exclude_restrictions,
+          mock_score: queryParams?.mock_score || queryParams?.score || 0,
         }),
       });
       if (!res.ok) return false;
@@ -222,7 +226,10 @@ export default function PayModal({ onClose, onSuccess, queryParams, totalSchools
       c_city: queryParams?.c_city || "",
       c_nature: queryParams?.c_nature || "",
       c_tier: queryParams?.c_tier || "",
-      mock_score: queryParams?.mock_score || 0,
+      discipline_filter: queryParams?.discipline_filter || "",
+      batch_filter: queryParams?.batch_filter || "",
+      exclude_restrictions: queryParams?.exclude_restrictions,
+      mock_score: queryParams?.mock_score || queryParams?.score || 0,
     };
 
     try {

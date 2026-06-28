@@ -8,6 +8,7 @@ from database import get_db, Order, User, SessionLocal, CommissionRecord
 # User 已导入 — JSAPI 端点需要查找小程序用户
 from routers.auth import _verify_token
 from services.email_service import send_payment_notification
+from services.report_scope import build_report_scope_key
 import logging
 
 logger = logging.getLogger(__name__)
@@ -102,6 +103,9 @@ class CreateOrderRequest(BaseModel):
     c_city: str = ""             # 用户筛选：城市
     c_nature: str = ""           # 用户筛选：性质
     c_tier: str = ""             # 用户筛选：档次
+    discipline_filter: str = ""  # 门类/专业类筛选
+    batch_filter: str = ""       # 批次筛选
+    exclude_restrictions: str | None = None  # 特殊限制筛选
     mock_score: int = 0          # 用户高考分数
 
 
@@ -130,6 +134,13 @@ async def create_order(req: CreateOrderRequest, request: Request, db: Session = 
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        report_scope_key=build_report_scope_key(
+            province=req.province, rank=req.rank_input, subject=req.subject,
+            score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,
+            c_nature=req.c_nature, c_tier=req.c_tier,
+            discipline_filter=req.discipline_filter, batch_filter=req.batch_filter,
+            exclude_restrictions=req.exclude_restrictions,
+        ),
         mock_score=req.mock_score or None,
     )
     db.add(order)
@@ -177,6 +188,9 @@ class CreateJSAPIRequest(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    discipline_filter: str = ""  # 门类/专业类筛选
+    batch_filter: str = ""       # 批次筛选
+    exclude_restrictions: str | None = None  # 特殊限制筛选
     mock_score: int = 0  # 用户高考分数
 
 
@@ -211,6 +225,13 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        report_scope_key=build_report_scope_key(
+            province=req.province, rank=req.rank_input, subject=req.subject,
+            score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,
+            c_nature=req.c_nature, c_tier=req.c_tier,
+            discipline_filter=req.discipline_filter, batch_filter=req.batch_filter,
+            exclude_restrictions=req.exclude_restrictions,
+        ),
         mock_score=req.mock_score or None,
     )
     db.add(order)
@@ -241,6 +262,9 @@ class CreateH5Request(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    discipline_filter: str = ""  # 门类/专业类筛选
+    batch_filter: str = ""       # 批次筛选
+    exclude_restrictions: str | None = None  # 特殊限制筛选
     mock_score: int = 0  # 用户高考分数
 
 
@@ -269,6 +293,13 @@ async def create_h5_order(req: CreateH5Request, request: Request, db: Session = 
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        report_scope_key=build_report_scope_key(
+            province=req.province, rank=req.rank_input, subject=req.subject,
+            score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,
+            c_nature=req.c_nature, c_tier=req.c_tier,
+            discipline_filter=req.discipline_filter, batch_filter=req.batch_filter,
+            exclude_restrictions=req.exclude_restrictions,
+        ),
         mock_score=req.mock_score or None,
     )
     db.add(order)
@@ -337,6 +368,9 @@ class CreateJSAPIWebRequest(BaseModel):
     c_city: str = ""     # 用户筛选：城市
     c_nature: str = ""   # 用户筛选：性质
     c_tier: str = ""     # 用户筛选：档次
+    discipline_filter: str = ""  # 门类/专业类筛选
+    batch_filter: str = ""       # 批次筛选
+    exclude_restrictions: str | None = None  # 特殊限制筛选
     mock_score: int = 0  # 用户高考分数
 
 
@@ -369,6 +403,13 @@ async def create_jsapi_web_order(req: CreateJSAPIWebRequest, request: Request, d
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        report_scope_key=build_report_scope_key(
+            province=req.province, rank=req.rank_input, subject=req.subject,
+            score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,
+            c_nature=req.c_nature, c_tier=req.c_tier,
+            discipline_filter=req.discipline_filter, batch_filter=req.batch_filter,
+            exclude_restrictions=req.exclude_restrictions,
+        ),
         mock_score=req.mock_score or None,
     )
     db.add(order)

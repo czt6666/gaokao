@@ -57,6 +57,7 @@ from services.recommend_core import (
     _filter_stopped_2026, parse_user_subjects, subject_match_struct,
 )
 from services._prewarm_cache import start_prewarm_daemon
+from services.report_scope import build_report_scope_key, order_matches_report
 
 app = FastAPI(title="高考志愿填报决策引擎", version="3.1.0")
 app.include_router(auth_router.router)
@@ -383,86 +384,47 @@ def recommend(
     #   - 二维码超时时显示「二维码已过期，重新获取」按钮
     # 订阅到期时间设置 → routers/payment.py:246-261 (_finalize_order)
     #   - season_2026: 2026-09-01, monthly: +30天, quarterly: +90天
-    # ¥39 = 解锁「某省×某位次×某选科」单次查询
-    # order_no 必须同时满足：已支付 + province/rank/subject 与当前查询匹配
+    scope_kwargs = dict(
+        province=province, rank=rank, subject=subject, score=score,
+        c_major=c_major, c_city=c_city, c_nature=c_nature, c_tier=c_tier,
+        discipline_filter=discipline_filter, batch_filter=batch_filter,
+        exclude_restrictions=exclude_restrictions,
+    )
+    current_scope_key = build_report_scope_key(**scope_kwargs)
+
+    def _active_subscription(user: User | None) -> bool:
+        if not user or not user.is_paid:
+            return False
+        return bool(user.subscription_end_at and user.subscription_end_at > datetime.datetime.utcnow())
+
     is_paid = False
     if order_no:
-        paid_order = (
-            db.query(Order)
-            .filter(Order.order_no == order_no, Order.status == "paid")
-            .first()
-        )
+        paid_order = db.query(Order).filter(Order.order_no == order_no, Order.status == "paid").first()
         if paid_order:
-            # 省份必须匹配（空字符串=历史兼容，视为匹配）
-            province_match = (
-                paid_order.province == "" or paid_order.province == province
-            )
-            # 位次微调容差 ±50 视为同次查询
-            rank_match = (
-                paid_order.rank_input is None or abs(paid_order.rank_input - rank) <= 50
-            )
-            # 选科必须匹配（空字符串=历史兼容订单，视为匹配）
-            subject_match = paid_order.subject == "" or paid_order.subject == subject
-            is_paid = province_match and rank_match and subject_match
-
-            # 订阅制订单：即使订单本身有效，也需检查用户订阅状态是否仍然有效
-            if is_paid and paid_order.product_type in (
-                "season_2026",
-                "monthly_sub",
-                "quarterly_sub",
-            ):
-                if paid_order.user_id:
-                    order_user = (
-                        db.query(User).filter(User.id == paid_order.user_id).first()
-                    )
-                    now = datetime.datetime.utcnow()
-                    if (
-                        not order_user
-                        or not order_user.is_paid
-                        or not (
-                            order_user.subscription_end_at
-                            and order_user.subscription_end_at > now
-                        )
-                    ):
-                        is_paid = False
+            if paid_order.product_type in ("season_2026", "monthly_sub", "quarterly_sub"):
+                order_user = db.query(User).filter(User.id == paid_order.user_id).first() if paid_order.user_id else None
+                is_paid = _active_subscription(order_user)
+            else:
+                is_paid = order_matches_report(paid_order, current_scope_key, **scope_kwargs)
 
     if not is_paid:
         auth_header = request.headers.get("Authorization", "")
         if auth_header.startswith("Bearer "):
-            from routers.auth import _verify_token
-
-            tok_payload = _verify_token(auth_header[7:])
+            tok_payload = _auth_verify_token(auth_header[7:])
             if tok_payload:
                 uid = tok_payload.get("uid")
                 phone = tok_payload.get("phone")
-                u = None
-                if uid:
-                    u = db.query(User).filter(User.id == uid).first()
-                elif phone:
-                    u = db.query(User).filter(User.phone == phone).first()
+                u = db.query(User).filter(User.id == uid).first() if uid else (db.query(User).filter(User.phone == phone).first() if phone else None)
                 if u:
-                    # JWT路径：查该用户是否有与当前 province+rank+subject 匹配的 paid order
-                    # 位次微调容差 ±50 视为同次查询
-                    matching_order = (
-                        db.query(Order)
-                        .filter(
-                            Order.user_id == u.id,
-                            Order.status == "paid",
-                            Order.province == province,
-                            Order.subject == subject,
-                            Order.rank_input >= rank - 50,
-                            Order.rank_input <= rank + 50,
-                        )
-                        .first()
-                    )
-                    if matching_order:
+                    if _active_subscription(u):
                         is_paid = True
-                    # 订阅制会员：未过期内无限次查询（不依赖单笔订单匹配）
-                    # 只要有 is_paid + 未过期的 subscription_end_at 即视为有效
-                    if not is_paid and u.is_paid:
-                        now = datetime.datetime.utcnow()
-                        if u.subscription_end_at and u.subscription_end_at > now:
-                            is_paid = True
+                    else:
+                        paid_orders = db.query(Order).filter(Order.user_id == u.id, Order.status == "paid").all()
+                        is_paid = any(
+                            o.product_type not in ("season_2026", "monthly_sub", "quarterly_sub")
+                            and order_matches_report(o, current_scope_key, **scope_kwargs)
+                            for o in paid_orders
+                        )
 
     constraints = {}
     if c_major.strip():

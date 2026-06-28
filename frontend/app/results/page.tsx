@@ -2164,7 +2164,20 @@ function ResultsContent() {
             // 触发数据重新加载（后端通过 JWT 识别付费状态）
             setRefreshTrigger((n) => n + 1);
           }}
-          queryParams={{ province, rank: rank ? Number(rank) : undefined, subject, c_major: cMajor, c_city: cCity, c_nature: cNature, c_tier: cTier, mock_score: mockScore ? Number(mockScore) : undefined }}
+          queryParams={{
+            province,
+            rank: rank ? Number(rank) : undefined,
+            subject,
+            c_major: cMajor,
+            c_city: cCity,
+            c_nature: cNature,
+            c_tier: cTier,
+            mock_score: mockScore ? Number(mockScore) : undefined,
+            score: score ? Number(score) : undefined,
+            discipline_filter: disciplineFilter,
+            batch_filter: batchFilterParam,
+            exclude_restrictions: hasExcludeRestrictionsParam ? excludeRestrictionsParam : null,
+          }}
           totalSchools={totalSchools}
           isPaid={data?.is_paid ?? false}
           defaultProductType={defaultProductType}

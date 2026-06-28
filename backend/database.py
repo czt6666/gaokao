@@ -250,6 +250,7 @@ class Order(Base):
     c_city          = Column(String(20), default="")        # 用户筛选：城市
     c_nature        = Column(String(20), default="")        # 用户筛选：性质
     c_tier          = Column(String(20), default="")        # 用户筛选：档次
+    report_scope_key = Column(String(64), default="", index=True)  # 单次报告作用域（完整查询+筛选参数）
     mock_score      = Column(Integer, nullable=True)        # 用户高考分数（分数模式下单时传入）
     commission_fen  = Column(Integer, default=0)            # 该订单产生的佣金（分）
 
@@ -445,6 +446,7 @@ def _ensure_schema():
                 ("c_city",     "VARCHAR(20) DEFAULT ''"),
                 ("c_nature",   "VARCHAR(20) DEFAULT ''"),
                 ("c_tier",     "VARCHAR(20) DEFAULT ''"),
+                ("report_scope_key", "VARCHAR(64) DEFAULT ''"),
                 ("mock_score", "INTEGER"),
                 ("commission_fen", "INTEGER DEFAULT 0"),
             ],
@@ -475,6 +477,7 @@ def _ensure_schema():
             "CREATE INDEX IF NOT EXISTS ix_user_events_province_created ON user_events(province, created_at)",
             "CREATE INDEX IF NOT EXISTS ix_user_events_type_created ON user_events(event_type, created_at)",
             "CREATE INDEX IF NOT EXISTS ix_user_events_rank ON user_events(rank_input)",
+            "CREATE INDEX IF NOT EXISTS ix_orders_scope_key ON orders(report_scope_key)",
         ]
         for sql in index_sqls:
             try:

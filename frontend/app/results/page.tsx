@@ -992,13 +992,14 @@ function ResultsContent() {
     startGenerating();  // 答完题再走满强制生成时长
   }
 
-  // 首次进入结果页：弹出「使用教程」提示（点「不再显示」后永久关闭）
+  // 首次进入结果页：弹出「使用教程」提示（点「不再显示」后永久关闭；同 session 内只显示一次）
   useEffect(() => {
     try {
-      if (!localStorage.getItem("gaokao_guide_dismissed")) {
-        const t = setTimeout(() => setShowGuidePrompt(true), 800);
-        return () => clearTimeout(t);
+      if (localStorage.getItem("gaokao_guide_dismissed") || sessionStorage.getItem("gaokao_guide_shown")) {
+        return;
       }
+      const t = setTimeout(() => { setShowGuidePrompt(true); try { sessionStorage.setItem("gaokao_guide_shown", "1"); } catch {} }, 800);
+      return () => clearTimeout(t);
     } catch { }
   }, []);
 

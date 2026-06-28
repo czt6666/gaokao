@@ -955,6 +955,7 @@ function ResultsContent() {
   const [emailInput, setEmailInput] = useState("");
   const [lockedExpanded, setLockedExpanded] = useState(false);
   const [showGuidePrompt, setShowGuidePrompt] = useState(false);
+  const hasRestoredFromCache = useRef(false);
 
   // ── 结果揭晓门控：首次需做 3 道偏好题；之后强制走满「生成」时长 + 数据就绪，才显示结果页 ──
   // 强制生成时长（每次揭晓都走，不止首次）。报告含金量高，不该秒出。
@@ -1064,20 +1065,45 @@ function ResultsContent() {
     // 移动端 / App 内置浏览器：blob + a.download 在安卓夸克/Via/Kimi/微信等浏览器上不被支持，
     // 改为直接导航到带鉴权的真实 PDF 链接（浏览器内打开预览，可自行保存/分享），兼容性最佳。
     const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
+    const isWechat = /MicroMessenger/i.test(ua);
+    const isIOS = /iPhone|iPad|iPod/i.test(ua);
     const isMobile = /Android|iPhone|iPad|iPod|Mobile|MicroMessenger|Quark|Via|UCBrowser|MQQBrowser|HeyTapBrowser|VivoBrowser|OppoBrowser|MiuiBrowser|HuaweiBrowser|Kimi/i.test(ua);
+
+    // iOS 微信：直接 fetch + blob 下载，避免 inline PDF 白屏
+    if (isIOS && isWechat) {
+      try {
+        const iosUrl = orderNo
+          ? `${baseUrl}&order_no=${encodeURIComponent(orderNo)}`
+          : baseUrl;
+        const res = await fetch(iosUrl, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ detail: "服务暂不可用" }));
+          throw new Error(err.detail || "生成失败");
+        }
+        const blob = await res.blob();
+        const objUrl = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = objUrl;
+        a.download = `水卢报告_${province}_${rank}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(objUrl), 10000);
+      } catch (e: any) {
+        alert(`报告生成失败：${e.message}`);
+      } finally {
+        setExporting(false);
+        setShowExportLoading(false);
+      }
+      return;
+    }
+
     if (isMobile) {
       // 鉴权优先用订单号（作用域更小），否则退回 JWT（仅本人 token，短时导航）
       const authParam = orderNo
         ? `order_no=${encodeURIComponent(orderNo)}`
         : `token=${encodeURIComponent(token)}`;
       const inlineUrl = `${baseUrl}&${authParam}&inline=1`;
-      // 先同步打开占位标签页（避免 await 后被弹窗拦截），显示「生成中」
-      const win = window.open("", "_blank");
-      if (win) {
-        try {
-          win.document.write('<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>报告生成中</title><body style="margin:0;font:16px -apple-system,BlinkMacSystemFont,sans-serif;color:#333;display:flex;align-items:center;justify-content:center;height:100vh;text-align:center"><div>正在生成报告，请稍候…<br><span style="font-size:13px;color:#999">首次生成约需 10–30 秒</span></div></body>');
-        } catch { }
-      }
       try {
         // 先预热：服务端生成并写入缓存（返回极小 JSON），等待真正生成完成后再导航
         const res = await fetch(`${baseUrl}&warm=1`, { headers: { Authorization: `Bearer ${token}` } });
@@ -1086,10 +1112,12 @@ function ResultsContent() {
           throw new Error(err.detail || "生成失败");
         }
         // 已缓存 → 导航到内联 PDF（秒开）
-        if (win) win.location.href = inlineUrl;
-        else window.location.href = inlineUrl;
+        if (isWechat) {
+          window.location.href = inlineUrl; // 微信内：当前页跳转（新窗口不稳定）
+        } else {
+          window.open(inlineUrl, "_blank"); // 其他浏览器：新标签页打开
+        }
       } catch (e: any) {
-        try { win?.close(); } catch { }
         alert(`报告生成失败：${e.message}`);
       } finally {
         setExporting(false);
@@ -1192,8 +1220,7 @@ function ResultsContent() {
           if (res.ok) {
             const d = await res.json();
             if (d.status === "paid") {
-              // 支付成功，触发数据重新加载（后端会通过 JWT 识别付费状态）
-              setRefreshTrigger((n) => n + 1);
+              // 支付成功，fetch effect 已通过 isPaidReturn 强制刷新数据
             }
           }
         } catch { }
@@ -1246,7 +1273,53 @@ function ResultsContent() {
     track("page_view", { page: "/results", province, rankInput: Number(rank) });
     setFetchError(null);
     setFetchErrorCode("");
-    setLoading(true);
+
+    // 检查是否刚从登录/付费返回
+    const isLoginReturn = typeof window !== "undefined" && sessionStorage.getItem("gaokao_just_logged_in") === "1";
+    if (isLoginReturn) {
+      try { sessionStorage.removeItem("gaokao_just_logged_in"); } catch {}
+    }
+    const isPaidReturn = searchParams.get("paid") != null;
+    if (isPaidReturn) {
+      try { localStorage.removeItem(RESULT_CACHE_KEY); } catch {}
+    }
+
+    // 尝试从缓存恢复（查询参数相同则秒开，跳过 18s 强制等待）
+    let restored = false;
+    if (!isPaidReturn && !hasRestoredFromCache.current) {
+      try {
+        const cached = JSON.parse(localStorage.getItem(RESULT_CACHE_KEY) || "null");
+        if (cached?.data && cached?.params) {
+          const match =
+            cached.params.province === province &&
+            cached.params.rank === rank &&
+            cached.params.subject === subject &&
+            cached.params.examMode === examMode &&
+            cached.params.score === score &&
+            cached.params.cMajor === cMajor &&
+            cached.params.cCity === cCity &&
+            cached.params.cNature === cNature &&
+            cached.params.cTier === cTier &&
+            cached.params.disciplineFilter === disciplineFilter &&
+            cached.params.batchFilterParam === batchFilterParam &&
+            cached.params.excludeRestrictionsParam === excludeRestrictionsParam;
+          if (match) {
+            setData(cached.data);
+            setLoading(false);
+            setGateReady(true);
+            hasRestoredFromCache.current = true;
+            restored = true;
+          }
+        }
+      } catch {}
+    }
+    // 登录后返回 + 缓存已恢复 → 直接返回，不 fetch
+    if (isLoginReturn && restored) {
+      return () => {};
+    }
+    if (!restored) {
+      setLoading(true);
+    }
 
     let stale = false;
     const controller = new AbortController();
@@ -1303,6 +1376,14 @@ function ResultsContent() {
           const hist = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
           const filtered = hist.filter((h: any) => !(h.province === province && h.rank === rank && h.subject === subject && h.exam_mode === examMode));
           localStorage.setItem(HISTORY_KEY, JSON.stringify([entry, ...filtered].slice(0, 5)));
+        } catch { }
+        // Save to result cache for instant restore on page return
+        try {
+          localStorage.setItem(RESULT_CACHE_KEY, JSON.stringify({
+            data: d,
+            params: { province, rank, subject, examMode, score, cMajor, cCity, cNature, cTier, disciplineFilter, batchFilterParam, excludeRestrictionsParam },
+            timestamp: Date.now(),
+          }));
         } catch { }
       })
       .catch((e: any) => {

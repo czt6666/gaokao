@@ -9,6 +9,7 @@ import datetime, os, json, csv, io
 from pydantic import BaseModel
 
 from database import get_db, User, Order, UserEvent, ReportLog, ReportScan, Feedback, CommissionRecord, WithdrawalRecord
+from main import _get_tier_cities_map
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -482,21 +483,25 @@ def list_orders(
     page_size: int = Query(20, ge=1, le=100),
     status: str = Query("", description="pending/paid/refunded 或空=全部"),
     q_search: str = Query("", description="搜索订单号或省份"),
+    user_id: int | None = Query(None, description="用户ID"),
     db: Session = Depends(get_db)
 ):
     q = db.query(Order)
     if status:
         q = q.filter(Order.status == status)
+    if user_id is not None:
+        q = q.filter(Order.user_id == user_id)
     if q_search:
         q = q.filter(
             Order.order_no.contains(q_search) | Order.province.contains(q_search)
         )
     total = q.count()
     orders = q.order_by(Order.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
+    tier_map = _get_tier_cities_map(db)
     return {
         "total": total,
         "page":  page,
-        "items": [_order_row(o) for o in orders]
+        "items": [{**_order_row(o), "c_city_reduced": _reduce_city_filter(o.c_city or "", tier_map)} for o in orders]
     }
 
 
@@ -506,7 +511,8 @@ def _order_row(o):
         "amount":     round(o.amount / 100, 2),
         "status":     o.status,
         "pay_method": o.pay_method,
-        "province":   o.province,
+        "province":   o.province or "",
+        "subject":    o.subject or "",
         "rank_input": o.rank_input,
         "created_at": o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
         "pay_time":   o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
@@ -518,7 +524,43 @@ def _order_row(o):
         "mock_score": o.mock_score or 0,
         "product_type": o.product_type or "",
         "transaction_id": o.transaction_id or "",
+        "discipline_filter": o.discipline_filter or "",
+        "batch_filter": o.batch_filter or "",
+        "exclude_restrictions": o.exclude_restrictions or "",
+        "gender_filter": _parse_gender_filter(o.exclude_restrictions or ""),
     }
+
+
+def _parse_gender_filter(exclude_restrictions: str) -> str:
+    if not exclude_restrictions:
+        return ""
+    parts = exclude_restrictions.split(",")
+    for p in parts:
+        if p == "gender:female_only":
+            return "只招男生"
+        elif p == "gender:male_only":
+            return "只招女生"
+    return ""
+
+
+def _reduce_city_filter(city_str: str, tier_map: dict) -> str:
+    if not city_str:
+        return ""
+    cities = set(city_str.split(","))
+    reduced = []
+    remaining = set(cities)
+    tier_order = ["一线", "新一线", "二线", "三线", "四线", "五线"]
+    for tier in tier_order:
+        tier_cities = set(tier_map.get(tier, []))
+        if tier_cities and tier_cities <= remaining:
+            remaining -= tier_cities
+            num = tier.replace("新一线", "1").replace("一线", "1").replace("二线", "2").replace("三线", "3").replace("四线", "4").replace("五线", "5")
+            reduced.append(num)
+    if not reduced:
+        return city_str
+    if not remaining:
+        return "".join(reduced) + "线"
+    return "".join(reduced) + "线+" + ",".join(sorted(remaining))
 
 
 # ── 订单导出 CSV ─────────────────────────────────────────────
@@ -531,15 +573,16 @@ def export_orders_csv(status: str = Query(""), db: Session = Depends(get_db)):
 
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选性质", "筛选档次", "高考分数"])
+    w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "选科", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选城市(归一)", "筛选性质", "筛选档次", "高考分数", "性别筛选"])
+    tier_map = _get_tier_cities_map(db)
     for o in orders:
         w.writerow([
             o.order_no, round(o.amount/100, 2), o.status, o.pay_method,
-            o.province, o.rank_input, o.user_id,
+            o.province or "", o.subject or "", o.rank_input, o.user_id,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
             o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
-            o.c_major or "", o.c_city or "", o.c_nature or "", o.c_tier or "",
-            o.mock_score or "",
+            o.c_major or "", o.c_city or "", _reduce_city_filter(o.c_city or "", tier_map), o.c_nature or "", o.c_tier or "",
+            o.mock_score or "", _parse_gender_filter(o.exclude_restrictions or ""),
         ])
     buf.seek(0)
     return StreamingResponse(

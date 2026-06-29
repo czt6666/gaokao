@@ -253,6 +253,9 @@ class Order(Base):
     report_scope_key = Column(String(64), default="", index=True)  # 单次报告作用域（完整查询+筛选参数）
     mock_score      = Column(Integer, nullable=True)        # 用户高考分数（分数模式下单时传入）
     commission_fen  = Column(Integer, default=0)            # 该订单产生的佣金（分）
+    discipline_filter    = Column(String(200), default="")    # 用户筛选：学科门类
+    batch_filter         = Column(String(200), default="")    # 用户筛选：批次
+    exclude_restrictions = Column(String(200), default="")    # 用户筛选：排除限制条件
 
     __table_args__ = (Index("ix_order_status_created", "status", "created_at"),)
 

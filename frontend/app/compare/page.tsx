@@ -136,7 +136,7 @@ function MobileSchoolCard({ item, onRemove, candidateProvince }: {
             <div style={{ fontSize: 12, color: "var(--color-text-tertiary)", marginBottom: 8 }}>A类学科</div>
             {aclass.length > 0 ? (
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                {aclass.slice(0, 8).map((e) => (
+                {aclass.map((e) => (
                   <span key={e.subject} style={{
                     fontSize: 11, padding: "4px 8px", borderRadius: 6,
                     background: "var(--color-bg)", border: "1px solid var(--color-separator)",
@@ -402,7 +402,7 @@ export default function ComparePage() {
                           const aclass = it.data.school.subject_evaluations.filter((e) => ["A+", "A", "A-"].includes(e.grade));
                           return aclass.length > 0 ? (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-                              {aclass.slice(0, 6).map((e) => (
+                              {aclass.map((e) => (
                                 <span key={e.subject} style={{
                                   fontSize: 11, padding: "2px 7px", borderRadius: 6,
                                   background: "var(--color-bg)", border: "1px solid var(--color-separator)",

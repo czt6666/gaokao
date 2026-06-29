@@ -34,7 +34,7 @@ interface UserRow {
   subscription_type: string; subscription_end: string; days_remaining: number; referral_code: string;
 }
 interface UserQueryRecord { id: number; province: string; rank_input: number; event_data: string; page: string; created_at: string; ip: string; }
-interface UserOrderRecord { order_no: string; amount: number; status: string; pay_method: string; product_type: string; province: string; rank_input: number; created_at: string; pay_time: string; transaction_id: string; }
+interface UserOrderRecord { order_no: string; amount: number; status: string; pay_method: string; product_type: string; province: string; subject: string; rank_input: number; created_at: string; pay_time: string; transaction_id: string; c_major: string; c_city_reduced: string; c_nature: string; c_tier: string; mock_score: number; gender_filter: string; discipline_filter: string; batch_filter: string; exclude_restrictions: string; }
 interface UserEventRecord { id: number; event_type: string; event_data: string; page: string; created_at: string; ip: string; }
 interface UsagePdfRow {
   id: number; user_id: number | null; user_label: string; province: string; rank_input: number | null;
@@ -881,6 +881,7 @@ export default function AdminPage() {
                 { label: "产品类型", value: orderDetail.product_type || "—" },
                 { label: "支付方式", value: orderDetail.pay_method || "—" },
                 { label: "省份", value: orderDetail.province || "—" },
+                { label: "选科", value: orderDetail.subject || "—" },
                 { label: "位次", value: orderDetail.rank_input?.toLocaleString() || "—" },
                 { label: "分数", value: orderDetail.mock_score || "—" },
                 { label: "微信支付流水", value: orderDetail.transaction_id || "—" },
@@ -894,14 +895,16 @@ export default function AdminPage() {
               ))}
             </div>
 
-            {(orderDetail.c_major || orderDetail.c_city || orderDetail.c_nature || orderDetail.c_tier) && (
+            {(orderDetail.c_major || orderDetail.c_city_reduced || orderDetail.c_nature || orderDetail.c_tier || orderDetail.subject || orderDetail.gender_filter) && (
               <div style={{ marginBottom: 20 }}>
                 <div style={{ fontSize: 11, color: "#6E6E73", marginBottom: 6 }}>筛选条件</div>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                   {orderDetail.c_major && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#E8F4FD", color: "#0071E3", fontSize: 12 }}>专业: {orderDetail.c_major}</span>}
-                  {orderDetail.c_city && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#EDFBF2", color: "#34C759", fontSize: 12 }}>城市: {orderDetail.c_city}</span>}
+                  {orderDetail.c_city_reduced && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#EDFBF2", color: "#34C759", fontSize: 12 }}>城市: {orderDetail.c_city_reduced}</span>}
                   {orderDetail.c_nature && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#FFF9E6", color: "#FF9500", fontSize: 12 }}>性质: {orderDetail.c_nature}</span>}
                   {orderDetail.c_tier && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#F5F5F7", color: "#6E6E73", fontSize: 12 }}>档次: {orderDetail.c_tier}</span>}
+                  {orderDetail.subject && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#EBF3FF", color: "#0071E3", fontSize: 12 }}>选科: {orderDetail.subject}</span>}
+                  {orderDetail.gender_filter && <span style={{ padding: "3px 10px", borderRadius: 6, background: "#F0E6FF", color: "#AF52DE", fontSize: 12 }}>{orderDetail.gender_filter}</span>}
                 </div>
               </div>
             )}
@@ -1403,10 +1406,12 @@ export default function AdminPage() {
                       <td style={{ padding: "10px 16px", fontSize: 11 }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 4, maxWidth: 200 }}>
                           {o.c_major && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#E8F4FD", color: "#0071E3" }}>专业:{o.c_major}</span>}
-                          {o.c_city && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#EDFBF2", color: "#34C759" }}>城市:{o.c_city}</span>}
+                          {o.c_city_reduced && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#EDFBF2", color: "#34C759" }}>城市:{o.c_city_reduced}</span>}
                           {o.c_nature && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#FFF9E6", color: "#FF9500" }}>性质:{o.c_nature}</span>}
                           {o.c_tier && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#F5F5F7", color: "#6E6E73" }}>档次:{o.c_tier}</span>}
-                          {!o.c_major && !o.c_city && !o.c_nature && !o.c_tier && <span style={{ color: "#aeaeb2" }}>—</span>}
+                          {o.subject && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#EBF3FF", color: "#0071E3" }}>选科:{o.subject}</span>}
+                          {o.gender_filter && <span style={{ padding: "1px 6px", borderRadius: 4, background: "#F0E6FF", color: "#AF52DE" }}>{o.gender_filter}</span>}
+                          {!o.c_major && !o.c_city_reduced && !o.c_nature && !o.c_tier && !o.subject && !o.gender_filter && <span style={{ color: "#aeaeb2" }}>—</span>}
                         </div>
                       </td>
                       <td style={{ padding: "10px 16px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(o.created_at)}</td>

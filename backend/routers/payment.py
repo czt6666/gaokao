@@ -134,6 +134,9 @@ async def create_order(req: CreateOrderRequest, request: Request, db: Session = 
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        discipline_filter=req.discipline_filter or "",
+        batch_filter=req.batch_filter or "",
+        exclude_restrictions=req.exclude_restrictions or "",
         report_scope_key=build_report_scope_key(
             province=req.province, rank=req.rank_input, subject=req.subject,
             score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,
@@ -225,6 +228,9 @@ async def create_jsapi_order(req: CreateJSAPIRequest, request: Request, db: Sess
         c_city=req.c_city or "",
         c_nature=req.c_nature or "",
         c_tier=req.c_tier or "",
+        discipline_filter=req.discipline_filter or "",
+        batch_filter=req.batch_filter or "",
+        exclude_restrictions=req.exclude_restrictions or "",
         report_scope_key=build_report_scope_key(
             province=req.province, rank=req.rank_input, subject=req.subject,
             score=req.mock_score or None, c_major=req.c_major, c_city=req.c_city,

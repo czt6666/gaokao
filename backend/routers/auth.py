@@ -824,6 +824,9 @@ async def get_paid_orders(request: Request, db: Session = Depends(get_db)):
             + (f"&c_city={quote(o.c_city)}" if o.c_city else "")
             + (f"&c_nature={quote(o.c_nature)}" if o.c_nature else "")
             + (f"&c_tier={quote(o.c_tier)}" if o.c_tier else "")
+            + (f"&discipline_filter={quote(o.discipline_filter)}" if o.discipline_filter else "")
+            + (f"&batch_filter={quote(o.batch_filter)}" if o.batch_filter else "")
+            + (f"&exclude_restrictions={quote(o.exclude_restrictions)}" if o.exclude_restrictions else "")
             + (f"&mock_score={o.mock_score}" if o.mock_score else "")
         )
         result.append({

@@ -1351,8 +1351,9 @@ function ResultsContent() {
     })();
     const authToken = typeof window !== "undefined" ? localStorage.getItem("auth_token") : null;
     const scoreParam = score ? `&score=${encodeURIComponent(score)}` : "";
+    const orderParam = orderNo ? `&order_no=${encodeURIComponent(orderNo)}` : "";
     fetch(
-      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : ""}${scoreParam}${constraintParam}`,
+      `${API}/api/recommend?rank=${rank}&province=${province}&subject=${encodeURIComponent(subject)}${examMode ? `&exam_mode=${encodeURIComponent(examMode)}` : ""}${scoreParam}${constraintParam}${orderParam}`,
       {
         signal: controller.signal,
         headers: authToken ? { Authorization: `Bearer ${authToken}` } : {},

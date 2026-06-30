@@ -452,6 +452,9 @@ def _ensure_schema():
                 ("report_scope_key", "VARCHAR(64) DEFAULT ''"),
                 ("mock_score", "INTEGER"),
                 ("commission_fen", "INTEGER DEFAULT 0"),
+                ("discipline_filter",    "VARCHAR(200) DEFAULT ''"),
+                ("batch_filter",         "VARCHAR(200) DEFAULT ''"),
+                ("exclude_restrictions", "VARCHAR(200) DEFAULT ''"),
             ],
             "user_events": [
                 ("subject",    "VARCHAR(50) DEFAULT ''"),

@@ -58,6 +58,7 @@ from services.recommend_core import (
 )
 from services._prewarm_cache import start_prewarm_daemon
 from services.report_scope import build_report_scope_key, order_matches_report
+from services.city_tier import get_tier_cities_map
 
 app = FastAPI(title="高考志愿填报决策引擎", version="3.1.0")
 app.include_router(auth_router.router)
@@ -136,7 +137,7 @@ def _prewarm_caches():
             from database import SessionLocal
             db = SessionLocal()
             try:
-                _get_tier_cities_map(db)
+                get_tier_cities_map(db)
                 logger.info("[prewarm] 城市线级缓存已预热")
             finally:
                 db.close()
@@ -436,7 +437,7 @@ def recommend(
     if c_city.strip():
         _city_names.extend(x.strip() for x in c_city.strip().split(",") if x.strip())
     if c_city_level.strip():
-        tier_map = _get_tier_cities_map(db)
+        tier_map = get_tier_cities_map(db)
         for t in c_city_level.strip().split(","):
             t = t.strip()
             if t and t in tier_map:
@@ -1752,53 +1753,11 @@ _BENKE_ORDER = [
     "农学", "医学", "管理学", "艺术学", "军事学", "交叉学科",
 ]
 
-
-_CITY_TIERS = ["一线", "新一线", "二线", "三线", "四线", "五线"]
-_MUNICIPALITIES = ("北京", "上海", "天津", "重庆")
-
-# 线级→城市名缓存（首次调用时从 admission_2026 构建，兼容旧版 c_city_level 参数）
-_tier_cities_cache: dict | None = None
-
-
-def _get_tier_cities_map(db: Session) -> dict:
-    """返回 {线级: [城市名列表]}，首次调用时从 admission_2026 构建并缓存。"""
-    global _tier_cities_cache
-    if _tier_cities_cache is not None:
-        return _tier_cities_cache
-    from collections import Counter
-    from sqlalchemy import text as _text
-    rows = db.execute(_text(
-        "SELECT DISTINCT "
-        "CASE WHEN school_province IN ('北京','上海','天津','重庆') THEN school_province ELSE city END AS disp_city, "
-        "city_level FROM admission_2026 WHERE COALESCE(city,'') != ''"
-    )).fetchall()
-    votes: dict = defaultdict(Counter)
-    for disp_city, lv in rows:
-        if disp_city:
-            votes[disp_city][_norm_city_tier(lv)] += 1
-    tier_cities: dict = defaultdict(list)
-    for city, c in votes.items():
-        tier_cities[c.most_common(1)[0][0]].append(city)
-    out = {}
-    for t in _CITY_TIERS + ["其他"]:
-        cities = sorted(tier_cities.get(t, []))
-        if cities:
-            out[t] = cities
-    _tier_cities_cache = out
-    return out
-
-
-def _norm_city_tier(city_level: str) -> str:
-    """城市层级归一：取首段、去「城市」后缀 → 一线/新一线/二线/三线/四线/五线，其余归「其他」。"""
-    s = (city_level or "").split("/")[0].strip().replace("城市", "")
-    return s if s in _CITY_TIERS else "其他"
-
-
 @app.get("/api/cities")
 def list_cities(db: Session = Depends(get_db)):
     """全国城市按一二三线分组（供城市筛选弹窗用）。
     复用 _get_tier_cities_map 缓存，首次调用后零 SQL。"""
-    tier_map = _get_tier_cities_map(db)
+    tier_map = get_tier_cities_map(db)
     groups = [{"tier": t, "cities": c} for t, c in tier_map.items()]
     return {"groups": groups}
 

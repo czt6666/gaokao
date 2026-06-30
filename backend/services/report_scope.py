@@ -121,5 +121,8 @@ def legacy_order_matches(
 def order_matches_report(order, current_scope_key: str, **kwargs) -> bool:
     scope = _clean(getattr(order, "report_scope_key", ""))
     if scope:
-        return scope == current_scope_key
+        if scope == current_scope_key:
+            return True
+        # report_scope_key 存在但不匹配：可能是旧代码生成或参数微调，回退兼容检查
+        return legacy_order_matches(order, **kwargs)
     return legacy_order_matches(order, **kwargs)

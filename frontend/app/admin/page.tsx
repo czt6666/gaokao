@@ -24,9 +24,10 @@ interface TodayStats {
 interface ChartDay { date: string; queries: number; paid: number; revenue: number; new_users: number; }
 interface Order {
   order_no: string; amount: number; status: string; pay_method: string;
-  province: string; rank_input: number; created_at: string; pay_time: string; user_id: number;
-  c_major: string; c_city: string; c_nature: string; c_tier: string; mock_score: number;
+  province: string; subject: string; rank_input: number; created_at: string; pay_time: string; user_id: number;
+  c_major: string; c_city: string; c_city_reduced: string; c_nature: string; c_tier: string; mock_score: number;
   product_type: string; transaction_id: string;
+  gender_filter: string; discipline_filter: string; batch_filter: string; exclude_restrictions: string;
 }
 interface UserRow {
   id: number; phone: string; province: string; is_paid: number; wechat: string; user_source: string;
@@ -72,8 +73,10 @@ interface EventItem {
   exam_mode: string;
   c_major: string;
   c_city: string;
+  c_city_reduced: string;
   c_nature: string;
   c_tier: string;
+  mock_score: number | null;
   event_data: string;
   page: string;
   ip: string;
@@ -292,6 +295,7 @@ export default function AdminPage() {
   const [hourly, setHourly] = useState<HourlyData[]>([]);
   const [demand, setDemand] = useState<DemandData | null>(null);
 
+  const [orderUserId, setOrderUserId] = useState("");
   const [orderSearch, setOrderSearch] = useState("");
   const [userSearch, setUserSearch] = useState("");
   const [schoolConv, setSchoolConv] = useState<SchoolConv[]>([]);
@@ -419,11 +423,16 @@ export default function AdminPage() {
   // Orders
   useEffect(() => {
     if (!authed || activeTab !== "orders") return;
-    apiFetch(`/api/admin/orders?page=${orderPage}&page_size=20&q_search=${encodeURIComponent(orderSearch)}`)
+    const qs = new URLSearchParams();
+    qs.set("page", String(orderPage));
+    qs.set("page_size", "20");
+    if (orderSearch) qs.set("q_search", orderSearch);
+    if (orderUserId) qs.set("user_id", orderUserId);
+    apiFetch(`/api/admin/orders?${qs.toString()}`)
       .then(d => { setOrders(d.items); setOrderTotal(d.total); })
       .catch(e => setError(e.message));
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authed, activeTab, orderPage, orderSearch]);
+  }, [authed, activeTab, orderPage, orderSearch, orderUserId]);
 
   // Users
   useEffect(() => {
@@ -552,9 +561,15 @@ export default function AdminPage() {
     apiFetch(`/api/admin/users?page=${userPage}&page_size=20&paid_only=${userPaidOnly}&q_search=${encodeURIComponent(userSearch)}`)
       .then(d => { setUsers(d.items); setUserTotal(d.total); });
 
-  const _refreshOrders = () =>
-    apiFetch(`/api/admin/orders?page=${orderPage}&page_size=20&q_search=${encodeURIComponent(orderSearch)}`)
+  const _refreshOrders = () => {
+    const qs = new URLSearchParams();
+    qs.set("page", String(orderPage));
+    qs.set("page_size", "20");
+    if (orderSearch) qs.set("q_search", orderSearch);
+    if (orderUserId) qs.set("user_id", orderUserId);
+    return apiFetch(`/api/admin/orders?${qs.toString()}`)
       .then(d => { setOrders(d.items); setOrderTotal(d.total); });
+  };
 
   const handleGrantPaid = (userId: number, phone: string) => {
     setConfirmDialog({
@@ -1369,10 +1384,20 @@ export default function AdminPage() {
                   onChange={e => { setOrderSearch(e.target.value); setOrderPage(1); }}
                   style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, width: 180, outline: "none" }}
                 />
+                <input
+                  placeholder="用户ID"
+                  value={orderUserId}
+                  onChange={e => { setOrderUserId(e.target.value); setOrderPage(1); }}
+                  style={{ padding: "6px 12px", borderRadius: 8, border: "1px solid #E5E5EA", fontSize: 13, width: 120, outline: "none" }}
+                />
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <div style={{ fontSize: 12, color: "#6E6E73" }}>共 {orderTotal} 条</div>
-                <button onClick={() => exportCsv("/api/admin/export/orders", `orders_${new Date().toISOString().slice(0,10)}.csv`)}
+                <button onClick={() => {
+                    const qs = new URLSearchParams();
+                    if (orderUserId) qs.set("user_id", orderUserId);
+                    exportCsv(`/api/admin/export/orders?${qs.toString()}`, `orders_${new Date().toISOString().slice(0,10)}.csv`);
+                  }}
                   style={{ padding: "5px 12px", borderRadius: 8, border: "1px solid #E5E5EA", background: "#fff", fontSize: 12, cursor: "pointer", color: "#0071E3" }}>
                   ⬇ 导出CSV
                 </button>
@@ -1676,14 +1701,7 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {events.map(ev => {
-                    // 从 event_data 解析 mock_score（如有）
-                    let mockScore: string | null = null;
-                    try {
-                      const d = JSON.parse(ev.event_data || "{}");
-                      if (d.mock_score) mockScore = String(d.mock_score);
-                    } catch {}
-                    return (
+                  {events.map(ev => (
                     <tr key={ev.id} style={{ borderBottom: "1px solid #F5F5F7" }}>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.id}</td>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.user_id ?? "—"}</td>
@@ -1694,23 +1712,23 @@ export default function AdminPage() {
                       </td>
                       <td style={{ padding: "8px 10px" }}>{ev.province || "—"}</td>
                       <td style={{ padding: "8px 10px" }}>{ev.rank_input?.toLocaleString() || "—"}</td>
-                      <td style={{ padding: "8px 10px" }}>{mockScore ? `${mockScore}分` : "—"}</td>
+                      <td style={{ padding: "8px 10px" }}>{ev.mock_score != null ? `${ev.mock_score}分` : "—"}</td>
                       <td style={{ padding: "8px 10px" }}>{ev.subject || "—"}</td>
                       <td style={{ padding: "8px 10px", color: "#6E6E73" }}>{ev.exam_mode || "—"}</td>
                       <td style={{ padding: "8px 10px" }}>
                         <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
-                          {ev.c_major && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#E8F4FD", color: "#0071E3", fontSize: 10 }}>专:{ev.c_major}</span>}
-                          {ev.c_city && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#EDFBF2", color: "#34C759", fontSize: 10 }}>城:{ev.c_city}</span>}
-                          {ev.c_nature && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#FFF9E6", color: "#FF9500", fontSize: 10 }}>性:{ev.c_nature}</span>}
-                          {ev.c_tier && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#F5F5F7", color: "#6E6E73", fontSize: 10 }}>档:{ev.c_tier}</span>}
-                          {!ev.c_major && !ev.c_city && !ev.c_nature && !ev.c_tier && <span style={{ color: "#aeaeb2" }}>—</span>}
+                          {ev.c_major && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#E8F4FD", color: "#0071E3", fontSize: 10 }}>专业:{ev.c_major}</span>}
+                          {ev.c_city_reduced && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#EDFBF2", color: "#34C759", fontSize: 10 }}>城市:{ev.c_city_reduced}</span>}
+                          {ev.c_nature && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#FFF9E6", color: "#FF9500", fontSize: 10 }}>性质:{ev.c_nature}</span>}
+                          {ev.c_tier && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#F5F5F7", color: "#6E6E73", fontSize: 10 }}>档次:{ev.c_tier}</span>}
+                          {ev.subject && <span style={{ padding: "1px 4px", borderRadius: 3, background: "#EBF3FF", color: "#0071E3", fontSize: 10 }}>选科:{ev.subject}</span>}
+                          {!ev.c_major && !ev.c_city_reduced && !ev.c_nature && !ev.c_tier && !ev.subject && <span style={{ color: "#aeaeb2" }}>—</span>}
                         </div>
                       </td>
                       <td style={{ padding: "8px 10px", color: "#6E6E73", fontSize: 11, whiteSpace: "nowrap" }}>{toBJ(ev.created_at)}</td>
                       <td style={{ padding: "8px 10px", color: "#aeaeb2", fontSize: 11 }}>{ev.ip || "—"}</td>
                     </tr>
-                    );
-                  })}
+                  ))}
                   {!events.length && (
                     <tr><td colSpan={13} style={{ padding: "48px 16px", textAlign: "center", color: "#6E6E73" }}>暂无事件数据</td></tr>
                   )}

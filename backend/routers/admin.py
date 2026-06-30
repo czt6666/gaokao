@@ -9,7 +9,7 @@ import datetime, os, json, csv, io
 from pydantic import BaseModel
 
 from database import get_db, User, Order, UserEvent, ReportLog, ReportScan, Feedback, CommissionRecord, WithdrawalRecord
-from main import _get_tier_cities_map
+from services.city_tier import get_tier_cities_map, reduce_city_filter
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
 
@@ -497,11 +497,11 @@ def list_orders(
         )
     total = q.count()
     orders = q.order_by(Order.created_at.desc()).offset((page - 1) * page_size).limit(page_size).all()
-    tier_map = _get_tier_cities_map(db)
+    tier_map = get_tier_cities_map(db)
     return {
         "total": total,
         "page":  page,
-        "items": [{**_order_row(o), "c_city_reduced": _reduce_city_filter(o.c_city or "", tier_map)} for o in orders]
+        "items": [{**_order_row(o), "c_city_reduced": reduce_city_filter(o.c_city or "", tier_map)} for o in orders]
     }
 
 
@@ -542,27 +542,6 @@ def _parse_gender_filter(exclude_restrictions: str) -> str:
             return "只招女生"
     return ""
 
-
-def _reduce_city_filter(city_str: str, tier_map: dict) -> str:
-    if not city_str:
-        return ""
-    cities = set(city_str.split(","))
-    reduced = []
-    remaining = set(cities)
-    tier_order = ["一线", "新一线", "二线", "三线", "四线", "五线"]
-    for tier in tier_order:
-        tier_cities = set(tier_map.get(tier, []))
-        if tier_cities and tier_cities <= remaining:
-            remaining -= tier_cities
-            num = tier.replace("新一线", "1").replace("一线", "1").replace("二线", "2").replace("三线", "3").replace("四线", "4").replace("五线", "5")
-            reduced.append(num)
-    if not reduced:
-        return city_str
-    if not remaining:
-        return "".join(reduced) + "线"
-    return "".join(reduced) + "线+" + ",".join(sorted(remaining))
-
-
 # ── 订单导出 CSV ─────────────────────────────────────────────
 @router.get("/export/orders", dependencies=[Depends(_verify_admin)])
 def export_orders_csv(status: str = Query(""), db: Session = Depends(get_db)):
@@ -574,14 +553,14 @@ def export_orders_csv(status: str = Query(""), db: Session = Depends(get_db)):
     buf = io.StringIO()
     w = csv.writer(buf)
     w.writerow(["订单号", "金额(元)", "状态", "支付方式", "省份", "选科", "位次", "用户ID", "创建时间", "支付时间", "筛选专业", "筛选城市", "筛选城市(归一)", "筛选性质", "筛选档次", "高考分数", "性别筛选"])
-    tier_map = _get_tier_cities_map(db)
+    tier_map = get_tier_cities_map(db)
     for o in orders:
         w.writerow([
             o.order_no, round(o.amount/100, 2), o.status, o.pay_method,
             o.province or "", o.subject or "", o.rank_input, o.user_id,
             o.created_at.strftime("%Y-%m-%d %H:%M") if o.created_at else "",
             o.pay_time.strftime("%Y-%m-%d %H:%M") if o.pay_time else "",
-            o.c_major or "", o.c_city or "", _reduce_city_filter(o.c_city or "", tier_map), o.c_nature or "", o.c_tier or "",
+            o.c_major or "", o.c_city or "", reduce_city_filter(o.c_city or "", tier_map), o.c_nature or "", o.c_tier or "",
             o.mock_score or "", _parse_gender_filter(o.exclude_restrictions or ""),
         ])
     buf.seek(0)
@@ -711,8 +690,15 @@ def list_events(
     uids = {e.user_id for e in events if e.user_id}
     user_map = {u.id: u for u in db.query(User).filter(User.id.in_(uids)).all()} if uids else {}
 
+    tier_map = get_tier_cities_map(db)
+
     def _event_row(e):
         u = user_map.get(e.user_id)
+        try:
+            data = json.loads(e.event_data or "{}")
+        except Exception:
+            data = {}
+        c_city_reduced = reduce_city_filter(e.c_city or "", tier_map)
         return {
             "id": e.id,
             "user_id": e.user_id,
@@ -727,8 +713,10 @@ def list_events(
             "exam_mode": e.exam_mode or "",
             "c_major": e.c_major or "",
             "c_city": e.c_city or "",
+            "c_city_reduced": c_city_reduced,
             "c_nature": e.c_nature or "",
             "c_tier": e.c_tier or "",
+            "mock_score": data.get("mock_score"),
             "event_data": e.event_data or "",
             "page": e.page or "",
             "ip": e.ip or "",
